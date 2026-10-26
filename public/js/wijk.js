@@ -303,7 +303,7 @@
   }
 
   // ---------- QR-codes (qrcode-generator, /vendor/qrcode.js) ----------
-  // Het Sint Maarten-icoon (PWA) staat in het midden van elke QR, zodat de codes herkenbaar zijn.
+  // Het app-icoon (PWA) staat in het midden van elke QR, zodat de codes herkenbaar zijn.
   let qrIconPromise = null;
   function loadQrIcon() {
     qrIconPromise = qrIconPromise || new Promise((resolve) => {

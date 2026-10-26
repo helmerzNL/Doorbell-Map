@@ -7,8 +7,8 @@ const { execFileSync } = require('node:child_process');
 
 const root = path.join(__dirname, '..');
 
-// Start de app in een eigen proces met of zonder SINTMAARTEN_TAG en lees kanaal, pagina en manifest.
-function probe(tag) {
+// Start de app in een eigen proces met of zonder DOORBELL_MAP_TAG (of het oude SINTMAARTEN_TAG) en lees kanaal, pagina en manifest.
+function probe(tag, varName = 'DOORBELL_MAP_TAG') {
   const script = `
     const app = require('./server/index.js');
     const s = app.listen(0, async () => {
@@ -23,8 +23,8 @@ function probe(tag) {
       s.close(); process.exit(0);
     });`;
   const env = { ...process.env, DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'sm-ch-')), SETUP_TOKEN: 'test-setup-token-123', SESSION_SECRET: 'test-session-secret-123', APP_VERSION: '1.2.3' };
-  delete env.SINTMAARTEN_TAG;
-  if (tag !== undefined) env.SINTMAARTEN_TAG = tag;
+  delete env.SINTMAARTEN_TAG; delete env.DOORBELL_MAP_TAG;
+  if (tag !== undefined) env[varName] = tag;
   return JSON.parse(execFileSync('node', ['-e', script], { cwd: root, env }).toString().trim().split('\n').pop());
 }
 
@@ -47,17 +47,22 @@ test('beta-build meldt het kanaal en zet beta in pagina en manifesten', () => {
   assert.match(r.beheer.name, /\(beta\)$/);
 });
 
+test('het oude SINTMAARTEN_TAG blijft het beta-kanaal bepalen (bestaande NAS-setups)', () => {
+  assert.equal(probe('beta', 'SINTMAARTEN_TAG').version.channel, 'beta');
+  assert.equal(probe('latest', 'SINTMAARTEN_TAG').version.channel, 'stable');
+});
+
 test('een image dat op de beta-branch is gebouwd (versie x.y.z-beta) is ook beta', () => {
   const script = "process.env.APP_VERSION='1.2.3-beta'; console.log(require('./server/version').channel)";
-  const env = { ...process.env }; delete env.SINTMAARTEN_TAG;
+  const env = { ...process.env }; delete env.SINTMAARTEN_TAG; delete env.DOORBELL_MAP_TAG;
   assert.equal(execFileSync('node', ['-e', script], { cwd: root, env }).toString().trim(), 'beta');
 });
 
-test('docker-compose.yml en .env.example gebruiken dezelfde SINTMAARTEN_TAG', () => {
+test('docker-compose.yml en .env.example gebruiken dezelfde DOORBELL_MAP_TAG', () => {
   const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8');
   const envExample = fs.readFileSync(path.join(root, '.env.example'), 'utf8');
-  assert.match(compose, /image: ghcr\.io\/helmerznl\/sintmaarten:\$\{SINTMAARTEN_TAG:-latest\}/);
-  assert.match(compose, /SINTMAARTEN_TAG: "\$\{SINTMAARTEN_TAG:-latest\}"/);
-  assert.match(envExample, /^SINTMAARTEN_TAG=latest$/m);
+  assert.match(compose, /image: ghcr\.io\/helmerznl\/doorbell-map:\$\{DOORBELL_MAP_TAG:-\$\{SINTMAARTEN_TAG:-latest\}\}/);
+  assert.match(compose, /DOORBELL_MAP_TAG: "\$\{DOORBELL_MAP_TAG:-\$\{SINTMAARTEN_TAG:-latest\}\}"/);
+  assert.match(envExample, /^DOORBELL_MAP_TAG=latest$/m);
   assert.ok(!/APP_IMAGE/.test(compose + envExample));
 });
