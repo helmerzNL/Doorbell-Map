@@ -288,6 +288,12 @@ You do not have to build the code: the image is built and published automaticall
 > Is the GHCR package private? Make it public (GitHub → Packages → Package settings), or log in with
 > `docker login ghcr.io` (username + Personal Access Token with `read:packages`).
 
+## Beta branch
+Develop new features on the **`beta`** branch, so that `main` (and so `:latest` and the releases) stays stable.
+- Workflow: create a `feature/…` branch, open a PR into `beta`, test and merge there. When `beta` is good, open a PR `beta` → `main` with a clear title (it ends up in the release notes).
+- Every push to `beta` makes GitHub Actions run the tests and build an image `ghcr.io/helmerznl/sintmaarten:beta` (plus a `sha` tag). There is **no** version tag, **no** release and `:latest` does not change; the app shows `x.y.z-beta` as its version.
+- Testing on the NAS: a separate stack with `image: ghcr.io/helmerznl/sintmaarten:beta`, its own port, its own `ORIGIN` and its **own `DATA_PATH`**. Do not share the data with your production stack: new versions may change the data format. Update with `docker compose pull && docker compose up -d`.
+
 ## GitHub Actions
 `.github/workflows/docker.yml` runs the tests and, on every push to `main`/`master`, builds a multi-arch image
 (amd64 + arm64) to `ghcr.io/helmerznl/sintmaarten:latest`. Update on the NAS with `docker compose pull && docker compose up -d`.

@@ -2,7 +2,7 @@ name: Docker image
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, beta]
   workflow_dispatch:
 
 permissions:
@@ -55,7 +55,8 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha
-            type=raw,value=v${{ steps.ver.outputs.version }}
+            type=raw,value=beta,enable=${{ github.ref == 'refs/heads/beta' }}
+            type=raw,value=v${{ steps.ver.outputs.version }},enable=${{ github.ref != 'refs/heads/beta' }}
 
       - uses: docker/build-push-action@v6
         with:
@@ -65,7 +66,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            APP_VERSION=${{ steps.ver.outputs.version }}
+            APP_VERSION=${{ steps.ver.outputs.version }}${{ github.ref == 'refs/heads/beta' && '-beta' || '' }}
             GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
