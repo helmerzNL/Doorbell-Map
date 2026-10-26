@@ -291,6 +291,7 @@ Nieuwe functies ontwikkel je op de branch **`beta`**, zodat `main` (en dus `:lat
 - Werkwijze: maak een `feature/…`-branch, open een PR naar `beta`, test en merge daar. Is `beta` goed, dan open je een PR `beta` → `main` met een duidelijke titel (die komt in de release notes).
 - Elke push naar `beta` laat GitHub Actions de tests draaien en een image `ghcr.io/helmerznl/sintmaarten:beta` bouwen (plus een `sha`-tag). Er komt **geen** versietag, **geen** release en `:latest` verandert niet; de app toont als versie `x.y.z-beta`.
 - Testen op de NAS: een aparte stack met `image: ghcr.io/helmerznl/sintmaarten:beta`, een eigen poort, een eigen `ORIGIN` en een **eigen `DATA_PATH`**. Deel de data niet met je productie-stack: nieuwe versies kunnen het gegevensformaat aanpassen. Bijwerken: `docker compose pull && docker compose up -d`.
+- **Promotie naar `main`:** alleen op verzoek van de eigenaar, met een promotie-PR `beta` → `main` en een **merge commit** (nooit squash), volgens de [promotion-runbook](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/promotion-runbook.md); de werkafspraken staan in [`AGENTS.md`](AGENTS.md). De check `only-from-beta` (`.github/workflows/pr-target.yml`) laat elke andere PR naar `main` falen; de eigenaar maakt hem verplicht in de branch protection van `main`.
 
 ## Issues en pull requests
 Meldingen en pull requests volgen de formulieren uit [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):

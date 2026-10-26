@@ -293,6 +293,7 @@ Develop new features on the **`beta`** branch, so that `main` (and so `:latest` 
 - Workflow: create a `feature/…` branch, open a PR into `beta`, test and merge there. When `beta` is good, open a PR `beta` → `main` with a clear title (it ends up in the release notes).
 - Every push to `beta` makes GitHub Actions run the tests and build an image `ghcr.io/helmerznl/sintmaarten:beta` (plus a `sha` tag). There is **no** version tag, **no** release and `:latest` does not change; the app shows `x.y.z-beta` as its version.
 - Testing on the NAS: a separate stack with `image: ghcr.io/helmerznl/sintmaarten:beta`, its own port, its own `ORIGIN` and its **own `DATA_PATH`**. Do not share the data with your production stack: new versions may change the data format. Update with `docker compose pull && docker compose up -d`.
+- **Promotion to `main`:** only when the owner asks, with a promotion PR `beta` → `main` and a **merge commit** (never squash), following the [promotion runbook](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/promotion-runbook.md); the working conventions are in [`AGENTS.md`](AGENTS.md). The `only-from-beta` check (`.github/workflows/pr-target.yml`) fails every other PR into `main`; the owner makes it required in the branch protection of `main`.
 
 ## Issues and pull requests
 Issues and pull requests follow the forms from [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):
