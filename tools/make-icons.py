@@ -71,7 +71,7 @@ def lantern(size, maskable=False, admin=False):
     top = cy - ry - 40
     d.line([P(cx, top), P(cx, 170)], fill=stick, width=int(26 * k))
     d.arc(box(cx - 6, 110, cx + 190, 250), 180, 360 + 40, fill=stick, width=int(26 * k))
-    # sterretje (Sint Maarten-licht)
+    # sterretje (lantaarnlicht)
     for dx, dy, r in ((cx - 300, 250, 22), (cx + 310, 330, 16), (cx + 250, 190, 12)):
         px, py = P(dx, dy)
         d.polygon([(px, py - r * 1.6), (px + r * .4, py - r * .4), (px + r * 1.6, py), (px + r * .4, py + r * .4),

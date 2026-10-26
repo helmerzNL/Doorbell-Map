@@ -1,5 +1,5 @@
 name: Bug report
-description: Something isn't working in Sint Maarten
+description: Something isn't working in Doorbell Map
 title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report this. Please check whether an
-        [existing issue](https://github.com/helmerzNL/Sintmaarten/issues?q=is%3Aissue)
+        [existing issue](https://github.com/helmerzNL/doorbell-map/issues?q=is%3Aissue)
         already covers this problem.
 
   - type: textarea

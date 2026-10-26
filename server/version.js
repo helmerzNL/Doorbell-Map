@@ -13,8 +13,9 @@ function gitSha() {
 const version = (process.env.APP_VERSION || 'dev').trim();
 const sha = (process.env.GIT_SHA && process.env.GIT_SHA !== 'onbekend' ? process.env.GIT_SHA : gitSha()).trim();
 
-// Kanaal: "beta" voor een beta-build (SINTMAARTEN_TAG bevat "beta", of het image is op de beta-branch gebouwd), anders "stable".
-const channel = /beta/i.test(process.env.SINTMAARTEN_TAG || '') || /beta/i.test(version) ? 'beta' : 'stable';
+// Kanaal: "beta" voor een beta-build (DOORBELL_MAP_TAG bevat "beta" — het oude SINTMAARTEN_TAG blijft werken —, of het image is op de beta-branch gebouwd), anders "stable".
+const tag = process.env.DOORBELL_MAP_TAG || process.env.SINTMAARTEN_TAG || '';
+const channel = /beta/i.test(tag) || /beta/i.test(version) ? 'beta' : 'stable';
 
 module.exports = {
   version,

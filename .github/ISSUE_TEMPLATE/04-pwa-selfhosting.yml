@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Use this for problems with the web app, installing it as a PWA, or
-        running your own (self-hosted) Sint Maarten server.
+        running your own (self-hosted) Doorbell Map server.
 
   - type: textarea
     id: summary
@@ -30,7 +30,7 @@ body:
   - type: dropdown
     id: hosting
     attributes:
-      label: How are you running Sint Maarten?
+      label: How are you running Doorbell Map?
       options:
         - Hosted version (https://sintmaarten.flux76.app)
         - Self-hosted via Docker
@@ -44,7 +44,7 @@ body:
     id: version
     attributes:
       label: App / server version or image tag
-      placeholder: "1.0.21 or ghcr.io/helmerznl/sintmaarten:v1.0.21"
+      placeholder: "1.0.21 or ghcr.io/helmerznl/doorbell-map:v1.0.21"
     validations:
       required: true
 
@@ -91,7 +91,7 @@ body:
     id: serverlogs
     attributes:
       label: Server logs (self-hosting only)
-      description: For example `docker logs sintmaarten --tail 100`. Please redact secrets and tokens.
+      description: For example `docker logs doorbell-map --tail 100`. Please redact secrets and tokens.
       render: shell
 
   - type: checkboxes

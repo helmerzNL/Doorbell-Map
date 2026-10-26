@@ -1,5 +1,5 @@
 {
-  "name": "sintmaarten",
+  "name": "doorbell-map",
   "version": "1.0.0",
   "private": true,
   "description": "Interactieve wijkkaart met beheer via passkey",
