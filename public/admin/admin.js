@@ -255,6 +255,7 @@
       const st = await api('/api/admin/settings');
       cfg.st = st;
       $('org-simple').checked = st.simpleUi;
+      $('stats-public').checked = st.statsPublic;
       statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
       langPicker.setValue(st.defaultLang);
@@ -275,6 +276,10 @@
   $('org-simple').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ simpleUi: $('org-simple').checked }), expectAuth: true }); toast($('org-simple').checked ? 'Eenvoudige weergave staat aan' : 'Eenvoudige weergave staat uit'); }
     catch (e) { $('org-err').textContent = e.message; $('org-simple').checked = !$('org-simple').checked; }
+  };
+  $('stats-public').onchange = async () => {
+    try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ statsPublic: $('stats-public').checked }), expectAuth: true }); toast($('stats-public').checked ? 'Overzichtskaart staat aan op de voorpagina' : 'Overzichtskaart staat uit op de voorpagina'); }
+    catch (e) { $('org-err').textContent = e.message; $('stats-public').checked = !$('stats-public').checked; }
   };
   for (const k of ['green', 'red', 'none']) {
     $(`stats-${k}`).onchange = async () => {
@@ -992,26 +997,7 @@
     });
   }
 
-  // Overlay op de kaart: aantal en percentage groen/rood (en niet gemarkeerd) van alle ingetekende huizen.
-  const pctFmt = new Intl.NumberFormat(I18n.locale, { style: 'percent', maximumFractionDigits: 0 });
-  function renderStats() {
-    const total = houses.length;
-    $('house-stats').hidden = !total;
-    if (!total) return;
-    const n = { green: 0, red: 0, none: 0 };
-    for (const h of houses) n[h.status in n ? h.status : 'none']++;
-    $('hs-total').textContent = total;
-    for (const k of ['green', 'red', 'none']) {
-      $(`hs-${k}`).textContent = n[k];
-      $(`hs-${k}-pct`).textContent = pctFmt.format(n[k] / total);
-    }
-    $('hs-green-row').hidden = !statsShow.green;
-    $('hs-red-row').hidden = !statsShow.red;
-    $('hs-none-row').hidden = !statsShow.none || !n.none;
-    $('hs-bar-green').style.width = statsShow.green ? `${(n.green / total) * 100}%` : '0';
-    $('hs-bar-red').style.width = statsShow.red ? `${(n.red / total) * 100}%` : '0';
-    $('hs-bar').hidden = !statsShow.green && !statsShow.red;
-  }
+  const renderStats = () => Wijk.renderStats(houses, statsShow);
 
   function render() {
     syncPolygons(); syncHandles(); syncDraft(); renderPanel(); renderStats();

@@ -657,6 +657,15 @@ test('overlay op de beheerkaart: per status te tonen of te verbergen', async () 
   assert.deepEqual((await put.json()).statsShow, { green: true, red: false, none: true });
   assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: false, none: true });
   assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"statsShow":{"green":false}}' })).status, 401);
+  assert.equal((await (await j('/api/map')).json()).statsPublic, false);
+  assert.equal((await adminReq('/settings', 'PUT', { statsPublic: true })).status, 200);
+  const pub = await (await j('/api/map')).json();
+  assert.equal(pub.statsPublic, true);
+  assert.deepEqual(pub.statsShow, { green: true, red: false, none: true });
+  assert.equal((await (await adminReq('/settings')).json()).statsPublic, true);
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"statsPublic":false}' })).status, 401);
+  await adminReq('/settings', 'PUT', { statsPublic: false });
+  assert.equal((await (await j('/api/map')).json()).statsPublic, false);
   await adminReq('/settings', 'PUT', { statsShow: { red: true } });
   assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: true, none: true });
 });
