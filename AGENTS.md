@@ -8,7 +8,7 @@ Het project volgt de richtlijnen van [App-Guidance](https://github.com/Flux76HQ/
 
 ## Over deze repository
 
-Sint Maarten (in het Engels: Halloween) is een interactieve wijkkaart (Node 22 + Express, JSON-opslag, passkeys), uitgerold als
+Doorbell Map (`doorbell-map`, voorheen Sint Maarten) is een evenement-neutrale interactieve wijkkaart (Node 22 + Express, JSON-opslag, passkeys), uitgerold als
 Docker-container. Zie [README.md](README.md). Wijzigingen zijn bijna altijd kleine functies of fixes in `server/`, `public/` of
 de tooling; de app heeft Nederlandse bron-teksten en een Engelse vertaling (`public/js/lang-en.js`).
 
@@ -20,7 +20,7 @@ de tooling; de app heeft Nederlandse bron-teksten en een Engelse vertaling (`pub
   hem verplicht en verbiedt directe pushes naar `main` in de branch protection (dat kan niet vanuit de code).
 - Werk op een `feature/…`-, `fix/…`- of `docs/…`-branch vanaf `beta`. Controleer vóór een vervolgcommit op een eerdere branch of de
   PR al gemerged is; zo ja: nieuwe branch vanaf `beta` en een nieuwe PR.
-- Elke push naar `beta` bouwt het image `ghcr.io/helmerznl/sintmaarten:beta` (zonder versietag, release of `:latest`); een push naar
+- Elke push naar `beta` bouwt het image `ghcr.io/helmerznl/doorbell-map:beta` (zonder versietag, release of `:latest`); een push naar
   `main` bouwt `:latest`, zet de versietag en maakt de GitHub Release (`.github/workflows/docker.yml`).
 - **Promotie van `beta` naar `main`** volgt de [promotion-runbook](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/promotion-runbook.md).
   Hier:

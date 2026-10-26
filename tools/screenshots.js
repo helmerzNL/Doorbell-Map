@@ -34,7 +34,7 @@ const MOBILE = { viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, is
 
 const INTRO = `Welkom bij de wijkkaart van onze wijkvereniging!
 
-Op deze kaart zie je welke huizen op Sint Maarten graag bezoek krijgen: groen = welkom, rood = liever niet.
+Op deze kaart zie je welke huizen graag bezoek krijgen aan de deur: groen = welkom, rood = liever niet.
 
 Woon je zelf in de wijk? Dan kun je de status van je eigen huis aanpassen. De beheerder keurt dat goed.
 

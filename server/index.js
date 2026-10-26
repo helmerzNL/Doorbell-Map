@@ -715,7 +715,7 @@ module.exports = app;
 
 if (require.main === module) {
   app.listen(config.port, () => {
-    console.log(`Sint Maarten draait op poort ${config.port} (${config.origin}, rpID ${config.rpID})`);
+    console.log(`Doorbell Map draait op poort ${config.port} (${config.origin}, rpID ${config.rpID})`);
     console.log(`Versie ${appVersion.label}`);
     if (config.setupTokenGenerated && !store.db().passkeys.length) {
       console.log(`\nINSTALLATIE: er is geen SETUP_TOKEN ingesteld. Tijdelijke code voor de eerste passkey:\n  ${config.setupToken}\n`);
