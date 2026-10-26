@@ -379,6 +379,10 @@
           <div class="row row-tight"><input type="text" id="bk-title" maxlength="40" placeholder="Bijvoorbeeld: Alles, voor de actie" aria-label="Titel voor een nieuwe backup"><button id="bk-make">Backup maken</button></div>
           <div class="set-hint">Met een korte titel (ook later via de potloodknop) herken je een backup makkelijk.</div>
         </div>
+        <div class="field"><label for="bk-file">Gedownloade backup uploaden</label>
+          <div class="row row-tight"><input type="file" id="bk-file" accept="application/json,.json" hidden><button id="bk-upload" type="button"><i data-mdi="upload"></i> Backup uploaden</button></div>
+          <div class="set-hint">Kies een eerder gedownload backupbestand (.json). Het komt als nieuwe backup in de lijst; daarna kies je <em>Terugzetten</em>.</div>
+        </div>
         <div id="bk-list" class="bk-list"></div>
         <p class="error" id="bk-err"></p>
         <div class="set-actions"><button id="bk-delete" class="danger" disabled>Geselecteerde verwijderen (bevestig met passkey)</button></div>

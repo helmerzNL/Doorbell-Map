@@ -339,6 +339,49 @@ admin.get('/backups/:id', (req, res) => {
   res.json(b);
 });
 
+// Maakt van een geüploade backup een schone inhoud ({houses, view, pdfView, texts}); gooit een Error bij ongeldige inhoud.
+function sanitizeBackup(b) {
+  if (!b || typeof b !== 'object' || Array.isArray(b)) throw new Error('Dit is geen geldige backup');
+  const houses = validateHouses(b.houses);
+  let view = null;
+  if (b.view) {
+    const v = b.view;
+    const okZoom = (z) => Number.isFinite(z) && z >= 1 && z <= 19;
+    if (!validLatLng(v.center) || !okZoom(v.zoom) || !okZoom(v.minZoom ?? 1) || !okZoom(v.maxZoom ?? 19)) throw new Error('De kaartweergave in de backup is ongeldig');
+    view = { center: v.center.map((n) => Math.round(n * 1e6) / 1e6), zoom: v.zoom, minZoom: v.minZoom ?? 1, maxZoom: v.maxZoom ?? 19, showNumbers: v.showNumbers === true };
+  }
+  let pdfView = null;
+  if (b.pdfView) {
+    if (!validLatLng(b.pdfView.center) || !Number.isInteger(b.pdfView.zoom) || b.pdfView.zoom < 1 || b.pdfView.zoom > 19) throw new Error('Het PDF-kaartvlak in de backup is ongeldig');
+    pdfView = { center: b.pdfView.center.map((n) => Math.round(n * 1e6) / 1e6), zoom: b.pdfView.zoom };
+  }
+  const t = b.texts;
+  if (!t || typeof t !== 'object') throw new Error('De teksten in de backup ontbreken');
+  const txt = (o, f) => { const r = cleanText(f, o?.[f]); if (r.error) throw new Error(r.error); return r.value; };
+  const labelsOf = (o) => {
+    const out = {};
+    for (const k of ['green', 'red', 'none']) out[k] = String(o?.[k] ?? '').trim().slice(0, 24);
+    return out;
+  };
+  const texts = { labels: labelsOf(t.labels), siteTitle: txt(t, 'siteTitle'), intro: txt(t, 'intro'), appName: txt(t, 'appName'), appShortName: txt(t, 'appShortName'), translations: {} };
+  for (const l of lang.LANGS) {
+    const o = t.translations?.[l];
+    if (!o || typeof o !== 'object' || l === 'nl') continue;
+    texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), labels: labelsOf(o.labels) };
+  }
+  return { houses, view, pdfView, texts };
+}
+
+// Een gedownloade backup (.json) weer uploaden: komt als nieuwe backup in de lijst; terugzetten blijft een aparte stap.
+admin.post('/backups/import', (req, res) => {
+  try {
+    const data = sanitizeBackup(req.body);
+    res.json({ id: backups.importData(data, req.body.title) });
+  } catch (err) {
+    res.status(400).json({ error: err.message || 'Ongeldige backup' });
+  }
+});
+
 // Handmatig een backup maken, met een korte titel (bijv. "Alles" of "Alleen layout").
 admin.post('/backups', (req, res) => {
   const id = backups.create('Handmatig', true, { title: req.body?.title, force: true });
