@@ -630,5 +630,27 @@
     if (BETA) { const b = document.createElement('span'); b.className = 'beta-tag'; b.textContent = 'BETA'; el.append(' ', b); }
   }
 
-  window.Wijk = { BETA, docTitle, setHeading, loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
+  // Overlay met aantal en percentage per status (beheerkaart en voorpagina); show = welke statusregels zichtbaar zijn.
+  const pctFmt = new Intl.NumberFormat(I18n.locale, { style: 'percent', maximumFractionDigits: 0 });
+  function renderStats(houses, show) {
+    const $ = (id) => document.getElementById(id);
+    const total = houses.length;
+    $('house-stats').hidden = !total;
+    if (!total) return;
+    const n = { green: 0, red: 0, none: 0 };
+    for (const h of houses) n[h.status in n ? h.status : 'none']++;
+    $('hs-total').textContent = total;
+    for (const k of ['green', 'red', 'none']) {
+      $(`hs-${k}`).textContent = n[k];
+      $(`hs-${k}-pct`).textContent = pctFmt.format(n[k] / total);
+    }
+    $('hs-green-row').hidden = !show.green;
+    $('hs-red-row').hidden = !show.red;
+    $('hs-none-row').hidden = !show.none || !n.none;
+    $('hs-bar-green').style.width = show.green ? `${(n.green / total) * 100}%` : '0';
+    $('hs-bar-red').style.width = show.red ? `${(n.red / total) * 100}%` : '0';
+    $('hs-bar').hidden = !show.green && !show.red;
+  }
+
+  window.Wijk = { BETA, renderStats, docTitle, setHeading, loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
 })();

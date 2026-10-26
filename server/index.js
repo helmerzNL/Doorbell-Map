@@ -92,6 +92,8 @@ app.get('/api/map', (req, res) => {
     residentsEnabled: residents.mode() !== 'closed', // ook 'swap': dan blijft de knop zichtbaar voor wie al een huis heeft
     residentsMode: residents.mode(),
     simpleUi: settings?.simpleUi === true,
+    statsPublic: settings?.statsPublic === true, // overzichtsoverlay ook op de voorpagina
+    statsShow: statsShow(settings),
     qrOnly: residents.qrOnly(),
     deviceCode: residents.codeOn(), // alleen of er een code nodig is, nooit de code zelf
     geofence: residents.geofence().on ? { center: residents.geofence().center, radius: residents.geofence().radius } : null,
@@ -473,7 +475,7 @@ admin.get('/settings', (req, res) => {
     const t = lang.translations(l);
     tx[l] = Object.fromEntries([...lang.TEXT_FIELDS.map((f) => [f, t[f] || '']), ['labels', { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' }]]);
   }
-  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
+  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
 });
 
 // Tekstvelden met hun maximale lengte; gelden voor het Nederlands (gewone instellingen) en voor elke vertaling.
@@ -538,6 +540,7 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     db.settings.residentsCodeOn = on;
   }
   if ('simpleUi' in body) db.settings.simpleUi = body.simpleUi === true;
+  if ('statsPublic' in body) db.settings.statsPublic = body.statsPublic === true;
   if (body.statsShow && typeof body.statsShow === 'object') {
     const next = statsShow(db.settings);
     for (const k of STATUSES) if (k in body.statsShow) next[k] = body.statsShow[k] === true;
@@ -589,7 +592,7 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     db.settings.translations = next;
   }
   store.save();
-  res.json({ labels: statusLabels(db.settings), statsShow: statsShow(db.settings), residentsEnabled: db.settings.residentsEnabled !== false, residentsAppOnly: db.settings.residentsAppOnly === true, intro: db.settings.intro, siteTitle: db.settings.siteTitle, appName: db.settings.appName, appShortName: db.settings.appShortName });
+  res.json({ labels: statusLabels(db.settings), statsPublic: db.settings.statsPublic === true, statsShow: statsShow(db.settings), residentsEnabled: db.settings.residentsEnabled !== false, residentsAppOnly: db.settings.residentsAppOnly === true, intro: db.settings.intro, siteTitle: db.settings.siteTitle, appName: db.settings.appName, appShortName: db.settings.appShortName });
 });
 
 admin.put('/view', backups.afterSave('Kaartweergave opgeslagen'), (req, res) => {

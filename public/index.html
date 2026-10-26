@@ -52,7 +52,15 @@
   </nav>
   <div id="more-pop" class="more-pop" role="menu" aria-label="Meer" hidden></div>
 </header>
-<div class="viewport" id="vp"></div>
+<div class="viewport" id="vp">
+  <div id="house-stats" class="house-stats" role="group" aria-label="Verdeling van de huizen" hidden>
+    <div class="hs-head"><span>Totaal aantal huizen</span><strong id="hs-total">0</strong></div>
+    <div class="hs-bar" id="hs-bar" aria-hidden="true"><i class="green" id="hs-bar-green"></i><i class="red" id="hs-bar-red"></i></div>
+    <div class="hs-row" id="hs-green-row"><i class="dot green"></i><span class="hs-name" data-label="green">Groen</span><b id="hs-green">0</b><span class="hs-pct" id="hs-green-pct">0%</span></div>
+    <div class="hs-row" id="hs-red-row"><i class="dot red"></i><span class="hs-name" data-label="red">Rood</span><b id="hs-red">0</b><span class="hs-pct" id="hs-red-pct">0%</span></div>
+    <div class="hs-row hs-none" id="hs-none-row" hidden><i class="dot"></i><span class="hs-name" data-label="none">Niet gemarkeerd</span><b id="hs-none">0</b><span class="hs-pct" id="hs-none-pct">0%</span></div>
+  </div>
+</div>
 
 <dialog id="intro-dialog">
   <div class="intro-head">
