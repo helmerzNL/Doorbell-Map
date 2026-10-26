@@ -10,4 +10,6 @@ services:
     ports:
       - "${PORT:-9888}:${PORT:-9888}"
     volumes:
-      - ./data:/data
+      # Map op de host voor je gegevens (zie DATA_PATH in .env). Gebruik bij stack-beheerders (Dockge, Portainer,
+      # Komodo) een absoluut pad, bv. /mnt/user/appdata/sintmaarten; ./data ligt dan in de map van de beheerder.
+      - ${DATA_PATH:-./data}:/data
