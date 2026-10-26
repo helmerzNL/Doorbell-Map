@@ -1,10 +1,10 @@
-# Halloween – interactive neighbourhood map
+# Doorbell Map – interactive neighbourhood map
 
 🇳🇱 [Nederlandse versie van deze README](README.md)
 
 > This is the English version of the README. The screenshots show the Dutch interface; the app itself can be switched to English (see [Languages and dark mode](#languages-and-dark-mode)).
 
-An interactive map of the neighbourhood in which every house is **green**, **red** or **not marked** (for example for a Halloween event: which houses do or do not want visitors to ring the bell). Visitors view the map in the browser or as an app on their phone; the admin draws the houses and manages everything in `/beheer` (the admin area), secured with a **passkey**. It runs as a single Docker container, for example on a NAS: you deploy it with [`docker-compose.yml`](docker-compose.yml) and your own `.env` (a copy of [`.env.example`](.env.example)); see [Deploy it yourself with Docker](#deploy-it-yourself-with-docker).
+An interactive map of the neighbourhood in which every house is **green**, **red** or **not marked** (for example for Halloween, St. Martin's Day or another door-to-door event: which houses do or do not want visitors to ring the bell). Visitors view the map in the browser or as an app on their phone; the admin draws the houses and manages everything in `/beheer` (the admin area), secured with a **passkey**. It runs as a single Docker container, for example on a NAS: you deploy it with [`docker-compose.yml`](docker-compose.yml) and your own `.env` (a copy of [`.env.example`](.env.example)); see [Deploy it yourself with Docker](#deploy-it-yourself-with-docker).
 
 ## Contents
 - [Features in brief](#features-in-brief)
@@ -24,7 +24,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - Map based on OpenStreetMap (no API key) with coloured areas over the houses; click a house for its note.
 - House numbers on the map (switch), a street filter with green/red counts, and an information window.
 - **PDF** (A4 landscape) with map, legend, totals, logo, explanation and an overview of the marked houses, including date and time.
-- **Installable as an app (PWA)** with its own Halloween icon and **offline** use.
+- **Installable as an app (PWA)** with its own app icon and **offline** use.
 - Works on phone (menu bar at the bottom, floating status bar) and desktop.
 - **Multilingual** (Dutch and English, can be switched on in the admin area) and a **dark/light mode** with a button at the top right. See [Languages and dark mode](#languages-and-dark-mode).
 
@@ -83,7 +83,7 @@ Example with random houses (map data © OpenStreetMap contributors).
 
 ### Access via QR code (optional)
 If you want residents to only be able to link **their own house**, switch on *Choose a house only via QR code* under *Settings → Residents → Access via QR code*. Every house then has its own QR code with a secret that is **not** on the map (the house ids are public, which is why the secret is separate).
-- **Handing out:** choose *Print QR codes (PDF)* (all streets or one street): an A4 with a card per house to deliver to the residents. The QR is one whole: the site title at the top and street + house number at the bottom are built into the image, with the Halloween icon in the middle of the code. For a selected house in the editor a **QR code** button shows the code, lets you **copy the link**, download it as a PNG or **renew** it.
+- **Handing out:** choose *Print QR codes (PDF)* (all streets or one street): an A4 with a card per house to deliver to the residents. The QR is one whole: the site title at the top and street + house number at the bottom are built into the image, with the app icon in the middle of the code. For a selected house in the editor a **QR code** button shows the code, lets you **copy the link**, download it as a PNG or **renew** it.
 - **Sharing via WhatsApp:** in the house popup there is *Share via WhatsApp* (and, on a phone, sharing the card) with a prepared text. You change that text under *Settings → Config → Texts → Text when sharing via WhatsApp* (per language; *Residents → Access via QR code* has a pointer with a *Go to Config* button). The message and the card are in the default language of the site; when *Multilingual* is on, the popup has a language picker (with flags) to show and share them in another language, and the printable PDF follows the default language; `{adres}` becomes the address of the house and `{link}` the personal link (if `{link}` is missing, the link is added after the text). Empty = default text.
 - **Resident:** scans the code with the phone's camera, confirms "Is this your house?" and can then change the house. In the *My house* screen, without a link, only the instructions to scan are shown; the map and the address list then no longer work for choosing a house.
 - **One device per house:** if a house is already linked, the server refuses a second device. Remove the link (*Settings → Residents → Devices*) to be able to scan again.
@@ -226,13 +226,13 @@ For every successful build on `main` the GitHub Action sets a tag `vMAJOR.MINOR.
 ## Version number
 At the bottom of the settings menu (⚙) are the version and the commit of the running build, for example **v1.0.3 (9f2c4e1)**.
 With every successful build of the GitHub Action the patch number goes up by 1 (the first build is v1.0.0); the build gets a git tag `v1.0.N` and the image is
-also published under that tag (`ghcr.io/helmerznl/sintmaarten:v1.0.3`). The `1.0` part comes from the `VERSION` file: change that for a new minor or major version, and the counter starts again at 0.
+also published under that tag (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). The `1.0` part comes from the `VERSION` file: change that for a new minor or major version, and the counter starts again at 0.
 Locally (without a build) the app shows `dev` with the commit from git. The workflow needs write access to the repo to set the tag (it is in `docker.yml`).
 
 ## Backups
 After **every save attempt** (houses/layout, texts, map view) the server makes a JSON backup in `data/backups/` of the layout (houses + map view) and the texts (explanation, app name).
 Identical states are not stored twice and the newest 200 are kept (`MAX_BACKUPS` to change that). The logo is not part of the backups.
-Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); deleting asks for confirmation with your passkey.
+A downloaded backup (.json, download button in the list) can be added again with **Upload backup**; it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); deleting asks for confirmation with your passkey.
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
 
 ## Name of the app
@@ -255,17 +255,17 @@ You run the app on your own Docker environment (NAS, server, Raspberry Pi, VPS) 
 
 | File | What for |
 | --- | --- |
-| [`docker-compose.yml`](docker-compose.yml) | Describes the container: the image `ghcr.io/helmerznl/sintmaarten:latest`, the port, the `./data` folder for your data and that the settings come from `.env`. |
+| [`docker-compose.yml`](docker-compose.yml) | Describes the container: the image `ghcr.io/helmerznl/doorbell-map:latest`, the port, the `./data` folder for your data and that the settings come from `.env`. |
 | [`.env.example`](.env.example) | Example of your settings. Copy it to `.env` and fill it in; `.env` contains secrets and does **not** belong in git. |
 
 You do not have to build the code: the image is built and published automatically by [GitHub Actions](.github/workflows/docker.yml) (see the [Dockerfile](Dockerfile) for the build instructions).
 
 **Steps**
-1. Create a folder on your Docker host, for example `sintmaarten`, and download the two files:
+1. Create a folder on your Docker host, for example `doorbell-map`, and download the two files:
    ```sh
-   mkdir sintmaarten && cd sintmaarten
-   curl -O https://raw.githubusercontent.com/helmerzNL/Sintmaarten/main/docker-compose.yml
-   curl -o .env https://raw.githubusercontent.com/helmerzNL/Sintmaarten/main/.env.example
+   mkdir doorbell-map && cd doorbell-map
+   curl -O https://raw.githubusercontent.com/helmerzNL/doorbell-map/main/docker-compose.yml
+   curl -o .env https://raw.githubusercontent.com/helmerzNL/doorbell-map/main/.env.example
    ```
    (Or copy the contents of [`docker-compose.yml`](docker-compose.yml) and [`.env.example`](.env.example) by hand; save `.env.example` as `.env`.)
 2. Fill in `.env`:
@@ -277,7 +277,8 @@ You do not have to build the code: the image is built and published automaticall
    | `SESSION_SECRET` | Key for signing sessions (at least 16 characters), for example `openssl rand -hex 32`. If you leave it empty, sessions expire at every restart. |
    | `SITE_TITLE` | Name of the site (can be changed later in the admin area). |
    | `PORT` | Port of the web server, default **9888**. |
-   | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/sintmaarten`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
+   | `DOORBELL_MAP_TAG` | Which version runs: `latest` (stable, default), `beta` or a version number to pin (for example `v1.0.21`). With `beta` a **BETA** label appears next to the name, in the tab title and under the app icon. If this variable is still called `SINTMAARTEN_TAG` on your setup, it keeps working; rename it when convenient. |
+   | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/doorbell-map`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
 3. Start the container: `docker compose up -d`. Your data (houses, passkeys, logo, explanation, backups) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
 4. Put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy), so that `ORIGIN` is correct.
@@ -291,12 +292,19 @@ You do not have to build the code: the image is built and published automaticall
 ## Beta branch
 Develop new features on the **`beta`** branch, so that `main` (and so `:latest` and the releases) stays stable.
 - Workflow: create a `feature/…` branch, open a PR into `beta`, test and merge there. When `beta` is good, open a PR `beta` → `main` with a clear title (it ends up in the release notes).
-- Every push to `beta` makes GitHub Actions run the tests and build an image `ghcr.io/helmerznl/sintmaarten:beta` (plus a `sha` tag). There is **no** version tag, **no** release and `:latest` does not change; the app shows `x.y.z-beta` as its version.
-- Testing on the NAS: a separate stack with `image: ghcr.io/helmerznl/sintmaarten:beta`, its own port, its own `ORIGIN` and its **own `DATA_PATH`**. Do not share the data with your production stack: new versions may change the data format. Update with `docker compose pull && docker compose up -d`.
+- Every push to `beta` makes GitHub Actions run the tests and build an image `ghcr.io/helmerznl/doorbell-map:beta` (plus a `sha` tag). There is **no** version tag, **no** release and `:latest` does not change; the app shows `x.y.z-beta` as its version.
+- Testing on the NAS: a separate stack with `DOORBELL_MAP_TAG=beta` in the `.env` (this selects the image `…:beta` and turns the BETA label on), its own `container_name` in the compose file, its own port, its own `ORIGIN` and its **own `DATA_PATH`**. Do not share the data with your production stack: new versions may change the data format. Update with `docker compose pull && docker compose up -d`.
+- **Promotion to `main`:** only when the owner asks, with a promotion PR `beta` → `main` and a **merge commit** (never squash), following the [promotion runbook](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/promotion-runbook.md); the working conventions are in [`AGENTS.md`](AGENTS.md). The `only-from-beta` check (`.github/workflows/pr-target.yml`) fails every other PR into `main`; the owner makes it required in the branch protection of `main`.
+
+## Issues and pull requests
+Issues and pull requests follow the forms from [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):
+- **Issues** (`.github/ISSUE_TEMPLATE/`): bug, feature, documentation, regression, performance, chore, release checklist and *PWA / self-hosting*. Blank issues are off; questions go to Discussions, security reports to a private advisory.
+- **Pull requests** (`.github/PULL_REQUEST_TEMPLATE.md`): *Summary*, *Deployment files* (changes to Compose or `.env.example` as an instruction for the operator), *Limits*, a *Change Spec* for the release notes and a checklist. The bullets under *Summary* end up in the automatic release notes.
+- GitHub only shows the issue forms from the default branch.
 
 ## GitHub Actions
 `.github/workflows/docker.yml` runs the tests and, on every push to `main`/`master`, builds a multi-arch image
-(amd64 + arm64) to `ghcr.io/helmerznl/sintmaarten:latest`. Update on the NAS with `docker compose pull && docker compose up -d`.
+(amd64 + arm64) to `ghcr.io/helmerznl/doorbell-map:latest`. Update on the NAS with `docker compose pull && docker compose up -d`.
 
 ## Local development
 ```

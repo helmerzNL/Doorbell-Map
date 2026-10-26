@@ -144,6 +144,39 @@ test('PDF-kaartvlak instellen, valideren, wissen en terugzetten uit backup', asy
   await j('/api/admin/pdf-view', { method: 'DELETE', headers: { cookie } });
 });
 
+test('backup downloaden, uploaden en terugzetten', async () => {
+  const h = { 'Content-Type': 'application/json', cookie };
+  const put = (url, body) => j(url, { method: 'PUT', headers: h, body: JSON.stringify(body) });
+  const sq = [[52.02, 5.16], [52.02, 5.161], [52.021, 5.161]];
+  await put('/api/admin/view', { center: [52.02, 5.16], zoom: 17 });
+  await put('/api/admin/pdf-view', { center: [52.02, 5.16], zoom: 16 });
+  await put('/api/admin/houses', { houses: [{ id: 'up1', street: 'Uploadstraat', number: '1', status: 'green', points: sq }] });
+  const id = backups.create('test upload', true, { force: true });
+  const file = await (await j(`/api/admin/backups/${id}`, { headers: { cookie } })).json();
+  const up = await j('/api/admin/backups/import', { method: 'POST', headers: h, body: JSON.stringify({ ...file, id: '../../evil' }) });
+  assert.equal(up.status, 200);
+  const { id: newId } = await up.json();
+  assert.match(newId, backups.ID);
+  assert.notEqual(newId, id);
+  assert.ok((await (await j('/api/admin/backups', { headers: { cookie } })).json()).some((b) => b.id === newId && b.reason === 'Geüpload'));
+  await put('/api/admin/houses', { houses: [] });
+  await put('/api/admin/view', { center: [51, 4], zoom: 10 });
+  assert.equal((await j(`/api/admin/backups/${newId}/restore`, { method: 'POST', headers: h, body: '{}' })).status, 200);
+  const m = await (await j('/api/map')).json();
+  assert.equal(m.houses[0].street, 'Uploadstraat');
+  assert.deepEqual(m.view.center, [52.02, 5.16]);
+  assert.deepEqual(m.pdfView, { center: [52.02, 5.16], zoom: 16 });
+  // oude backup zonder pdfView/siteTitle/translations wordt geaccepteerd
+  const old = { houses: file.houses, view: null, texts: { labels: { green: 'Groen', red: 'Rood', none: 'Niet' }, intro: 'Hoi', appName: '', appShortName: '' } };
+  assert.equal((await j('/api/admin/backups/import', { method: 'POST', headers: h, body: JSON.stringify(old) })).status, 200);
+  for (const bad of [[], { ...file, houses: 'nee' }, { ...file, houses: [{ points: [[1, 1]] }] }, { ...file, view: { center: [52, 5], zoom: 99 } }, { ...file, pdfView: { center: [52, 5], zoom: 3.5 } }, { ...file, texts: { ...file.texts, appShortName: 'x'.repeat(40) } }, { ...file, texts: undefined }]) {
+    const r = await j('/api/admin/backups/import', { method: 'POST', headers: h, body: JSON.stringify(bad) });
+    assert.equal(r.status, 400, JSON.stringify(bad).slice(0, 60));
+  }
+  assert.equal((await j('/api/admin/backups/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(file) })).status, 401);
+  await j('/api/admin/pdf-view', { method: 'DELETE', headers: { cookie } });
+});
+
 test('kaartweergave instellen, valideren en wissen', async () => {
   const h = { 'Content-Type': 'application/json', cookie };
   const ok = await j('/api/admin/view', { method: 'PUT', headers: h, body: JSON.stringify({ center: [52.02, 5.16], zoom: 17.5, minZoom: 14, maxZoom: 19 }) });
@@ -615,6 +648,26 @@ test('eenvoudige weergave: instelling in het beheer, zichtbaar op de kaart', asy
   assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"simpleUi":false}' })).status, 401);
   await adminReq('/settings', 'PUT', { simpleUi: false });
   assert.equal((await (await j('/api/map')).json()).simpleUi, false);
+});
+
+test('overlay op de beheerkaart: per status te tonen of te verbergen', async () => {
+  assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: true, none: true });
+  const put = await adminReq('/settings', 'PUT', { statsShow: { red: false, bogus: false } });
+  assert.equal(put.status, 200);
+  assert.deepEqual((await put.json()).statsShow, { green: true, red: false, none: true });
+  assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: false, none: true });
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"statsShow":{"green":false}}' })).status, 401);
+  assert.equal((await (await j('/api/map')).json()).statsPublic, false);
+  assert.equal((await adminReq('/settings', 'PUT', { statsPublic: true })).status, 200);
+  const pub = await (await j('/api/map')).json();
+  assert.equal(pub.statsPublic, true);
+  assert.deepEqual(pub.statsShow, { green: true, red: false, none: true });
+  assert.equal((await (await adminReq('/settings')).json()).statsPublic, true);
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"statsPublic":false}' })).status, 401);
+  await adminReq('/settings', 'PUT', { statsPublic: false });
+  assert.equal((await (await j('/api/map')).json()).statsPublic, false);
+  await adminReq('/settings', 'PUT', { statsShow: { red: true } });
+  assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: true, none: true });
 });
 
 test('toegangscode voor apparaten zonder GPS (schakelaar en code in het beheer)', async () => {

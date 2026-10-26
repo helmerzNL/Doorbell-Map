@@ -1,8 +1,8 @@
-# Sint Maarten – interactieve wijkkaart
+# Doorbell Map – interactieve wijkkaart
 
 🇬🇧 [English version of this README](README.en.md)
 
-Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet gemarkeerd** is (bijvoorbeeld voor een Sint Maarten-actie: welke huizen willen wel of niet dat er wordt aangebeld). Bezoekers bekijken de kaart in de browser of als app op hun telefoon; de beheerder tekent de huizen en beheert alles in `/beheer`, beveiligd met een **passkey**. Draait als één Docker-container op bijvoorbeeld een NAS: je deployt hem met [`docker-compose.yml`](docker-compose.yml) en een eigen `.env` (kopie van [`.env.example`](.env.example)); zie [Zelf deployen met Docker](#zelf-deployen-met-docker).
+Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet gemarkeerd** is (bijvoorbeeld voor Sint Maarten, Halloween of een andere deur-aan-deur-actie: welke huizen willen wel of niet dat er wordt aangebeld). Bezoekers bekijken de kaart in de browser of als app op hun telefoon; de beheerder tekent de huizen en beheert alles in `/beheer`, beveiligd met een **passkey**. Draait als één Docker-container op bijvoorbeeld een NAS: je deployt hem met [`docker-compose.yml`](docker-compose.yml) en een eigen `.env` (kopie van [`.env.example`](.env.example)); zie [Zelf deployen met Docker](#zelf-deployen-met-docker).
 
 ## Inhoud
 - [Functies in het kort](#functies-in-het-kort)
@@ -22,7 +22,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - Kaart op basis van OpenStreetMap (geen API-sleutel) met gekleurde vlakken over de huizen; klik op een huis voor de notitie.
 - Huisnummers op de kaart (schakelaar), straten-filter met tellingen groen/rood, en een uitleg- en infovenster.
 - **PDF** (A4 liggend) met kaart, legenda, aantallen, logo, uitleg en een overzicht van de gemarkeerde huizen, inclusief datum en tijd.
-- **Installeerbaar als app (PWA)** met eigen Sint Maarten-icoon en **offline** gebruik.
+- **Installeerbaar als app (PWA)** met eigen app-icoon en **offline** gebruik.
 - Werkt op telefoon (menubalk onderin, zwevend statusbalkje) en desktop.
 - **Meertalig** (Nederlands en Engels, in te schakelen in het beheer) en een **donkere/lichte weergave** met een knop rechtsboven. Zie [Talen en donkere weergave](#talen-en-donkere-weergave).
 
@@ -81,7 +81,7 @@ Voorbeeld met willekeurige huizen (kaartgegevens © OpenStreetMap-bijdragers).
 
 ### Toegang via QR-code (optioneel)
 Wil je dat bewoners alleen hun **eigen huis** kunnen koppelen, dan zet je onder *Instellingen → Bewoners → Toegang via QR-code* de schakelaar *Huis kiezen alleen via QR-code* aan. Elk huis heeft dan een eigen QR-code met een geheim dat **niet** op de kaart staat (de huis-id's zijn openbaar, daarom is het geheim apart).
-- **Uitdelen:** kies *QR-codes afdrukken (PDF)* (alle straten of één straat): een A4 met per huis een kaartje om bij de bewoners te bezorgen. De QR is één geheel: de sitetitel bovenaan en straat + huisnummer onderaan zijn in de afbeelding verwerkt, met het Sint Maarten-icoon in het midden van de code. Bij een geselecteerd huis in de editor staat een knop **QR-code** om de code te tonen, de **link te kopiëren**, als PNG te downloaden of te **vernieuwen**.
+- **Uitdelen:** kies *QR-codes afdrukken (PDF)* (alle straten of één straat): een A4 met per huis een kaartje om bij de bewoners te bezorgen. De QR is één geheel: de sitetitel bovenaan en straat + huisnummer onderaan zijn in de afbeelding verwerkt, met het app-icoon in het midden van de code. Bij een geselecteerd huis in de editor staat een knop **QR-code** om de code te tonen, de **link te kopiëren**, als PNG te downloaden of te **vernieuwen**.
 - **Delen via WhatsApp:** in de popup van een huis staan *Delen via WhatsApp* (en, op telefoon, het delen van het kaartje) met een voorbereide tekst. Die tekst pas je aan onder *Instellingen → Config → Teksten → Tekst bij delen via WhatsApp* (per taal; in *Bewoners → Toegang via QR-code* staat een verwijzing met de knop *Naar Config*). Het bericht en het kaartje gaan in de standaardtaal van de site; is *Meertalig* aan, dan staat in de popup een taalkiezer (met vlaggen) om ze in een andere taal te tonen en te delen, en de afdrukbare PDF volgt de standaardtaal; `{adres}` wordt het adres van het huis en `{link}` de persoonlijke link (ontbreekt `{link}`, dan komt de link achter de tekst). Leeg = standaardtekst.
 - **Bewoner:** scant de code met de camera van de telefoon, bevestigt "Is dit jouw huis?" en kan daarna het huis wijzigen. In het scherm *Mijn huis* staat zonder koppeling alleen de uitleg om te scannen; de kaart en de adreslijst werken dan niet meer voor het kiezen van een huis.
 - **Eén apparaat per huis:** is een huis al gekoppeld, dan weigert de server een tweede apparaat. Verwijder de koppeling (*Instellingen → Bewoners → Apparaten*) om opnieuw te kunnen scannen.
@@ -224,13 +224,13 @@ Bij elke geslaagde build op `main` zet de GitHub Action een tag `vMAJOR.MINOR.PA
 ## Versienummer
 Onderin het instellingenmenu (⚙) staat de versie en de commit van de draaiende build, bijvoorbeeld **v1.0.3 (9f2c4e1)**.
 Bij elke geslaagde build van de GitHub Action gaat het patchnummer met 1 omhoog (de eerste build is v1.0.0); de build krijgt een git-tag `v1.0.N` en het image wordt
-ook onder die tag gepubliceerd (`ghcr.io/helmerznl/sintmaarten:v1.0.3`). Het deel `1.0` komt uit het bestand `VERSION`: pas dat aan voor een nieuwe minor- of major-versie, dan begint de teller opnieuw bij 0.
+ook onder die tag gepubliceerd (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). Het deel `1.0` komt uit het bestand `VERSION`: pas dat aan voor een nieuwe minor- of major-versie, dan begint de teller opnieuw bij 0.
 Lokaal (zonder build) toont de app `dev` met de commit uit git. De workflow heeft schrijfrechten op de repo nodig om de tag te zetten (staat in `docker.yml`).
 
 ## Backups
 Na **elke opslagpoging** (huizen/layout, teksten, kaartweergave) maakt de server een JSON-backup in `data/backups/` van de layout (huizen + kaartweergave) en de teksten (uitleg, appnaam).
 Identieke staten worden niet dubbel bewaard en de nieuwste 200 blijven staan (`MAX_BACKUPS` om dat aan te passen). Het logo valt buiten de backups.
-Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); verwijderen vraagt een bevestiging met je passkey.
+Een gedownloade backup (.json, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen; hij komt als nieuwe backup in de lijst. Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); verwijderen vraagt een bevestiging met je passkey.
 Elke backup kan een **korte titel** krijgen (max. 40 tekens, knop ✎), bijvoorbeeld "Alles" of "Alleen layout". Met *Backup maken* maak je handmatig een backup met een eigen titel, ook als er niets is veranderd.
 
 ## Naam van de app
@@ -253,17 +253,17 @@ Je draait de app op je eigen Docker-omgeving (NAS, server, Raspberry Pi, VPS) me
 
 | Bestand | Waarvoor |
 | --- | --- |
-| [`docker-compose.yml`](docker-compose.yml) | Beschrijft de container: het image `ghcr.io/helmerznl/sintmaarten:latest`, de poort, de map `./data` voor je gegevens en dat de instellingen uit `.env` komen. |
+| [`docker-compose.yml`](docker-compose.yml) | Beschrijft de container: het image `ghcr.io/helmerznl/doorbell-map:latest`, de poort, de map `./data` voor je gegevens en dat de instellingen uit `.env` komen. |
 | [`.env.example`](.env.example) | Voorbeeld van je instellingen. Kopieer het naar `.env` en vul het in; `.env` bevat geheimen en hoort **niet** in git. |
 
 Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/workflows/docker.yml) automatisch gebouwd en gepubliceerd (zie [Dockerfile](Dockerfile) voor de bouwinstructies).
 
 **Stappen**
-1. Maak een map op je Docker-host, bijvoorbeeld `sintmaarten`, en download de twee bestanden:
+1. Maak een map op je Docker-host, bijvoorbeeld `doorbell-map`, en download de twee bestanden:
    ```sh
-   mkdir sintmaarten && cd sintmaarten
-   curl -O https://raw.githubusercontent.com/helmerzNL/Sintmaarten/main/docker-compose.yml
-   curl -o .env https://raw.githubusercontent.com/helmerzNL/Sintmaarten/main/.env.example
+   mkdir doorbell-map && cd doorbell-map
+   curl -O https://raw.githubusercontent.com/helmerzNL/doorbell-map/main/docker-compose.yml
+   curl -o .env https://raw.githubusercontent.com/helmerzNL/doorbell-map/main/.env.example
    ```
    (Of kopieer de inhoud van [`docker-compose.yml`](docker-compose.yml) en [`.env.example`](.env.example) met de hand; `.env.example` sla je op als `.env`.)
 2. Vul `.env` in:
@@ -275,7 +275,8 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
    | `SESSION_SECRET` | Sleutel voor het ondertekenen van sessies (minstens 16 tekens), bijvoorbeeld `openssl rand -hex 32`. Laat je hem leeg, dan vervallen sessies bij elke herstart. |
    | `SITE_TITLE` | Naam van de site (daarna aan te passen in het beheer). |
    | `PORT` | Poort van de webserver, standaard **9888**. |
-   | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/sintmaarten`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
+   | `DOORBELL_MAP_TAG` | Welke versie draait: `latest` (stabiel, standaard), `beta` of een versienummer om vast te zetten (bijvoorbeeld `v1.0.21`). Bij `beta` staat er een **BETA**-label bij de naam, in de tabtitel en onder het app-icoon. Heette deze variabele bij jou nog `SINTMAARTEN_TAG`, dan blijft die werken; hernoem hem wanneer het uitkomt. |
+   | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/doorbell-map`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
    | `RP_ID`, `SESSION_HOURS` | Optioneel; zie de opmerkingen in [`.env.example`](.env.example). |
 3. Start de container: `docker compose up -d`. Je gegevens (huizen, passkeys, logo, uitleg, backups) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
 4. Zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy), zodat `ORIGIN` klopt.
@@ -289,12 +290,19 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 ## Beta-branch
 Nieuwe functies ontwikkel je op de branch **`beta`**, zodat `main` (en dus `:latest` en de releases) stabiel blijft.
 - Werkwijze: maak een `feature/…`-branch, open een PR naar `beta`, test en merge daar. Is `beta` goed, dan open je een PR `beta` → `main` met een duidelijke titel (die komt in de release notes).
-- Elke push naar `beta` laat GitHub Actions de tests draaien en een image `ghcr.io/helmerznl/sintmaarten:beta` bouwen (plus een `sha`-tag). Er komt **geen** versietag, **geen** release en `:latest` verandert niet; de app toont als versie `x.y.z-beta`.
-- Testen op de NAS: een aparte stack met `image: ghcr.io/helmerznl/sintmaarten:beta`, een eigen poort, een eigen `ORIGIN` en een **eigen `DATA_PATH`**. Deel de data niet met je productie-stack: nieuwe versies kunnen het gegevensformaat aanpassen. Bijwerken: `docker compose pull && docker compose up -d`.
+- Elke push naar `beta` laat GitHub Actions de tests draaien en een image `ghcr.io/helmerznl/doorbell-map:beta` bouwen (plus een `sha`-tag). Er komt **geen** versietag, **geen** release en `:latest` verandert niet; de app toont als versie `x.y.z-beta`.
+- Testen op de NAS: een aparte stack met `DOORBELL_MAP_TAG=beta` in de `.env` (dat kiest het image `…:beta` en zet het BETA-label aan), een eigen `container_name` in het compose-bestand, een eigen poort, een eigen `ORIGIN` en een **eigen `DATA_PATH`**. Deel de data niet met je productie-stack: nieuwe versies kunnen het gegevensformaat aanpassen. Bijwerken: `docker compose pull && docker compose up -d`.
+- **Promotie naar `main`:** alleen op verzoek van de eigenaar, met een promotie-PR `beta` → `main` en een **merge commit** (nooit squash), volgens de [promotion-runbook](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/promotion-runbook.md); de werkafspraken staan in [`AGENTS.md`](AGENTS.md). De check `only-from-beta` (`.github/workflows/pr-target.yml`) laat elke andere PR naar `main` falen; de eigenaar maakt hem verplicht in de branch protection van `main`.
+
+## Issues en pull requests
+Meldingen en pull requests volgen de formulieren uit [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):
+- **Issues** (`.github/ISSUE_TEMPLATE/`): bug, feature, documentatie, regressie, performance, chore, release-checklist en *PWA / self-hosting*. Lege issues staan uit; vragen gaan naar Discussions, beveiligingsmeldingen naar een privé advisory.
+- **Pull requests** (`.github/PULL_REQUEST_TEMPLATE.md`): *Summary*, *Deployment files* (wijzigingen in Compose of `.env.example` als instructie voor de beheerder), *Limits*, *Change Spec* voor de release notes en een checklist. De bullets onder *Summary* komen in de automatische release notes.
+- GitHub toont de issue-formulieren pas vanaf de standaardbranch.
 
 ## GitHub Actions
 `.github/workflows/docker.yml` draait de tests en bouwt bij elke push naar `main`/`master` een multi-arch image
-(amd64 + arm64) naar `ghcr.io/helmerznl/sintmaarten:latest`. Update op de NAS met `docker compose pull && docker compose up -d`.
+(amd64 + arm64) naar `ghcr.io/helmerznl/doorbell-map:latest`. Update op de NAS met `docker compose pull && docker compose up -d`.
 
 ## Lokaal ontwikkelen
 ```

@@ -20,6 +20,7 @@ test('release notes: samenvatting uit het kopje Wijzigingen, opgeschoond en bepe
   assert.ok(!s.join(' ').includes('**') && !s.join(' ').includes('`'));
   assert.deepEqual(summarize(fixture.prs[1].body), ['Dependencies op het build-platform installeren.', 'Verder niets gewijzigd.']);
   assert.deepEqual(summarize('geen kopje hier'), []);
+  assert.deepEqual(summarize('## Summary\n\nTekst.\n- Eerste punt\n- Tweede punt\n\n## Limits\n- niet'), ['Eerste punt', 'Tweede punt']);
   assert.equal(summarize('## Wijzigingen\n- ' + 'x'.repeat(300))[0].length, 168);
   assert.equal(clean('[tekst](http://x) ![img](a.png) **vet**'), 'tekst vet');
 });
@@ -35,11 +36,11 @@ test('release notes: PR-nummers uit merge- en squashcommits', () => {
 });
 
 test('release notes: renderen met volgorde, lege secties weg en footer', () => {
-  const md = render({ tag: 'v1.0.12', prev: 'v1.0.11', repo: 'helmerzNL/Sintmaarten', prs: fixture.prs });
+  const md = render({ tag: 'v1.0.12', prev: 'v1.0.11', repo: 'helmerzNL/doorbell-map', prs: fixture.prs });
   const order = ['Nieuwe functies', 'Opgeloste problemen', 'Documentatie', 'Installeren'].map((t) => md.indexOf(t));
   assert.ok(order.every((i, k) => i > (order[k - 1] ?? -1)), 'volgorde van de secties');
   assert.match(md, /\*\*Toegang via QR-code[^\n]*\*\* \(#32\)/);
-  assert.match(md, /docker pull ghcr\.io\/helmerznl\/sintmaarten:v1\.0\.12/);
+  assert.match(md, /docker pull ghcr\.io\/helmerznl\/doorbell-map:v1\.0\.12/);
   assert.match(md, /compare\/v1\.0\.11\.\.\.v1\.0\.12/);
   const only = render({ tag: 'v1.0.13', prev: 'v1.0.12', repo: 'o/r', prs: [fixture.prs[1]] });
   assert.ok(!only.includes('Nieuwe functies') && !only.includes('Documentatie'));

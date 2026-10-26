@@ -22,6 +22,7 @@
     }
     return data;
   }
+  if (Wijk.BETA) Wijk.setHeading($('admin-title'), 'Beheer');
   const post = (url, body, extra) => api(url, { method: 'POST', body: JSON.stringify(body || {}), ...extra });
 
   function toast(msg) {
@@ -173,6 +174,7 @@
   };
 
   // ---------- logo & uitleg ----------
+  let statsShow = { green: true, red: true, none: true }; // welke statusregels de overlay op de kaart toont (instelling)
   let org = { intro: '', logo: null, siteTitle: '', appName: '', appShortName: '', labels: null };
   function renderOrg() {
     $('org-logo').hidden = !org.logo;
@@ -253,6 +255,8 @@
       const st = await api('/api/admin/settings');
       cfg.st = st;
       $('org-simple').checked = st.simpleUi;
+      $('stats-public').checked = st.statsPublic;
+      statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
       langPicker.setValue(st.defaultLang);
       const def = { shareText: st.defaultShareTexts };
@@ -273,6 +277,20 @@
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ simpleUi: $('org-simple').checked }), expectAuth: true }); toast($('org-simple').checked ? 'Eenvoudige weergave staat aan' : 'Eenvoudige weergave staat uit'); }
     catch (e) { $('org-err').textContent = e.message; $('org-simple').checked = !$('org-simple').checked; }
   };
+  $('stats-public').onchange = async () => {
+    try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ statsPublic: $('stats-public').checked }), expectAuth: true }); toast($('stats-public').checked ? 'Overzichtskaart staat aan op de voorpagina' : 'Overzichtskaart staat uit op de voorpagina'); }
+    catch (e) { $('org-err').textContent = e.message; $('stats-public').checked = !$('stats-public').checked; }
+  };
+  for (const k of ['green', 'red', 'none']) {
+    $(`stats-${k}`).onchange = async () => {
+      const box = $(`stats-${k}`);
+      try {
+        const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ statsShow: { [k]: box.checked } }), expectAuth: true });
+        statsShow = res.statsShow; if (cfg.st) cfg.st.statsShow = statsShow;
+        if (typeof renderStats === 'function') renderStats();
+      } catch (e) { $('org-err').textContent = e.message; box.checked = !box.checked; }
+    };
+  }
   $('org-upload').onclick = () => $('org-file').click();
   $('org-file').onchange = async () => {
     const f = $('org-file').files[0];
@@ -411,6 +429,22 @@
     catch (e) { $('bk-err').textContent = e.message; }
   };
 
+  $('bk-upload').onclick = () => $('bk-file').click();
+  $('bk-file').onchange = async () => {
+    const f = $('bk-file').files[0];
+    $('bk-file').value = '';
+    if (!f) return;
+    $('bk-err').textContent = '';
+    try {
+      if (f.size > 2 * 1024 * 1024) throw new Error('Het bestand is te groot (maximaal 2 MB)');
+      let data;
+      try { data = JSON.parse(await f.text()); } catch { throw new Error('Dit is geen geldig backupbestand (JSON)'); }
+      await post('/api/admin/backups/import', data, { expectAuth: true });
+      toast('Backup geüpload ✔ Kies nu Terugzetten');
+      renderBackups();
+    } catch (e) { $('bk-err').textContent = e.message; }
+  };
+
   async function restoreBackup(b) {
     if (!confirmT(`Backup van ${fmtDate(b.createdAt)} terugzetten?\nDe huidige staat wordt eerst zelf als backup bewaard.${dirty ? '\n\nLet op: niet-opgeslagen wijzigingen gaan verloren.' : ''}`)) return;
     try {
@@ -451,7 +485,7 @@
     for (const id of ['tab-badge', 'cog-badge', 'nav-badge']) { $(id).hidden = n === 0; $(id).textContent = n; }
     $('pend-badge').hidden = pendingCount === 0; $('pend-badge').textContent = pendingCount;
     $('msg-badge').hidden = messageCount === 0; $('msg-badge').textContent = messageCount;
-    document.title = n ? `(${n}) Beheer` : 'Beheer';
+    document.title = Wijk.docTitle(n ? `(${n}) Beheer` : 'Beheer');
     try { if (navigator.setAppBadge) { if (n > 0) navigator.setAppBadge(n).catch(() => {}); else navigator.clearAppBadge().catch(() => {}); } } catch { /* niet ondersteund */ }
   }
 
@@ -963,8 +997,10 @@
     });
   }
 
+  const renderStats = () => Wijk.renderStats(houses, statsShow);
+
   function render() {
-    syncPolygons(); syncHandles(); syncDraft(); renderPanel();
+    syncPolygons(); syncHandles(); syncDraft(); renderPanel(); renderStats();
     if (nums && numsBuilt !== numsRev) { nums.rebuild(houses); numsBuilt = numsRev; }
   }
 
@@ -1314,6 +1350,7 @@
     const raw = await api('/api/map');
     const data = I18n.localize(raw);
     houses = data.houses;
+    try { statsShow = (await api('/api/admin/settings', { expectAuth: true })).statsShow; } catch { /* standaard: alles tonen */ }
     org = { intro: raw.intro || '', logo: raw.logo, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     initEditor(data);

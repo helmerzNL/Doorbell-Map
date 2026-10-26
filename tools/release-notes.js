@@ -30,10 +30,10 @@ const clean = (t) => String(t)
   .replace(/\s+/g, ' ')
   .trim();
 
-// De eerste paar opsommingen uit het kopje "Wijziging(en)" / "Oplossing" van de PR-beschrijving.
+// De eerste paar opsommingen uit het kopje "Wijziging(en)" / "Oplossing" / "Summary" van de PR-beschrijving.
 function summarize(body, max = 3) {
   const lines = String(body || '').replace(/\r/g, '').split('\n');
-  const start = lines.findIndex((l) => /^##\s+(wijziging|oplossing|wat)/i.test(l));
+  const start = lines.findIndex((l) => /^##\s+(wijziging|oplossing|wat|summary)/i.test(l));
   if (start < 0) return [];
   const out = [];
   for (const l of lines.slice(start + 1)) {
@@ -51,7 +51,7 @@ function render({ tag, prev, repo, prs, commits = [] }) {
   const groups = Object.fromEntries(SECTIONS.map(([k]) => [k, []]));
   for (const pr of prs) groups[pr.kind || classify(pr)].push(pr);
   if (!prs.length) for (const c of commits) groups.other.push({ title: c, number: null, summary: [] });
-  const out = [`Release **${tag}** van Sint Maarten – interactieve wijkkaart.`, ''];
+  const out = [`Release **${tag}** van Doorbell Map – interactieve wijkkaart.`, ''];
   let any = false;
   for (const [key, title] of SECTIONS) {
     const list = groups[key];
@@ -66,8 +66,8 @@ function render({ tag, prev, repo, prs, commits = [] }) {
     out.push('');
   }
   if (!any) out.push('Geen functionele wijzigingen in deze release.', '');
-  out.push('### Installeren', '', '```sh', `docker pull ghcr.io/${(repo || 'helmerznl/sintmaarten').toLowerCase()}:${tag}`, '```', '',
-    'Zie [Zelf deployen met Docker](https://github.com/' + (repo || 'helmerzNL/Sintmaarten') + '#zelf-deployen-met-docker) voor `docker-compose.yml` en `.env`.');
+  out.push('### Installeren', '', '```sh', `docker pull ghcr.io/${(repo || 'helmerznl/doorbell-map').toLowerCase()}:${tag}`, '```', '',
+    'Zie [Zelf deployen met Docker](https://github.com/' + (repo || 'helmerzNL/doorbell-map') + '#zelf-deployen-met-docker) voor `docker-compose.yml` en `.env`.');
   if (prev && repo) out.push('', `**Volledige wijzigingen:** https://github.com/${repo}/compare/${prev}...${tag}`);
   return out.join('\n') + '\n';
 }
@@ -81,7 +81,7 @@ function previousTag(tag) {
 }
 
 async function gh(path, token) {
-  const res = await fetch(`https://api.github.com${path}`, { headers: { Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}), 'User-Agent': 'sintmaarten-release-notes' } });
+  const res = await fetch(`https://api.github.com${path}`, { headers: { Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}), 'User-Agent': 'doorbell-map-release-notes' } });
   if (!res.ok) throw new Error(`GitHub ${path}: ${res.status}`);
   return res.json();
 }
@@ -104,7 +104,7 @@ async function main(argv) {
   if (fi >= 0) { fixture = JSON.parse(fs.readFileSync(args[fi + 1], 'utf8')); args.splice(fi, 2); }
   const [tag, prevArg] = args;
   if (!tag) { console.error('Gebruik: node tools/release-notes.js <tag> [<vorige-tag>] [--fixture bestand]'); process.exit(1); }
-  const repo = process.env.GITHUB_REPOSITORY || 'helmerzNL/Sintmaarten';
+  const repo = process.env.GITHUB_REPOSITORY || 'helmerzNL/doorbell-map';
   const prev = prevArg || previousTag(tag);
   if (fixture) { process.stdout.write(render({ tag, prev, repo, prs: fixture.prs || [], commits: fixture.commits || [] })); return; }
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;

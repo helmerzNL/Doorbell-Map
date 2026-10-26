@@ -8,8 +8,8 @@
   // ---------- kop, logo en uitleg ----------
   function applyMeta(first) {
     Wijk.setLabels(data.labels);
-    $('title').textContent = data.title;
-    document.title = data.title;
+    Wijk.setHeading($('title'), data.title);
+    document.title = Wijk.docTitle(data.title);
     const iosTitle = data.appShortName || data.appName || data.title;
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', iosTitle);
 
@@ -100,6 +100,7 @@
     polys.forEach((p) => map.removeLayer(p));
     polys.clear();
     shownHouses = data.houses.filter((h) => h.status !== 'none');
+    if (data.statsPublic) Wijk.renderStats(data.houses, data.statsShow); else $('house-stats').hidden = true;
     for (const h of shownHouses) {
       const poly = L.polygon(h.points, Wijk.houseStyle(h.status));
       const box = document.createElement('div');
@@ -259,7 +260,7 @@
   }
 
   // ---------- automatisch verversen (o.a. nadat de beheerder een wijziging goedkeurt) ----------
-  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi]);
+  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.statsPublic, d.statsShow]);
   let lastSig = signature(data);
   let busy = false;
   let lastSync = new Date();

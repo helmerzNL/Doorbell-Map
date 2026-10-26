@@ -1,15 +1,16 @@
 services:
-  sintmaarten:
-    image: ghcr.io/helmerznl/sintmaarten:latest
-    container_name: sintmaarten
+  doorbell-map:
+    image: ghcr.io/helmerznl/doorbell-map:${DOORBELL_MAP_TAG:-${SINTMAARTEN_TAG:-latest}}
+    container_name: doorbell-map
     restart: unless-stopped
     env_file: .env
     environment:
       DATA_DIR: /data
+      DOORBELL_MAP_TAG: "${DOORBELL_MAP_TAG:-${SINTMAARTEN_TAG:-latest}}" # latest, beta of een versie; bij beta toont de app een BETA-label
       PORT: "${PORT:-9888}"
     ports:
       - "${PORT:-9888}:${PORT:-9888}"
     volumes:
       # Map op de host voor je gegevens (zie DATA_PATH in .env). Gebruik bij stack-beheerders (Dockge, Portainer,
-      # Komodo) een absoluut pad, bv. /mnt/user/appdata/sintmaarten; ./data ligt dan in de map van de beheerder.
+      # Komodo) een absoluut pad, bv. /mnt/user/appdata/doorbell-map; ./data ligt dan in de map van de beheerder.
       - ${DATA_PATH:-./data}:/data

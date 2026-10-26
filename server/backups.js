@@ -55,6 +55,18 @@ function create(reason, ok = true, { title = '', force = false } = {}) {
   return id;
 }
 
+// Zet een (door de route gecontroleerde en schoongemaakte) inhoud als nieuwe backup in de lijst.
+// Het id komt nooit uit het bestand zelf.
+function importData(data, title = '') {
+  const id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+  const all = ids();
+  const tmp = `${file(id)}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify({ id, createdAt: new Date().toISOString(), reason: 'Geüpload', title: cleanTitle(title) || 'Geüpload', ok: true, hash: digest(data), ...data }, null, 2));
+  fs.renameSync(tmp, file(id));
+  for (const old of all.slice(0, Math.max(0, all.length + 1 - MAX_BACKUPS))) fs.rmSync(file(old), { force: true });
+  return id;
+}
+
 function list() {
   return ids().reverse().map((id) => {
     const b = read(id);
@@ -107,4 +119,4 @@ const afterSave = (reason) => (req, res, next) => {
   next();
 };
 
-module.exports = { create, list, read, remove, setTitle, MAX_TITLE, restore, afterSave, ID };
+module.exports = { create, importData, list, read, remove, setTitle, MAX_TITLE, restore, afterSave, ID };

@@ -54,7 +54,7 @@
 <!-- Editor -->
 <div id="v-edit" class="hidden view-mode" style="display:contents">
 <header class="bar">
-  <h1>Beheer</h1>
+  <h1 id="admin-title">Beheer</h1>
   <span class="muted" id="dirty"></span>
   <button class="primary" id="save">Opslaan</button>
   <button id="edit-toggle" class="primary" type="button" aria-pressed="false"><svg class="mdi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg><span>Bewerken</span></button>
@@ -113,6 +113,13 @@
     </div>
   </aside>
   <div class="viewport" id="vp">
+  </div>
+  <div id="house-stats" class="house-stats" role="group" aria-label="Verdeling van de huizen" hidden>
+    <div class="hs-head"><span>Totaal aantal huizen</span><strong id="hs-total">0</strong></div>
+    <div class="hs-bar" id="hs-bar" aria-hidden="true"><i class="green" id="hs-bar-green"></i><i class="red" id="hs-bar-red"></i></div>
+    <div class="hs-row" id="hs-green-row"><i class="dot green"></i><span class="hs-name" data-label="green">Groen</span><b id="hs-green">0</b><span class="hs-pct" id="hs-green-pct">0%</span></div>
+    <div class="hs-row" id="hs-red-row"><i class="dot red"></i><span class="hs-name" data-label="red">Rood</span><b id="hs-red">0</b><span class="hs-pct" id="hs-red-pct">0%</span></div>
+    <div class="hs-row hs-none" id="hs-none-row" hidden><i class="dot"></i><span class="hs-name" data-label="none">Niet gemarkeerd</span><b id="hs-none">0</b><span class="hs-pct" id="hs-none-pct">0%</span></div>
   </div>
   <div id="view-hint" class="view-hint">Dubbelklik (of druk lang) op een huis voor de status en de QR-code</div>
 </div>
@@ -323,6 +330,16 @@
           <div class="set-text"><div class="set-title">Eenvoudige weergave</div><div class="set-hint">Verbergt <em>Huisnummers</em>, <em>Bewerken</em> en <em>Straten</em>. <em>Mijn huis</em> en <em>PDF opslaan</em> blijven in de menubalk.</div></div>
           <label class="switch"><input type="checkbox" id="org-simple" role="switch" aria-label="Eenvoudige weergave voor bezoekers"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
         </div>
+        <div class="field"><label>Overzichtskaart met aantallen</label>
+          <div class="set-row">
+            <div class="set-text"><div class="set-title">Ook op de voorpagina tonen</div><div class="set-hint">Bezoekers zien dan dezelfde overlay (totaal, aantallen en percentages) op de kaart.</div></div>
+            <label class="switch"><input type="checkbox" id="stats-public" role="switch" aria-label="Overzichtskaart ook op de voorpagina tonen"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
+          </div>
+          <div class="set-hint">Welke statussen in de overlay staan (beheerkaart en voorpagina):</div>
+          <div class="set-row"><div class="set-text"><div class="set-title"><i class="dot green"></i><span data-label="green">Groen</span></div></div><label class="switch"><input type="checkbox" id="stats-green" role="switch" aria-label="Groen tonen in de overlay op de beheerkaart"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label></div>
+          <div class="set-row"><div class="set-text"><div class="set-title"><i class="dot red"></i><span data-label="red">Rood</span></div></div><label class="switch"><input type="checkbox" id="stats-red" role="switch" aria-label="Rood tonen in de overlay op de beheerkaart"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label></div>
+          <div class="set-row"><div class="set-text"><div class="set-title"><i class="dot"></i><span data-label="none">Niet gemarkeerd</span></div></div><label class="switch"><input type="checkbox" id="stats-none" role="switch" aria-label="Niet gemarkeerd tonen in de overlay op de beheerkaart"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label></div>
+        </div>
         <div class="field" data-perlang><label>Namen van de statussen</label>
           <div class="grid-3">
             <div><label for="lbl-green" class="sub">Groen heet</label><input type="text" id="lbl-green" maxlength="24" placeholder="Groen"></div>
@@ -378,6 +395,10 @@
         <div class="field"><label for="bk-title">Nieuwe backup met titel</label>
           <div class="row row-tight"><input type="text" id="bk-title" maxlength="40" placeholder="Bijvoorbeeld: Alles, voor de actie" aria-label="Titel voor een nieuwe backup"><button id="bk-make">Backup maken</button></div>
           <div class="set-hint">Met een korte titel (ook later via de potloodknop) herken je een backup makkelijk.</div>
+        </div>
+        <div class="field"><label for="bk-file">Gedownloade backup uploaden</label>
+          <div class="row row-tight"><input type="file" id="bk-file" accept="application/json,.json" hidden><button id="bk-upload" type="button"><i data-mdi="upload"></i> Backup uploaden</button></div>
+          <div class="set-hint">Kies een eerder gedownload backupbestand (.json). Het komt als nieuwe backup in de lijst; daarna kies je <em>Terugzetten</em>.</div>
         </div>
         <div id="bk-list" class="bk-list"></div>
         <p class="error" id="bk-err"></p>
