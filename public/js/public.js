@@ -8,8 +8,8 @@
   // ---------- kop, logo en uitleg ----------
   function applyMeta(first) {
     Wijk.setLabels(data.labels);
-    $('title').textContent = data.title;
-    document.title = data.title;
+    Wijk.setHeading($('title'), data.title);
+    document.title = Wijk.docTitle(data.title);
     const iosTitle = data.appShortName || data.appName || data.title;
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', iosTitle);
 

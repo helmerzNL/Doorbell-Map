@@ -1,11 +1,12 @@
 services:
   sintmaarten:
-    image: ghcr.io/helmerznl/sintmaarten:latest
+    image: ghcr.io/helmerznl/sintmaarten:${SINTMAARTEN_TAG:-latest}
     container_name: sintmaarten
     restart: unless-stopped
     env_file: .env
     environment:
       DATA_DIR: /data
+      SINTMAARTEN_TAG: "${SINTMAARTEN_TAG:-latest}" # latest, beta of een versie; bij beta toont de app een BETA-label
       PORT: "${PORT:-9888}"
     ports:
       - "${PORT:-9888}:${PORT:-9888}"

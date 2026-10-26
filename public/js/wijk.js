@@ -622,5 +622,13 @@
     setTimeout(() => t.remove(), 2800);
   }
 
-  window.Wijk = { loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
+  // Beta-build: de server zet <meta name="sm-channel" content="beta">; dan staat "BETA" bij de naam en in de tabtitel.
+  const BETA = document.querySelector('meta[name="sm-channel"]')?.content === 'beta';
+  const docTitle = (t) => (BETA ? `${t} · BETA` : t);
+  function setHeading(el, text) {
+    el.textContent = text;
+    if (BETA) { const b = document.createElement('span'); b.className = 'beta-tag'; b.textContent = 'BETA'; el.append(' ', b); }
+  }
+
+  window.Wijk = { BETA, docTitle, setHeading, loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
 })();

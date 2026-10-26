@@ -277,6 +277,7 @@ You do not have to build the code: the image is built and published automaticall
    | `SESSION_SECRET` | Key for signing sessions (at least 16 characters), for example `openssl rand -hex 32`. If you leave it empty, sessions expire at every restart. |
    | `SITE_TITLE` | Name of the site (can be changed later in the admin area). |
    | `PORT` | Port of the web server, default **9888**. |
+   | `SINTMAARTEN_TAG` | Which version runs: `latest` (stable, default), `beta` or a version number to pin (for example `v1.0.21`). With `beta` a **BETA** label appears next to the name, in the tab title and under the app icon. |
    | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/sintmaarten`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
 3. Start the container: `docker compose up -d`. Your data (houses, passkeys, logo, explanation, backups) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
@@ -292,7 +293,7 @@ You do not have to build the code: the image is built and published automaticall
 Develop new features on the **`beta`** branch, so that `main` (and so `:latest` and the releases) stays stable.
 - Workflow: create a `feature/…` branch, open a PR into `beta`, test and merge there. When `beta` is good, open a PR `beta` → `main` with a clear title (it ends up in the release notes).
 - Every push to `beta` makes GitHub Actions run the tests and build an image `ghcr.io/helmerznl/sintmaarten:beta` (plus a `sha` tag). There is **no** version tag, **no** release and `:latest` does not change; the app shows `x.y.z-beta` as its version.
-- Testing on the NAS: a separate stack with `image: ghcr.io/helmerznl/sintmaarten:beta`, its own port, its own `ORIGIN` and its **own `DATA_PATH`**. Do not share the data with your production stack: new versions may change the data format. Update with `docker compose pull && docker compose up -d`.
+- Testing on the NAS: a separate stack with `SINTMAARTEN_TAG=beta` in the `.env` (this selects the image `…:beta` and turns the BETA label on), its own `container_name` in the compose file, its own port, its own `ORIGIN` and its **own `DATA_PATH`**. Do not share the data with your production stack: new versions may change the data format. Update with `docker compose pull && docker compose up -d`.
 
 ## Issues and pull requests
 Issues and pull requests follow the forms from [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):

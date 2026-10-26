@@ -106,10 +106,12 @@ app.use('/uploads', express.static(store.uploadDir, { immutable: true, maxAge: '
 // PWA-manifest met de naam van de site
 app.get('/manifest.webmanifest', (req, res) => {
   const name = lang.text('appName') || siteTitle();
-  const shortName = lang.text('appShortName') || (name.length > 12 ? name.slice(0, 12) : name);
+  const base = lang.text('appShortName') || (name.length > 12 ? name.slice(0, 12) : name);
+  const beta = appVersion.beta;
   res.type('application/manifest+json').json({
-    name,
-    short_name: shortName,
+    name: beta ? `${name} (beta)` : name,
+    short_name: beta ? `${base.slice(0, 9).trim()} β` : base, // onder het icoon: maximaal 12 tekens
+    id: beta ? '/?channel=beta' : undefined, // een beta naast de stabiele app installeren kan dan ook
     description: `Kaart van ${name}`,
     lang: lang.defaultLang(),
     start_url: '/',
@@ -129,8 +131,8 @@ app.get('/manifest.webmanifest', (req, res) => {
 app.get('/beheer.webmanifest', (req, res) => {
   const name = lang.text('appName') || siteTitle();
   res.type('application/manifest+json').json({
-    name: `${name} – Beheer`,
-    short_name: 'Beheer',
+    name: `${name} – Beheer${appVersion.beta ? ' (beta)' : ''}`,
+    short_name: appVersion.beta ? 'Beheer β' : 'Beheer',
     description: `Beheer van ${name}`,
     lang: lang.defaultLang(),
     id: '/beheer',
@@ -326,8 +328,14 @@ admin.post('/confirm/options', asyncRoute(async (req, res) => {
 }));
 
 admin.get('/info', (req, res) => {
-  const { version, build, buildFull, label } = appVersion;
-  res.json({ version, build, buildFull, label });
+  const { version, build, buildFull, label, channel } = appVersion;
+  res.json({ version, build, buildFull, label, channel });
+});
+
+// Publieke versie- en kanaalinfo ("beta" of "stable").
+app.get('/api/version', (req, res) => {
+  const { version, build, channel } = appVersion;
+  res.set('Cache-Control', 'no-cache').json({ version, build, channel });
 });
 
 admin.get('/backups', (req, res) => res.json(backups.list()));
@@ -682,7 +690,7 @@ const page = (file) => (req, res) => {
   const l = lang.defaultLang();
   const html = fs.readFileSync(file, 'utf8').replaceAll('{{v}}', buildTag)
     .replace('<html lang="nl">', `<html lang="${l}">`)
-    .replace('</title>', `</title>\n<meta name="sm-lang" content="${l}"${lang.multilingual() ? ' data-multi="1"' : ''}>`);
+    .replace('</title>', `</title>\n<meta name="sm-lang" content="${l}"${lang.multilingual() ? ' data-multi="1"' : ''}>\n<meta name="sm-channel" content="${appVersion.channel}">`);
   res.set({ ...noCache, 'Content-Type': 'text/html; charset=utf-8' }).send(html);
 };
 app.get(['/', '/index.html'], page(path.join(pub, 'index.html')));

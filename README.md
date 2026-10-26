@@ -275,6 +275,7 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
    | `SESSION_SECRET` | Sleutel voor het ondertekenen van sessies (minstens 16 tekens), bijvoorbeeld `openssl rand -hex 32`. Laat je hem leeg, dan vervallen sessies bij elke herstart. |
    | `SITE_TITLE` | Naam van de site (daarna aan te passen in het beheer). |
    | `PORT` | Poort van de webserver, standaard **9888**. |
+   | `SINTMAARTEN_TAG` | Welke versie draait: `latest` (stabiel, standaard), `beta` of een versienummer om vast te zetten (bijvoorbeeld `v1.0.21`). Bij `beta` staat er een **BETA**-label bij de naam, in de tabtitel en onder het app-icoon. |
    | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/sintmaarten`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
    | `RP_ID`, `SESSION_HOURS` | Optioneel; zie de opmerkingen in [`.env.example`](.env.example). |
 3. Start de container: `docker compose up -d`. Je gegevens (huizen, passkeys, logo, uitleg, backups) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
@@ -290,7 +291,7 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 Nieuwe functies ontwikkel je op de branch **`beta`**, zodat `main` (en dus `:latest` en de releases) stabiel blijft.
 - Werkwijze: maak een `feature/…`-branch, open een PR naar `beta`, test en merge daar. Is `beta` goed, dan open je een PR `beta` → `main` met een duidelijke titel (die komt in de release notes).
 - Elke push naar `beta` laat GitHub Actions de tests draaien en een image `ghcr.io/helmerznl/sintmaarten:beta` bouwen (plus een `sha`-tag). Er komt **geen** versietag, **geen** release en `:latest` verandert niet; de app toont als versie `x.y.z-beta`.
-- Testen op de NAS: een aparte stack met `image: ghcr.io/helmerznl/sintmaarten:beta`, een eigen poort, een eigen `ORIGIN` en een **eigen `DATA_PATH`**. Deel de data niet met je productie-stack: nieuwe versies kunnen het gegevensformaat aanpassen. Bijwerken: `docker compose pull && docker compose up -d`.
+- Testen op de NAS: een aparte stack met `SINTMAARTEN_TAG=beta` in de `.env` (dat kiest het image `…:beta` en zet het BETA-label aan), een eigen `container_name` in het compose-bestand, een eigen poort, een eigen `ORIGIN` en een **eigen `DATA_PATH`**. Deel de data niet met je productie-stack: nieuwe versies kunnen het gegevensformaat aanpassen. Bijwerken: `docker compose pull && docker compose up -d`.
 
 ## Issues en pull requests
 Meldingen en pull requests volgen de formulieren uit [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):
