@@ -650,6 +650,17 @@ test('eenvoudige weergave: instelling in het beheer, zichtbaar op de kaart', asy
   assert.equal((await (await j('/api/map')).json()).simpleUi, false);
 });
 
+test('overlay op de beheerkaart: per status te tonen of te verbergen', async () => {
+  assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: true, none: true });
+  const put = await adminReq('/settings', 'PUT', { statsShow: { red: false, bogus: false } });
+  assert.equal(put.status, 200);
+  assert.deepEqual((await put.json()).statsShow, { green: true, red: false, none: true });
+  assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: false, none: true });
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"statsShow":{"green":false}}' })).status, 401);
+  await adminReq('/settings', 'PUT', { statsShow: { red: true } });
+  assert.deepEqual((await (await adminReq('/settings')).json()).statsShow, { green: true, red: true, none: true });
+});
+
 test('toegangscode voor apparaten zonder GPS (schakelaar en code in het beheer)', async () => {
   await adminReq('/settings', 'PUT', { residentsEnabled: true, residentsAppOnly: false, residentsOff: false, residentsSwapAfter: false, residentsGeofence: false, residentsCodeOn: false });
   await adminReq('/houses', 'PUT', { houses: [{ id: 'h1', street: 'Dorpsstraat', number: '1', status: 'none', points: ptsR }] });

@@ -30,4 +30,10 @@ function statusLabels(settings, lang) {
   return out;
 }
 
-module.exports = { normalizeHouse, STATUSES, statusLabels, DEFAULT_LABELS };
+// Welke statusregels de overlay op de beheerkaart toont (standaard alle drie).
+function statsShow(settings) {
+  const s = settings?.statsShow || {};
+  return Object.fromEntries(STATUSES.map((k) => [k, s[k] !== false]));
+}
+
+module.exports = { normalizeHouse, STATUSES, statusLabels, statsShow, DEFAULT_LABELS };
