@@ -201,7 +201,7 @@ A newly drawn house has **no status** by default (not marked; in the admin area 
 
 ## How it works
 - **Map**: OpenStreetMap (via Leaflet), no API key needed. Google Maps was deliberately not used: it requires a paid key and its terms do not allow drawing over it and exporting to PDF.
-- **Setting up the admin area**: search for your street and zoom in far; set the centre, the start zoom and the minimum/maximum zoom via *Set map view* (or adopt the current view). Visitors open the map (also in the app) with exactly that view; with *Automatic* the site shows all houses. In the same dialog you decide whether the house numbers are on by default for visitors.
+- **Setting up the admin area**: search for your street and zoom in far; set the centre, the start zoom and the minimum/maximum zoom via *Set map view* (or adopt the current view). Visitors open the map (also in the app) with exactly that view; with *Automatic* the site shows all houses. In the same dialog you decide whether the house numbers are on by default for visitors. Under *Map area in the PDF* a frame on the map shows which area the PDF displays (by default all houses automatically) and you can set your own: move the map to the area you want, choose *Use current map as PDF area* and save. *Automatic* restores the default.
 - **Onboarding**: the very first time `/beheer` asks for the `SETUP_TOKEN` and then creates a passkey. After that you can add extra devices via *Settings* (⚙) → *Security* (do that so you do not get locked out).
 
 > The PDF fetches map tiles directly from OpenStreetMap; keep usage modest

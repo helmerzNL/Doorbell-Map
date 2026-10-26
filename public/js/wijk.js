@@ -158,11 +158,13 @@
     });
   }
 
-  // Bepaalt welk kaartvlak (midden, zoom) de PDF toont: het gebied van alle huizen.
-  function pdfFrame(houses, view, W, H) {
+  // Bepaalt welk kaartvlak (midden, zoom) de PDF toont: het ingestelde PDF-vlak, anders het gebied van alle huizen.
+  function pdfFrame(houses, view, W, H, pdfView) {
     const pts = houses.flatMap((h) => h.points);
     let center, z;
-    if (pts.length) {
+    if (pdfView && Array.isArray(pdfView.center)) {
+      center = pdfView.center; z = Math.min(19, Math.max(1, Math.round(pdfView.zoom)));
+    } else if (pts.length) {
       const lats = pts.map((p) => p[0]), lngs = pts.map((p) => p[1]);
       const sw = [Math.min(...lats), Math.min(...lngs)], ne = [Math.max(...lats), Math.max(...lngs)];
       const pad = 0.12;
@@ -189,16 +191,27 @@
     return out;
   }
 
+  const unproject = ([x, y], z) => {
+    const n = worldPx(z);
+    return [(Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / n))) * 180) / Math.PI, (x / n) * 360 - 180];
+  };
+
   const PDF_W = 2000;
   const MAP_MM = { w: 277, h: 168 };
   const pdfH = () => Math.round((PDF_W * MAP_MM.h) / MAP_MM.w);
 
+  // Geografische hoeken [[zuid, west], [noord, oost]] van het kaartvlak dat de PDF toont (voor het kader in het beheer).
+  function pdfBounds(houses, view, pdfView) {
+    const H = pdfH(), f = pdfFrame(houses, view, PDF_W, H, pdfView);
+    return { z: f.z, bounds: [unproject([f.left, f.top + H], f.z), unproject([f.left + PDF_W, f.top], f.z)] };
+  }
+
   // Haalt de tegels voor de PDF en de omgeving alvast op, zodat de kaart ook offline werkt
   // (de service worker bewaart ze). Bewust beperkt om OpenStreetMap niet te belasten.
-  async function prefetchTiles(houses, view) {
+  async function prefetchTiles(houses, view, pdfView) {
     if (!navigator.onLine || !navigator.serviceWorker?.controller) return;
     const H = pdfH();
-    const frame = pdfFrame(houses, view, PDF_W, H);
+    const frame = pdfFrame(houses, view, PDF_W, H, pdfView);
     const list = frameTiles(frame, PDF_W, H);
     // uitzoomen: dezelfde omgeving op lagere zoomniveaus (max. 3 niveaus)
     for (let dz = 1; dz <= 3 && frame.z - dz >= 12; dz++) {
@@ -222,8 +235,8 @@
   }
 
   // Tekent de kaart (tegels + huizen) op een canvas dat het gebied van alle huizen toont.
-  async function renderMapCanvas(houses, view, W, H, showNumbers = true) {
-    const frame = pdfFrame(houses, view, W, H);
+  async function renderMapCanvas(houses, view, W, H, showNumbers = true, pdfView) {
+    const frame = pdfFrame(houses, view, W, H, pdfView);
     const { z, left, top } = frame;
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
@@ -521,7 +534,7 @@
     if (first) drawRichLine(doc, first, x, y, sizePt);
   }
 
-  async function buildPdf({ title, houses, view, intro, logo, showNumbers = true }) {
+  async function buildPdf({ title, houses, view, pdfView, intro, logo, showNumbers = true }) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pw = 297, ph = 210, margin = 10;
@@ -549,7 +562,7 @@
     doc.setTextColor(0);
 
     const mapW = pw - 2 * margin, mapH = (mapW * MAP_MM.h) / MAP_MM.w;
-    const canvas = await renderMapCanvas(houses, view, PDF_W, pdfH(), showNumbers);
+    const canvas = await renderMapCanvas(houses, view, PDF_W, pdfH(), showNumbers, pdfView);
     doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', margin, 20, mapW, mapH);
     doc.setDrawColor(150); doc.rect(margin, 20, mapW, mapH);
 
@@ -609,5 +622,5 @@
     setTimeout(() => t.remove(), 2800);
   }
 
-  window.Wijk = { loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
+  window.Wijk = { loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
 })();

@@ -125,6 +125,25 @@ test('wachtwoord: inloggen, beperkingen en bevestiging met passkey', async () =>
   store.db().password = null;
 });
 
+test('PDF-kaartvlak instellen, valideren, wissen en terugzetten uit backup', async () => {
+  const h = { 'Content-Type': 'application/json', cookie };
+  assert.equal((await (await j('/api/map')).json()).pdfView, null);
+  const ok = await j('/api/admin/pdf-view', { method: 'PUT', headers: h, body: JSON.stringify({ center: [52.02, 5.16], zoom: 17 }) });
+  assert.equal(ok.status, 200);
+  assert.deepEqual((await (await j('/api/map')).json()).pdfView, { center: [52.02, 5.16], zoom: 17 });
+  for (const bad of [{ zoom: 17.5 }, { zoom: 25 }, { zoom: 0 }, { center: [200, 5] }, { center: 'x' }]) {
+    const r = await j('/api/admin/pdf-view', { method: 'PUT', headers: h, body: JSON.stringify({ center: [52.02, 5.16], zoom: 17, ...bad }) });
+    assert.equal(r.status, 400, JSON.stringify(bad));
+  }
+  assert.equal((await j('/api/admin/pdf-view', { method: 'PUT', body: JSON.stringify({ center: [52, 5], zoom: 17 }), headers: { 'Content-Type': 'application/json' } })).status, 401);
+  const id = backups.create('test pdf-vlak', true, { force: true });
+  assert.equal((await j('/api/admin/pdf-view', { method: 'DELETE', headers: { cookie } })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).pdfView, null);
+  assert.ok(backups.restore(id));
+  assert.deepEqual((await (await j('/api/map')).json()).pdfView, { center: [52.02, 5.16], zoom: 17 });
+  await j('/api/admin/pdf-view', { method: 'DELETE', headers: { cookie } });
+});
+
 test('kaartweergave instellen, valideren en wissen', async () => {
   const h = { 'Content-Type': 'application/json', cookie };
   const ok = await j('/api/admin/view', { method: 'PUT', headers: h, body: JSON.stringify({ center: [52.02, 5.16], zoom: 17.5, minZoom: 14, maxZoom: 19 }) });

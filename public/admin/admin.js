@@ -1130,15 +1130,63 @@
     $('v-now').textContent = `Kaart nu: zoom ${map.getZoom()} · ${savedView ? 'startweergave is ingesteld' : 'geen startweergave: de site toont automatisch alle huizen'}`;
   }
 
+  // ---------- kaartvlak van de PDF ----------
+  let savedPdf = null, draftPdf = null, pdfBox = null;
+  const pdfNow = () => {
+    const v = draftPdf || savedPdf;
+    $('pdf-now').textContent = v
+      ? I18n.t(draftPdf ? 'PDF-vlak: zoom {n} (nog niet opgeslagen)' : 'PDF-vlak: zoom {n} (opgeslagen)', { n: v.zoom })
+      : I18n.t('Geen PDF-vlak ingesteld: de PDF toont automatisch alle huizen.');
+  };
+  function showPdfBox(fit) {
+    if (pdfBox) { pdfBox.remove(); pdfBox = null; }
+    const { bounds } = Wijk.pdfBounds(houses, savedView, draftPdf || savedPdf);
+    pdfBox = L.rectangle(bounds, { color: '#d9480f', weight: 3, dashArray: '8 6', fill: false, interactive: false }).addTo(map);
+    if (fit) map.fitBounds(bounds, { padding: [20, 20] });
+  }
+  function wirePdfView() {
+    $('pdf-show').onclick = () => { showPdfBox(true); pdfNow(); };
+    $('pdf-grab').onclick = () => {
+      // zoom zo kiezen dat de PDF (breedte PDF_W px) het gebied van de huidige kaart toont
+      const w = map.getSize().x;
+      const zoom = Math.min(19, Math.max(1, Math.round(map.getZoom() + Math.log2(Wijk.PDF_W / w))));
+      const c = map.getCenter();
+      draftPdf = { center: [Math.round(c.lat * 1e6) / 1e6, Math.round(c.lng * 1e6) / 1e6], zoom };
+      showPdfBox(false); pdfNow();
+    };
+    $('pdf-save').onclick = async () => {
+      $('v-err').textContent = '';
+      if (!draftPdf && !savedPdf) { $('v-err').textContent = 'Neem eerst de huidige kaart over als PDF-vlak.'; return; }
+      try {
+        const res = await api('/api/admin/pdf-view', { method: 'PUT', body: JSON.stringify(draftPdf || savedPdf), expectAuth: true });
+        savedPdf = res.pdfView; draftPdf = null;
+        showPdfBox(false); pdfNow();
+        toast('PDF-kaartvlak opgeslagen ✔');
+      } catch (e) { $('v-err').textContent = e.message; }
+    };
+    $('pdf-auto').onclick = async () => {
+      if (!confirmT('Het PDF-vlak wissen? De PDF toont dan automatisch alle huizen.')) return;
+      try {
+        await api('/api/admin/pdf-view', { method: 'DELETE', expectAuth: true });
+        savedPdf = null; draftPdf = null;
+        showPdfBox(false); pdfNow();
+        toast('PDF-vlak gewist');
+      } catch (e) { $('v-err').textContent = e.message; }
+    };
+  }
+
   function wireView() {
+    wirePdfView();
     $('view-open').onclick = () => {
       $('v-err').textContent = '';
       if (savedView) fillView(savedView); else { fillView({ center: [0, 0], zoom: 17 }); grabView(); }
       updateNow();
+      draftPdf = null; pdfNow();
       $('view-dialog').showModal();
     };
     $('view-grab').onclick = () => { grabView(); updateNow(); };
     $('v-close').onclick = () => $('view-dialog').close();
+    $('view-dialog').addEventListener('close', () => { if (pdfBox) { pdfBox.remove(); pdfBox = null; } });
     $('v-apply').onclick = () => {
       const v = readView();
       if (v.center.every(Number.isFinite) && Number.isFinite(v.zoom)) map.setView(v.center, Math.min(19, Math.max(1, v.zoom)));
@@ -1177,7 +1225,7 @@
   function initEditor(data) {
     if (map) { map.remove(); layers.clear(); handles = []; draftLayer = null; }
     $('vp').replaceChildren();
-    savedView = data.view;
+    savedView = data.view; savedPdf = data.pdfView || null;
     // in het beheer altijd het volledige zoombereik, ook als bezoekers beperkt zijn
     map = Wijk.createMap($('vp'), data.view && { ...data.view, minZoom: 1, maxZoom: 19 }, data.houses);
     Wijk.map = map;
@@ -1252,7 +1300,7 @@
     const raw = await api('/api/map');
     const data = I18n.localize(raw);
     houses = data.houses;
-    savedView = data.view;
+    savedView = data.view; savedPdf = data.pdfView || null;
     org = { intro: raw.intro || '', logo: raw.logo, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     selectedId = null; draft = [];

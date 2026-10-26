@@ -19,10 +19,11 @@ const file = (id) => path.join(dir, `${id}.json`);
 
 // De inhoud die we veiligstellen.
 function snapshotData() {
-  const { houses, view, settings } = store.db();
+  const { houses, view, pdfView, settings } = store.db();
   return {
     houses: JSON.parse(JSON.stringify(houses)),
     view: view ? { ...view } : null,
+    pdfView: pdfView ? { ...pdfView, center: [...pdfView.center] } : null,
     texts: { labels: { ...(settings?.labels || {}) }, siteTitle: settings?.siteTitle || '', intro: settings?.intro || '', appName: settings?.appName || '', appShortName: settings?.appShortName || '', translations: JSON.parse(JSON.stringify(settings?.translations || {})) },
   };
 }
@@ -86,6 +87,7 @@ function restore(id) {
   const db = store.db();
   db.houses = b.houses.map(normalizeHouse); // ook oude backups met "label" werken
   db.view = b.view;
+  if ('pdfView' in b) db.pdfView = b.pdfView; // oudere backups kennen dit veld nog niet
   db.settings.intro = b.texts.intro;
   if (b.texts.labels) db.settings.labels = b.texts.labels;
   if ('siteTitle' in b.texts) db.settings.siteTitle = b.texts.siteTitle; // oudere backups kennen dit veld nog niet

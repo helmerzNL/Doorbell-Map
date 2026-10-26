@@ -81,10 +81,10 @@ function publicTranslations() {
 }
 
 app.get('/api/map', (req, res) => {
-  const { view, houses, settings } = store.db();
+  const { view, pdfView, houses, settings } = store.db();
   res.set('Cache-Control', 'no-cache');
   res.json({
-    title: settings?.siteTitle || config.siteTitle, siteTitle: settings?.siteTitle || '', view, houses,
+    title: settings?.siteTitle || config.siteTitle, siteTitle: settings?.siteTitle || '', view, pdfView: pdfView || null, houses,
     intro: settings?.intro || '', logo: settings?.logo || null,
     multilingual: lang.multilingual(), defaultLang: lang.defaultLang(),
     translations: publicTranslations(),
@@ -563,6 +563,24 @@ admin.delete('/view', backups.afterSave('Kaartweergave gewist'), (req, res) => {
   store.db().view = null;
   store.save();
   res.json({ view: null });
+});
+
+// Kaartvlak van de PDF: midden + (geheel) zoomniveau. Zonder vlak toont de PDF automatisch alle huizen.
+admin.put('/pdf-view', backups.afterSave('PDF-kaartvlak opgeslagen'), (req, res) => {
+  const { center, zoom } = req.body || {};
+  if (!validLatLng(center) || !Number.isInteger(zoom) || zoom < 1 || zoom > 19) {
+    return res.status(400).json({ error: 'Ongeldig PDF-kaartvlak (zoom is een geheel getal van 1 tot 19)' });
+  }
+  const db = store.db();
+  db.pdfView = { center: center.map((n) => Math.round(n * 1e6) / 1e6), zoom };
+  store.save();
+  res.json({ pdfView: db.pdfView });
+});
+
+admin.delete('/pdf-view', backups.afterSave('PDF-kaartvlak gewist'), (req, res) => {
+  store.db().pdfView = null;
+  store.save();
+  res.json({ pdfView: null });
 });
 
 const validLatLng = (p) =>

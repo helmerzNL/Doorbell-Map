@@ -314,7 +314,7 @@
   }
 
   // kaart alvast klaarzetten voor offline gebruik
-  if (navigator.serviceWorker) navigator.serviceWorker.ready.then(() => Wijk.prefetchTiles(data.houses, data.view));
+  if (navigator.serviceWorker) navigator.serviceWorker.ready.then(() => Wijk.prefetchTiles(data.houses, data.view, data.pdfView));
 
   // ---------- PDF ----------
   const pdfName = () => `${data.title.replace(/[^\w-]+/g, '-')}.pdf`;
@@ -327,7 +327,7 @@
     catch (e) { alert(I18n.tr('PDF maken mislukt: ' + e.message)); }
     finally { btn.innerHTML = html; pdfButtons.forEach((b) => (b.disabled = false)); }
   }
-  const make = () => Wijk.buildPdf({ title: data.title, houses: data.houses.filter((h) => h.status === 'none' || !hidden.has(streetName(h))), view: data.view, intro: data.intro, logo: data.logo, showNumbers: $('num-switch').checked });
+  const make = () => Wijk.buildPdf({ title: data.title, houses: data.houses.filter((h) => h.status === 'none' || !hidden.has(streetName(h))), view: data.view, pdfView: data.pdfView, intro: data.intro, logo: data.logo, showNumbers: $('num-switch').checked });
 
   $('pdf-dl').onclick = (e) => run(e.currentTarget, async () => (await make()).save(pdfName()));
   $('pdf-view').onclick = (e) => {
