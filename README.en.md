@@ -232,7 +232,7 @@ Locally (without a build) the app shows `dev` with the commit from git. The work
 ## Backups
 After **every save attempt** (houses/layout, texts, map view) the server makes a JSON backup in `data/backups/` of the layout (houses + map view) and the texts (explanation, app name).
 Identical states are not stored twice and the newest 200 are kept (`MAX_BACKUPS` to change that). The logo is not part of the backups.
-Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); deleting asks for confirmation with your passkey.
+A downloaded backup (.json, download button in the list) can be added again with **Upload backup**; it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); deleting asks for confirmation with your passkey.
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
 
 ## Name of the app

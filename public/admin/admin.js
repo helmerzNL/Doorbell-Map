@@ -411,6 +411,22 @@
     catch (e) { $('bk-err').textContent = e.message; }
   };
 
+  $('bk-upload').onclick = () => $('bk-file').click();
+  $('bk-file').onchange = async () => {
+    const f = $('bk-file').files[0];
+    $('bk-file').value = '';
+    if (!f) return;
+    $('bk-err').textContent = '';
+    try {
+      if (f.size > 2 * 1024 * 1024) throw new Error('Het bestand is te groot (maximaal 2 MB)');
+      let data;
+      try { data = JSON.parse(await f.text()); } catch { throw new Error('Dit is geen geldig backupbestand (JSON)'); }
+      await post('/api/admin/backups/import', data, { expectAuth: true });
+      toast('Backup geüpload ✔ Kies nu Terugzetten');
+      renderBackups();
+    } catch (e) { $('bk-err').textContent = e.message; }
+  };
+
   async function restoreBackup(b) {
     if (!confirmT(`Backup van ${fmtDate(b.createdAt)} terugzetten?\nDe huidige staat wordt eerst zelf als backup bewaard.${dirty ? '\n\nLet op: niet-opgeslagen wijzigingen gaan verloren.' : ''}`)) return;
     try {
