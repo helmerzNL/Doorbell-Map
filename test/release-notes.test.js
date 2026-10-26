@@ -20,6 +20,7 @@ test('release notes: samenvatting uit het kopje Wijzigingen, opgeschoond en bepe
   assert.ok(!s.join(' ').includes('**') && !s.join(' ').includes('`'));
   assert.deepEqual(summarize(fixture.prs[1].body), ['Dependencies op het build-platform installeren.', 'Verder niets gewijzigd.']);
   assert.deepEqual(summarize('geen kopje hier'), []);
+  assert.deepEqual(summarize('## Summary\n\nTekst.\n- Eerste punt\n- Tweede punt\n\n## Limits\n- niet'), ['Eerste punt', 'Tweede punt']);
   assert.equal(summarize('## Wijzigingen\n- ' + 'x'.repeat(300))[0].length, 168);
   assert.equal(clean('[tekst](http://x) ![img](a.png) **vet**'), 'tekst vet');
 });

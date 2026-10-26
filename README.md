@@ -286,6 +286,12 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 > Is het GHCR-package privé? Maak het publiek (GitHub → Packages → Package settings), of log in met
 > `docker login ghcr.io` (gebruikersnaam + Personal Access Token met `read:packages`).
 
+## Issues en pull requests
+Meldingen en pull requests volgen de formulieren uit [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):
+- **Issues** (`.github/ISSUE_TEMPLATE/`): bug, feature, documentatie, regressie, performance, chore, release-checklist en *PWA / self-hosting*. Lege issues staan uit; vragen gaan naar Discussions, beveiligingsmeldingen naar een privé advisory.
+- **Pull requests** (`.github/PULL_REQUEST_TEMPLATE.md`): *Summary*, *Deployment files* (wijzigingen in Compose of `.env.example` als instructie voor de beheerder), *Limits*, *Change Spec* voor de release notes en een checklist. De bullets onder *Summary* komen in de automatische release notes.
+- GitHub toont de issue-formulieren pas vanaf de standaardbranch.
+
 ## GitHub Actions
 `.github/workflows/docker.yml` draait de tests en bouwt bij elke push naar `main`/`master` een multi-arch image
 (amd64 + arm64) naar `ghcr.io/helmerznl/sintmaarten:latest`. Update op de NAS met `docker compose pull && docker compose up -d`.

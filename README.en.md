@@ -288,6 +288,12 @@ You do not have to build the code: the image is built and published automaticall
 > Is the GHCR package private? Make it public (GitHub → Packages → Package settings), or log in with
 > `docker login ghcr.io` (username + Personal Access Token with `read:packages`).
 
+## Issues and pull requests
+Issues and pull requests follow the forms from [App-Guidance](https://github.com/Flux76HQ/App-Guidance) (`shared/templates/github/`):
+- **Issues** (`.github/ISSUE_TEMPLATE/`): bug, feature, documentation, regression, performance, chore, release checklist and *PWA / self-hosting*. Blank issues are off; questions go to Discussions, security reports to a private advisory.
+- **Pull requests** (`.github/PULL_REQUEST_TEMPLATE.md`): *Summary*, *Deployment files* (changes to Compose or `.env.example` as an instruction for the operator), *Limits*, a *Change Spec* for the release notes and a checklist. The bullets under *Summary* end up in the automatic release notes.
+- GitHub only shows the issue forms from the default branch.
+
 ## GitHub Actions
 `.github/workflows/docker.yml` runs the tests and, on every push to `main`/`master`, builds a multi-arch image
 (amd64 + arm64) to `ghcr.io/helmerznl/sintmaarten:latest`. Update on the NAS with `docker compose pull && docker compose up -d`.
