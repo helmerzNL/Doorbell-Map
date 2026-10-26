@@ -30,10 +30,10 @@ const clean = (t) => String(t)
   .replace(/\s+/g, ' ')
   .trim();
 
-// De eerste paar opsommingen uit het kopje "Wijziging(en)" / "Oplossing" van de PR-beschrijving.
+// De eerste paar opsommingen uit het kopje "Wijziging(en)" / "Oplossing" / "Summary" van de PR-beschrijving.
 function summarize(body, max = 3) {
   const lines = String(body || '').replace(/\r/g, '').split('\n');
-  const start = lines.findIndex((l) => /^##\s+(wijziging|oplossing|wat)/i.test(l));
+  const start = lines.findIndex((l) => /^##\s+(wijziging|oplossing|wat|summary)/i.test(l));
   if (start < 0) return [];
   const out = [];
   for (const l of lines.slice(start + 1)) {
