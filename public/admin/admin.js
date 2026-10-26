@@ -22,6 +22,7 @@
     }
     return data;
   }
+  if (Wijk.BETA) Wijk.setHeading($('admin-title'), 'Beheer');
   const post = (url, body, extra) => api(url, { method: 'POST', body: JSON.stringify(body || {}), ...extra });
 
   function toast(msg) {
@@ -467,7 +468,7 @@
     for (const id of ['tab-badge', 'cog-badge', 'nav-badge']) { $(id).hidden = n === 0; $(id).textContent = n; }
     $('pend-badge').hidden = pendingCount === 0; $('pend-badge').textContent = pendingCount;
     $('msg-badge').hidden = messageCount === 0; $('msg-badge').textContent = messageCount;
-    document.title = n ? `(${n}) Beheer` : 'Beheer';
+    document.title = Wijk.docTitle(n ? `(${n}) Beheer` : 'Beheer');
     try { if (navigator.setAppBadge) { if (n > 0) navigator.setAppBadge(n).catch(() => {}); else navigator.clearAppBadge().catch(() => {}); } } catch { /* niet ondersteund */ }
   }
 
