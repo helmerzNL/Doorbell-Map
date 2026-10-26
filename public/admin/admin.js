@@ -980,8 +980,26 @@
     });
   }
 
+  // Overlay op de kaart: aantal en percentage groen/rood (en niet gemarkeerd) van alle ingetekende huizen.
+  const pctFmt = new Intl.NumberFormat(I18n.locale, { style: 'percent', maximumFractionDigits: 0 });
+  function renderStats() {
+    const total = houses.length;
+    $('house-stats').hidden = !total;
+    if (!total) return;
+    const n = { green: 0, red: 0, none: 0 };
+    for (const h of houses) n[h.status in n ? h.status : 'none']++;
+    $('hs-total').textContent = total;
+    for (const k of ['green', 'red', 'none']) {
+      $(`hs-${k}`).textContent = n[k];
+      $(`hs-${k}-pct`).textContent = pctFmt.format(n[k] / total);
+    }
+    $('hs-none-row').hidden = !n.none;
+    $('hs-bar-green').style.width = `${(n.green / total) * 100}%`;
+    $('hs-bar-red').style.width = `${(n.red / total) * 100}%`;
+  }
+
   function render() {
-    syncPolygons(); syncHandles(); syncDraft(); renderPanel();
+    syncPolygons(); syncHandles(); syncDraft(); renderPanel(); renderStats();
     if (nums && numsBuilt !== numsRev) { nums.rebuild(houses); numsBuilt = numsRev; }
   }
 
