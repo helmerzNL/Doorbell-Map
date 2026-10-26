@@ -340,6 +340,21 @@ body.simple-ui #num-switch-wrap, body.simple-ui #edit-switch-wrap, body.simple-u
 .editor { position: relative; }
 .view-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 700; background: rgba(29,42,34,.88); color: #fff; padding: 7px 14px;
   border-radius: 999px; font-size: .85rem; max-width: calc(100% - 28px); text-align: center; pointer-events: none; box-shadow: var(--shadow); }
+/* overlay met verdeling groen/rood op de beheerkaart */
+.house-stats { position: absolute; top: 10px; right: 10px; z-index: 700; min-width: 190px; max-width: calc(100% - 20px); background: var(--panel); color: var(--text); border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow); padding: 9px 12px 10px; font-size: .85rem; font-variant-numeric: tabular-nums; pointer-events: none; }
+.house-stats[hidden], .house-stats [hidden] { display: none !important; }
+.house-stats .hs-head { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.house-stats .hs-head strong { color: var(--text); }
+.house-stats .hs-bar { display: flex; height: 6px; border-radius: 999px; overflow: hidden; background: var(--none); margin-bottom: 7px; }
+.house-stats .hs-bar i { display: block; height: 100%; }
+.house-stats .hs-bar .green { background: var(--green); } .house-stats .hs-bar .red { background: var(--red); }
+.house-stats .hs-row { display: flex; align-items: center; gap: 2px; padding: 1px 0; }
+.house-stats .hs-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+.house-stats .hs-row b { min-width: 2ch; text-align: right; }
+.house-stats .hs-pct { min-width: 4ch; text-align: right; color: var(--muted); margin-left: 8px; }
+.house-stats .hs-none { color: var(--muted); }
+@media (max-width: 560px) { .house-stats { min-width: 0; padding: 7px 10px 8px; font-size: .8rem; } }
 #edit-toggle[aria-pressed=true] { background: var(--accent); color: #fff; }
 .ico-site, .ico-site[data-mdi] { display: none; }
 @media (max-width: 560px) {

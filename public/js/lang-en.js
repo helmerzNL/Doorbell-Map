@@ -182,6 +182,8 @@
     "Zoek": "Search",
     "Bepaalt hoe bezoekers de kaart te zien krijgen": "Determines how visitors see the map",
     "Kaartweergave instellen": "Set map view",
+    "Verdeling van de ingetekende huizen": "Breakdown of the drawn houses",
+    "Ingetekende huizen": "Drawn houses",
     "Huisnummers midden op de gemarkeerde huizen tonen": "Show house numbers in the middle of the marked houses",
     "Huisnummers op de kaart": "House numbers on the map",
     "Selecteren": "Select",
