@@ -174,6 +174,7 @@
   };
 
   // ---------- logo & uitleg ----------
+  let statsShow = { green: true, red: true, none: true }; // welke statusregels de overlay op de kaart toont (instelling)
   let org = { intro: '', logo: null, siteTitle: '', appName: '', appShortName: '', labels: null };
   function renderOrg() {
     $('org-logo').hidden = !org.logo;
@@ -254,6 +255,7 @@
       const st = await api('/api/admin/settings');
       cfg.st = st;
       $('org-simple').checked = st.simpleUi;
+      statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
       langPicker.setValue(st.defaultLang);
       const def = { shareText: st.defaultShareTexts };
@@ -274,6 +276,16 @@
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ simpleUi: $('org-simple').checked }), expectAuth: true }); toast($('org-simple').checked ? 'Eenvoudige weergave staat aan' : 'Eenvoudige weergave staat uit'); }
     catch (e) { $('org-err').textContent = e.message; $('org-simple').checked = !$('org-simple').checked; }
   };
+  for (const k of ['green', 'red', 'none']) {
+    $(`stats-${k}`).onchange = async () => {
+      const box = $(`stats-${k}`);
+      try {
+        const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ statsShow: { [k]: box.checked } }), expectAuth: true });
+        statsShow = res.statsShow; if (cfg.st) cfg.st.statsShow = statsShow;
+        if (typeof renderStats === 'function') renderStats();
+      } catch (e) { $('org-err').textContent = e.message; box.checked = !box.checked; }
+    };
+  }
   $('org-upload').onclick = () => $('org-file').click();
   $('org-file').onchange = async () => {
     const f = $('org-file').files[0];
@@ -993,9 +1005,12 @@
       $(`hs-${k}`).textContent = n[k];
       $(`hs-${k}-pct`).textContent = pctFmt.format(n[k] / total);
     }
-    $('hs-none-row').hidden = !n.none;
-    $('hs-bar-green').style.width = `${(n.green / total) * 100}%`;
-    $('hs-bar-red').style.width = `${(n.red / total) * 100}%`;
+    $('hs-green-row').hidden = !statsShow.green;
+    $('hs-red-row').hidden = !statsShow.red;
+    $('hs-none-row').hidden = !statsShow.none || !n.none;
+    $('hs-bar-green').style.width = statsShow.green ? `${(n.green / total) * 100}%` : '0';
+    $('hs-bar-red').style.width = statsShow.red ? `${(n.red / total) * 100}%` : '0';
+    $('hs-bar').hidden = !statsShow.green && !statsShow.red;
   }
 
   function render() {
@@ -1349,6 +1364,7 @@
     const raw = await api('/api/map');
     const data = I18n.localize(raw);
     houses = data.houses;
+    try { statsShow = (await api('/api/admin/settings', { expectAuth: true })).statsShow; } catch { /* standaard: alles tonen */ }
     org = { intro: raw.intro || '', logo: raw.logo, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     initEditor(data);

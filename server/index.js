@@ -15,7 +15,7 @@ const { hashPassword, verifyPassword } = require('./password');
 const backups = require('./backups');
 const residents = require('./residents');
 const appVersion = require('./version');
-const { normalizeHouse, STATUSES, statusLabels } = require('./houses');
+const { normalizeHouse, STATUSES, statusLabels, statsShow } = require('./houses');
 
 const app = express();
 app.set('trust proxy', true);
@@ -473,7 +473,7 @@ admin.get('/settings', (req, res) => {
     const t = lang.translations(l);
     tx[l] = Object.fromEntries([...lang.TEXT_FIELDS.map((f) => [f, t[f] || '']), ['labels', { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' }]]);
   }
-  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
+  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
 });
 
 // Tekstvelden met hun maximale lengte; gelden voor het Nederlands (gewone instellingen) en voor elke vertaling.
@@ -538,6 +538,11 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     db.settings.residentsCodeOn = on;
   }
   if ('simpleUi' in body) db.settings.simpleUi = body.simpleUi === true;
+  if (body.statsShow && typeof body.statsShow === 'object') {
+    const next = statsShow(db.settings);
+    for (const k of STATUSES) if (k in body.statsShow) next[k] = body.statsShow[k] === true;
+    db.settings.statsShow = next;
+  }
   if ('residentsSwapAfter' in body) db.settings.residentsSwapAfter = body.residentsSwapAfter === true;
   if ('residentsEnabled' in body) db.settings.residentsEnabled = body.residentsEnabled === true;
   if ('residentsAppOnly' in body) db.settings.residentsAppOnly = body.residentsAppOnly === true;
@@ -584,7 +589,7 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     db.settings.translations = next;
   }
   store.save();
-  res.json({ labels: statusLabels(db.settings), residentsEnabled: db.settings.residentsEnabled !== false, residentsAppOnly: db.settings.residentsAppOnly === true, intro: db.settings.intro, siteTitle: db.settings.siteTitle, appName: db.settings.appName, appShortName: db.settings.appShortName });
+  res.json({ labels: statusLabels(db.settings), statsShow: statsShow(db.settings), residentsEnabled: db.settings.residentsEnabled !== false, residentsAppOnly: db.settings.residentsAppOnly === true, intro: db.settings.intro, siteTitle: db.settings.siteTitle, appName: db.settings.appName, appShortName: db.settings.appShortName });
 });
 
 admin.put('/view', backups.afterSave('Kaartweergave opgeslagen'), (req, res) => {
