@@ -277,12 +277,13 @@ You do not have to build the code: the image is built and published automaticall
    | `SESSION_SECRET` | Key for signing sessions (at least 16 characters), for example `openssl rand -hex 32`. If you leave it empty, sessions expire at every restart. |
    | `SITE_TITLE` | Name of the site (can be changed later in the admin area). |
    | `PORT` | Port of the web server, default **9888**. |
+   | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/sintmaarten`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
-3. Start the container: `docker compose up -d`. Your data (houses, passkeys, logo, explanation, backups) is in `./data`; the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
+3. Start the container: `docker compose up -d`. Your data (houses, passkeys, logo, explanation, backups) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
 4. Put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy), so that `ORIGIN` is correct.
 5. Open `ORIGIN/beheer` and create your first passkey with the `SETUP_TOKEN` (see [Onboarding](#the-admin-area-beheer)).
 
-**Updating:** `docker compose pull && docker compose up -d`. **Back-up:** copy the `data/` folder (or use the backups in the admin area).
+**Updating:** `docker compose pull && docker compose up -d`. **Back-up:** copy the data folder (`DATA_PATH`) (or use the backups in the admin area).
 
 > Is the GHCR package private? Make it public (GitHub → Packages → Package settings), or log in with
 > `docker login ghcr.io` (username + Personal Access Token with `read:packages`).

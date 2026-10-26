@@ -275,12 +275,13 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
    | `SESSION_SECRET` | Sleutel voor het ondertekenen van sessies (minstens 16 tekens), bijvoorbeeld `openssl rand -hex 32`. Laat je hem leeg, dan vervallen sessies bij elke herstart. |
    | `SITE_TITLE` | Naam van de site (daarna aan te passen in het beheer). |
    | `PORT` | Poort van de webserver, standaard **9888**. |
+   | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/sintmaarten`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
    | `RP_ID`, `SESSION_HOURS` | Optioneel; zie de opmerkingen in [`.env.example`](.env.example). |
-3. Start de container: `docker compose up -d`. Je gegevens (huizen, passkeys, logo, uitleg, backups) staan in `./data`; de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
+3. Start de container: `docker compose up -d`. Je gegevens (huizen, passkeys, logo, uitleg, backups) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
 4. Zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy), zodat `ORIGIN` klopt.
 5. Open `ORIGIN/beheer` en maak je eerste passkey aan met de `SETUP_TOKEN` (zie [Onboarding](#het-beheer-beheer)).
 
-**Bijwerken:** `docker compose pull && docker compose up -d`. **Back-up:** kopieer de map `data/` (of gebruik de backups in het beheer).
+**Bijwerken:** `docker compose pull && docker compose up -d`. **Back-up:** kopieer die map (of gebruik de backups in het beheer).
 
 > Is het GHCR-package privé? Maak het publiek (GitHub → Packages → Package settings), of log in met
 > `docker login ghcr.io` (gebruikersnaam + Personal Access Token met `read:packages`).
