@@ -182,6 +182,8 @@
     "Zoek": "Search",
     "Bepaalt hoe bezoekers de kaart te zien krijgen": "Determines how visitors see the map",
     "Kaartweergave instellen": "Set map view",
+    "Gereedschap": "Tools",
+    "Geselecteerd huis": "Selected house",
     "Verdeling van de huizen": "Breakdown of the houses",
     "Totaal aantal huizen": "Total number of houses",
     "Overzichtskaart met aantallen": "Overview card with counts",
