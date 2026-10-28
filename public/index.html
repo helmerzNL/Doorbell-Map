@@ -15,8 +15,10 @@
 <script src="/js/theme.js?v={{v}}"></script>
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css?v={{v}}">
 <link rel="stylesheet" href="/css/style.css?v={{v}}">
+<link rel="stylesheet" href="/css/ui.css?v={{v}}">
+<link rel="stylesheet" href="/css/public.css?v={{v}}">
 </head>
-<body>
+<body class="app public">
 <header class="bar">
   <img id="logo" class="logo" alt="" hidden>
   <h1 id="title">Onze wijk</h1>
@@ -42,7 +44,7 @@
   </div>
   <div class="prefs" id="prefs"></div>
   <nav class="actions" aria-label="Acties">
-    <button id="intro-btn" hidden aria-label="Uitleg"><span class="ico">ℹ</span><span class="lbl">Uitleg</span></button>
+    <button id="intro-btn" hidden aria-label="Uitleg"><span class="ico" data-mdi="information-outline"></span><span class="lbl">Uitleg</span></button>
     <button id="house-edit" hidden aria-label="Mijn huis"><span class="ico" data-mdi="home-edit-outline"></span><span class="lbl">Mijn huis</span></button>
     <button id="sync-btn" hidden aria-label="Synchroniseren: huizen bijwerken" title="Huizen bijwerken"><span class="ico" data-mdi="sync"></span><span class="lbl">Sync</span></button>
     <button id="streets-btn" aria-label="Straten tonen of verbergen" aria-haspopup="dialog" hidden><span class="ico" data-mdi="road-variant"></span><span class="lbl">Straten</span></button>
