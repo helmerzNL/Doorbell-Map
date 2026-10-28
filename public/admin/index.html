@@ -16,11 +16,14 @@
 <script src="/js/theme.js?v={{v}}"></script>
 <link rel="stylesheet" href="/vendor/leaflet/leaflet.css?v={{v}}">
 <link rel="stylesheet" href="/css/style.css?v={{v}}">
+<link rel="stylesheet" href="/css/ui.css?v={{v}}">
+<link rel="stylesheet" href="/css/admin.css?v={{v}}">
 </head>
-<body>
+<body class="app admin">
 
 <!-- Onboarding: eerste passkey -->
 <section id="v-setup" class="card hidden">
+  <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
   <h2>Eerste keer instellen</h2>
   <p class="muted">Maak een passkey aan om het beheer te beveiligen. Voer de installatiecode in (<code>SETUP_TOKEN</code> uit je <code>.env</code>, of uit de containerlog als je die leeg liet).</p>
   <label for="s-token">Installatiecode</label>
@@ -33,6 +36,7 @@
 
 <!-- Inloggen -->
 <section id="v-login" class="card hidden">
+  <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
   <h2>Beheer</h2>
   <p class="muted">Log in met je passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel).</p>
   <p class="error" id="l-err"></p>
@@ -54,7 +58,7 @@
 <!-- Editor -->
 <div id="v-edit" class="hidden view-mode" style="display:contents">
 <header class="bar">
-  <h1 id="admin-title">Beheer</h1>
+  <h1 id="admin-title"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span><span class="brand-text">Beheer</span></h1>
   <span class="muted" id="dirty"></span>
   <button class="primary" id="save">Opslaan</button>
   <button id="edit-toggle" class="primary" type="button" aria-pressed="false"><svg class="mdi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z"/></svg><span>Bewerken</span></button>
@@ -74,15 +78,16 @@
       <span class="track" aria-hidden="true"><span class="thumb"></span></span>
       <span class="switch-text">Huisnummers op de kaart</span>
     </label>
-    <div class="row">
-      <button id="t-select" class="active"><i data-mdi="cursor-default"></i> Selecteren</button>
-      <button id="t-draw"><i data-mdi="vector-polygon"></i> Huis tekenen</button>
-    </div>
-    <div>
-      <label for="active-street" style="margin-top:0">Straat voor nieuwe huizen</label>
+    <div class="side-card">
+      <h5 class="side-title">Gereedschap</h5>
+      <div class="row seg">
+        <button id="t-select" class="active"><i data-mdi="cursor-default"></i> Selecteren</button>
+        <button id="t-draw"><i data-mdi="vector-polygon"></i> Huis tekenen</button>
+      </div>
+      <label for="active-street">Straat voor nieuwe huizen</label>
       <input type="text" id="active-street" list="street-list" maxlength="100" placeholder="bijv. Loerikseweg">
-      <label style="margin-top:10px">Status voor nieuwe huizen</label>
-      <div class="row">
+      <label>Status voor nieuwe huizen</label>
+      <div class="row seg">
         <button data-newstatus="none" class="active"><i class="dot"></i><span data-label="none">Niet gemarkeerd</span></button>
         <button data-newstatus="green"><i class="dot green"></i><span data-label="green">Groen</span></button>
         <button data-newstatus="red"><i class="dot red"></i><span data-label="red">Rood</span></button>
@@ -90,6 +95,7 @@
     </div>
     <div class="hint" id="hint"></div>
     <div id="props" class="hidden">
+      <h5 class="side-title">Geselecteerd huis</h5>
       <label for="p-street">Straat</label>
       <input type="text" id="p-street" list="street-list" maxlength="100" placeholder="bijv. Loerikseweg">
       <datalist id="street-list"></datalist>
@@ -98,7 +104,7 @@
       <label for="p-note">Notitie (zichtbaar bij klik)</label>
       <textarea id="p-note" rows="2" maxlength="500"></textarea>
       <label>Status</label>
-      <div class="row" id="p-status">
+      <div class="row seg" id="p-status">
         <button data-status="green"><i class="dot green"></i><span data-label="green">Groen</span></button>
         <button data-status="red"><i class="dot red"></i><span data-label="red">Rood</span></button>
         <button data-status="none"><span data-label="none">Niet gemarkeerd</span></button>
@@ -158,7 +164,7 @@
   <div class="intro-head"><h3 id="qr-title">Huis</h3><button id="qr-x" class="icon-btn" type="button" aria-label="Sluiten"><i data-mdi="close"></i></button></div>
   <div id="qr-status-wrap">
     <label>Status</label>
-    <div class="row" id="qr-status">
+    <div class="row seg" id="qr-status">
       <button type="button" data-st="green"><i class="dot green"></i><span data-label="green">Groen</span></button>
       <button type="button" data-st="red"><i class="dot red"></i><span data-label="red">Rood</span></button>
       <button type="button" data-st="none"><i class="dot"></i><span data-label="none">Niet gemarkeerd</span></button>

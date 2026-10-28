@@ -1,0 +1,168 @@
+/* ===== Beheer: pagina-specifieke stijl =====
+   Wordt alleen door /beheer geladen, ná style.css en ui.css (gedeelde knoppen, velden, schakelaars en dialogen). */
+/* ---------- kopbalk ---------- */
+body.admin header.bar {
+  gap: 10px; padding: 0 18px; min-height: 60px; flex-wrap: nowrap; background: var(--panel); border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(16,32,24,.03), var(--sh-1); position: relative; z-index: 1100;
+}
+body.admin header.bar h1 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -.005em; display: flex; align-items: center; gap: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.admin #dirty { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--warn-soft); color: var(--warn-ink); font-size: .78rem; font-weight: 650; }
+body.admin #dirty:empty { display: none; }
+body.admin #edit-toggle { background: var(--panel); color: var(--text); }
+body.admin #edit-toggle[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+body.admin #edit-toggle[aria-pressed=true]:hover { background: var(--accent-hover); }
+body.admin #logout { color: var(--muted); box-shadow: none; background: transparent; border-color: var(--line); }
+
+/* ---------- inlog- en installatiescherm ---------- */
+body.admin #v-setup, body.admin #v-login {
+  width: min(440px, calc(100% - 32px)); max-width: none; margin: max(6vh, 24px) auto; padding: 32px 30px 26px; border-radius: var(--r-xl); border: 1px solid var(--line); box-shadow: var(--sh-3);
+  position: relative;
+}
+body.admin #v-setup h2, body.admin #v-login h2 { margin: 0 0 6px; font-size: 1.45rem; letter-spacing: -.01em; }
+body.admin #v-setup > .muted, body.admin #v-login > .muted { font-size: .92rem; line-height: 1.55; margin: 0 0 18px; }
+body.admin #v-setup button.primary, body.admin #v-login button.primary { width: 100%; min-height: 46px; font-size: 1rem; margin-top: 6px; }
+body.admin #v-login #l-pw-go { width: 100%; min-height: 44px; }
+body.admin #v-setup label, body.admin #v-login label { color: var(--text); margin: 14px 0 6px; }
+body.admin #v-login .back-link { margin-top: 10px; font-size: .9rem; text-decoration: none; }
+body.admin #v-login .back-link:hover { text-decoration: underline; }
+body.admin #v-login #pw-form { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 4px; }
+body.admin #v-login #pw-form > .muted { text-align: center; margin: 14px 0 0 !important; }
+body.admin { background-image: radial-gradient(1100px 520px at 50% -8%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%); background-repeat: no-repeat; }
+body.admin:has(#v-edit:not(.hidden)) { background-image: none; }
+
+/* ---------- editor: zijbalk ---------- */
+body.admin .editor { background: var(--bg); }
+body.admin .side { width: 340px; padding: 14px; gap: 12px; background: var(--bg); border-right: 1px solid var(--line); scrollbar-width: thin; }
+body.admin .side > form, body.admin .side > div:not(.hint), body.admin .side > .side-card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px; box-shadow: var(--sh-1);
+}
+body.admin .side > form#search-form { padding: 8px; }
+body.admin .side > form#search-form .row { flex-wrap: nowrap; }
+body.admin .side > #props.hidden { display: none; }
+body.admin .side > #view-open, body.admin .side > .switch { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 10px 12px; box-shadow: var(--sh-1); }
+body.admin .side > #view-open { justify-content: flex-start; width: 100%; min-height: 44px; }
+body.admin .side > .switch { display: flex; justify-content: space-between; flex-direction: row-reverse; gap: 12px; }
+body.admin .side > .switch .switch-text { flex: 1; font-weight: 550; }
+body.admin .side .side-title { margin: 0 0 10px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+body.admin .side label { margin: 10px 0 5px; }
+body.admin .side label:first-child { margin-top: 0; }
+body.admin .side .hint { background: var(--accent-soft); color: color-mix(in srgb, var(--text) 82%, var(--accent)); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); border-radius: var(--r-md); line-height: 1.5; }
+body.admin .side .hint:empty { display: none; }
+/* segmentbediening: groep knoppen als één element */
+body.admin .row.seg { flex-wrap: nowrap; gap: 0; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+body.admin .row.seg > button { flex: 1 1 0; min-width: 0; min-height: 36px; padding: 6px 8px; border: 1px solid transparent; background: transparent; box-shadow: none; border-radius: 9px; font-size: .84rem; text-align: center; white-space: normal; line-height: 1.15; }
+body.admin .row.seg > button:hover { background: color-mix(in srgb, var(--panel) 70%, transparent); border-color: var(--line); }
+body.admin .row.seg > button.active { background: var(--panel); border-color: var(--accent); color: var(--text); font-weight: 650; box-shadow: var(--sh-1), inset 0 0 0 1px var(--accent); }
+body.admin .row.seg > button .dot { margin: 0; }
+body.admin #p-qr, body.admin #p-del { min-height: 38px; }
+body.admin #props { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent), var(--sh-1); }
+
+/* lijst met huizen */
+body.admin .list { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); max-height: 260px; scrollbar-width: thin; }
+body.admin .list div { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); transition: background-color .12s var(--ease); font-size: .9rem; }
+body.admin .list div .dot { margin: 0; }
+body.admin .list div:hover { background: var(--surface); }
+body.admin .list div.sel { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
+body.admin #count { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); }
+
+body.admin .view-hint { background: color-mix(in srgb, #0e1a14 86%, transparent); font-weight: 500; padding: 8px 16px; }
+
+/* dialoog met QR-kaartje */
+body.admin #qr-dialog { padding: 16px 18px 18px; }
+body.admin #qr-dialog .intro-head { background: var(--panel); }
+body.admin #qr-dialog .wa { background: #1faa5b; border-color: #1faa5b; color: #fff; }
+body.admin #qr-dialog .wa:hover { background: #17924d; border-color: #17924d; }
+body.admin #qr-dialog .qr-card img { border-radius: var(--r-lg); box-shadow: var(--sh-1); }
+body.admin #qr-dialog .linklike { background: none; border: 0; box-shadow: none; min-height: 0; padding: 0; color: var(--danger); display: inline; font-weight: 600; }
+body.admin #qr-dialog label { color: var(--text); }
+
+/* ---------- instellingen: lade ---------- */
+body.admin .scrim { background: rgba(8, 18, 13, .45); }
+body.admin .drawer { width: min(560px, 100vw); border-left: 1px solid var(--line); box-shadow: var(--sh-3); background: var(--bg); transition: transform .3s var(--ease), visibility .3s; }
+body.admin #settings .drawer-head { padding: 14px 18px; background: var(--panel); }
+body.admin #settings .drawer-head h3 { font-size: 1.15rem; font-weight: 700; letter-spacing: -.005em; }
+body.admin #settings .tabs { gap: 0; padding: 0 8px; background: var(--panel); box-shadow: 0 1px 0 var(--line); border-bottom: 0; position: relative; z-index: 2; }
+body.admin #settings .tabs button { flex: 1 1 0; flex-direction: column; gap: 3px; min-width: 0; min-height: 58px; padding: 9px 4px 8px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; box-shadow: none;
+  font-size: .76rem; font-weight: 600; color: var(--muted); position: relative; }
+body.admin #settings .tabs button:hover { background: var(--surface); color: var(--text); border-bottom-color: var(--line-strong); }
+body.admin #settings .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); background: none; }
+body.admin #settings .tabs button.active .tab-ico { fill: var(--accent); }
+body.admin #settings .tabs button .count-badge { position: absolute; top: 5px; left: calc(50% + 6px); }
+body.admin #settings .tab-ico { width: 22px; height: 22px; }
+@media (max-width: 520px) { body.admin #settings .tab-ico { display: block; } body.admin #settings .tabs { padding: 0 2px; } body.admin #settings .tabs button { padding-inline: 2px; font-size: .7rem; } }
+body.admin .drawer-body { padding: 4px 16px 32px; background: var(--bg); scrollbar-width: thin; }
+body.admin #settings .set-card { margin: 14px 0; padding: 18px 20px 16px; border-radius: var(--r-lg); border: 1px solid var(--line); box-shadow: var(--sh-1); }
+body.admin #settings .set-card-head { margin-bottom: 10px; }
+body.admin #settings .set-card-head h4 { font-size: 1.02rem; font-weight: 700; letter-spacing: -.005em; display: flex; align-items: center; gap: 8px; }
+body.admin #settings .set-card-head p { font-size: .84rem; }
+body.admin #settings .set-row { padding: 14px 0; }
+body.admin #settings .set-title { font-size: .92rem; }
+body.admin #settings .set-sub { margin-top: 20px; }
+body.admin #settings .field > label, body.admin #settings .field label.sub { color: var(--text); font-size: .8rem; }
+body.admin #settings .field label.sub { color: var(--muted); }
+body.admin #settings .set-actions { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; flex-wrap: wrap; }
+body.admin #settings .set-error { border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); background: var(--danger-soft); color: var(--danger); font-weight: 550; }
+body.admin #settings select { max-width: 60%; width: auto; min-width: 9rem; }
+body.admin #settings .field-inline select { width: auto; }
+body.admin #settings .input-unit input { width: 7rem; }
+body.admin #settings .logo-preview { border-radius: var(--r-md); border: 1px solid var(--line); padding: 6px; background-color: var(--surface); }
+body.admin .drawer-foot { background: var(--panel); border-top: 1px solid var(--line); font-size: .8rem; padding: 10px 18px calc(10px + env(safe-area-inset-bottom)); }
+
+/* lijsten in de lade: goedkeuren, apparaten, backups, passkeys */
+body.admin .bk-list { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); scrollbar-width: thin; overflow-x: hidden; }
+body.admin .bk-row, body.admin .chg-row { padding: 11px 14px; gap: 10px; transition: background-color .12s var(--ease); }
+body.admin .bk-row:hover, body.admin .chg-row:hover { background: var(--surface); }
+body.admin .bk-row button, body.admin .chg-row button, body.admin .bk-row .btn { min-height: 32px; padding: 4px 11px; font-size: .82rem; border-radius: 8px; }
+body.admin .chg-info { font-weight: 600; }
+body.admin .chg-info span { font-weight: 400; margin-top: 1px; }
+body.admin .bk-info { font-weight: 600; }
+body.admin .bk-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+body.admin .bk-list > p.muted { margin: 0; padding: 16px 14px !important; text-align: center; font-size: .86rem; }
+body.admin .pk { padding: 11px 2px; gap: 10px; }
+body.admin .pk button { min-height: 32px; padding: 4px 11px; font-size: .82rem; }
+body.admin .pending-msg { background: var(--warn-soft); color: var(--warn-ink); }
+
+
+/* ---------- onderbalk (telefoon en app) ---------- */
+@media (max-width: 760px) {
+  body.admin header.bar { padding: 0 12px; min-height: 54px; padding-top: env(safe-area-inset-top); gap: 8px; }
+  body.admin .admin-nav { padding: 6px 10px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--panel) 94%, transparent); box-shadow: 0 -1px 0 var(--line), 0 -6px 18px rgba(16,32,24,.07); }
+  body.admin .admin-nav button { min-height: 52px; gap: 3px; border-radius: 14px; background: none; border: 0; box-shadow: none; color: var(--muted); font-size: .74rem; font-weight: 600; }
+  body.admin .admin-nav button:hover { background: none; }
+  body.admin .admin-nav button[aria-pressed=true] { color: var(--accent); background: var(--accent-soft); }
+  body.admin .admin-nav .count-badge { top: 4px; }
+  body.admin .side { width: auto; max-height: 48%; border-right: 0; border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(16,32,24,.06); }
+  body.admin .row.seg > button { min-height: 40px; }
+  body.admin .bk-row button, body.admin .chg-row button { min-height: 36px; }
+}
+@media (max-width: 560px) {
+  body.admin header.bar { padding-inline: 10px; gap: 6px; }
+  body.admin header.bar h1 { font-size: 1rem; }
+  body.admin #v-setup, body.admin #v-login { margin-top: 20px; padding: 26px 20px 22px; }
+  body.admin #settings .set-card { padding: 16px 16px 14px; }
+  body.admin #settings .set-row { gap: 12px; }
+  body.admin #settings .set-actions { justify-content: stretch; }
+  body.admin #settings .set-actions button { flex: 1 1 auto; }
+}
+
+/* ---------- details ---------- */
+body.admin .row.seg > button[data-newstatus="none"], body.admin .row.seg > button[data-status="none"], body.admin .row.seg > button[data-st="none"] { flex: 1.7 1 0; }
+body.admin .row.seg > button { gap: 6px; }
+body.admin .row.seg > button span { text-align: center; }
+body.admin #v-setup .error:empty, body.admin #v-login .error:empty { display: none; }
+body.admin #v-setup .error, body.admin #v-login .error { min-height: 0; margin: 10px 0 0; font-size: .88rem; font-weight: 550; }
+body.admin .view-hint { font-size: .82rem; line-height: 1.35; border-radius: 16px; max-width: min(340px, calc(100% - 28px)); }
+
+
+/* de velden in de lade en dialogen krijgen dezelfde stijl als de rest (style.css heeft hier id-selectors die zwaarder wegen) */
+body.admin #settings input[type=text], body.admin #settings input[type=number], body.admin #settings input[type=password], body.admin #settings input[type=datetime-local],
+body.admin #settings textarea, body.admin #settings select, body.admin #qr-dialog input[type=text] {
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-md); min-height: 38px; padding: 8px 11px; font-size: .92rem;
+}
+body.admin #settings textarea { min-height: 0; }
+body.admin #settings input:focus-visible, body.admin #settings textarea:focus-visible, body.admin #settings select:focus-visible, body.admin #qr-dialog input:focus-visible {
+  outline: 3px solid var(--ring); outline-offset: 0; border-color: var(--accent);
+}
+body.admin #settings .set-row > button, body.admin #settings .set-actions button { white-space: nowrap; }
+body.admin #settings button { border-radius: var(--r-md); }
+body.admin #settings .set-row > button { flex: none; }

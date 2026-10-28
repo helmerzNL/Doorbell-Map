@@ -22,7 +22,7 @@
     }
     return data;
   }
-  if (Wijk.BETA) Wijk.setHeading($('admin-title'), 'Beheer');
+  if (Wijk.BETA) Wijk.setHeading($('admin-title').querySelector('.brand-text'), 'Beheer');
   const post = (url, body, extra) => api(url, { method: 'POST', body: JSON.stringify(body || {}), ...extra });
 
   function toast(msg) {

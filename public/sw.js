@@ -8,7 +8,7 @@ const MAX_TILES = 1500;
 
 // Scripts en stijlen worden met ?v=<build> opgevraagd (cache-busting); hier staan de paden zonder versie.
 const VERSIONED = [
-  '/css/style.css', '/js/theme.js', '/js/icons.js', '/js/lang-core.js', '/js/lang-en.js', '/js/i18n.js', '/js/wijk.js', '/js/public.js', '/js/pwa.js', '/js/resident.js',
+  '/css/style.css', '/css/ui.css', '/css/public.css', '/js/theme.js', '/js/icons.js', '/js/lang-core.js', '/js/lang-en.js', '/js/i18n.js', '/js/wijk.js', '/js/public.js', '/js/pwa.js', '/js/resident.js',
   '/vendor/leaflet/leaflet.js', '/vendor/leaflet/leaflet.css', '/vendor/jspdf.js',
 ];
 const OTHER = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png'];
