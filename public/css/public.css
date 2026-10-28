@@ -1,0 +1,121 @@
+/* ===== Voorpagina: pagina-specifieke stijl =====
+   Wordt door de voorpagina geladen, ná style.css en ui.css (gedeelde knoppen, velden, schakelaars en dialogen).
+   Alles hangt onder <body class="app public">, zodat andere pagina's er geen last van hebben. */
+
+/* ---------- kopbalk ---------- */
+body.public header.bar {
+  gap: 8px 12px; padding: 8px 18px; padding-top: max(8px, env(safe-area-inset-top)); min-height: 60px; background: var(--panel); border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(16,32,24,.03), var(--sh-1); position: relative; z-index: 1100;
+}
+body.public header.bar h1 { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 1.1rem; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
+body.public .logo { height: 36px; max-width: 132px; border-radius: 6px; }
+body.public .badge { background: var(--warn-soft); color: var(--warn-ink); font-weight: 650; }
+body.public .legend { gap: 8px; font-size: .84rem; }
+body.public .legend > span { display: inline-flex; align-items: center; gap: 2px; padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 550; }
+body.public .legend .dot { margin-right: 4px; }
+body.public .bar-switches { gap: 14px; }
+body.public .switch-text { font-weight: 550; }
+body.public .switch .num-icon, body.public .switch .edit-icon { color: var(--accent); }
+body.public .prefs { gap: 8px; }
+
+/* acties: Uitleg, Mijn huis, Straten, PDF, Meer */
+body.public .actions { gap: 8px; }
+body.public .actions .lbl { margin: 0; }
+body.public .actions .ico { font-style: normal; line-height: 0; display: inline-flex; }
+body.public .actions .ico .mdi { width: 18px; height: 18px; vertical-align: 0; }
+body.public .actions button[hidden] { display: none !important; }
+body.public .actions button.primary { box-shadow: var(--sh-1); }
+body.public .sync-spin .ico { animation: spin .9s linear infinite; }
+
+/* "Meer"-menu */
+body.public .more-pop { top: 64px; right: 14px; min-width: 220px; padding: 6px; border-radius: var(--r-lg); border: 1px solid var(--line); box-shadow: var(--sh-3); gap: 2px; background: var(--panel); }
+body.public .more-pop button { min-height: 44px; padding: 10px 12px; border-radius: var(--r-md); background: none; border: 0; box-shadow: none; justify-content: flex-start; font-size: .95rem; font-weight: 550; gap: 12px; }
+body.public .more-pop button:hover { background: var(--surface); }
+body.public .more-pop .ico { display: inline-flex; line-height: 0; }
+body.public .more-pop .ico .mdi { width: 20px; height: 20px; }
+
+/* ---------- kaart ---------- */
+body.public .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border-radius: var(--r-lg); box-shadow: var(--sh-3); border: 1px solid var(--line); }
+body.public .leaflet-popup-tip { background: var(--panel); box-shadow: none; border: 1px solid var(--line); }
+body.public .leaflet-popup-content { margin: 14px 18px 14px 16px; line-height: 1.45; }
+body.public .leaflet-popup-close-button { color: var(--muted); }
+body.public .leaflet-popup-close-button:hover { color: var(--text); background: none; }
+body.public .popup { border-radius: var(--r-lg); border: 1px solid var(--line); box-shadow: var(--sh-3); padding: 14px 18px; }
+body.public .popup h3 { font-weight: 700; }
+body.public .house-stats { pointer-events: none; }
+
+/* ---------- dialogen ---------- */
+body.public dialog { width: min(480px, calc(100vw - 24px)); max-width: none; }
+body.public #intro-dialog { width: min(640px, calc(100vw - 24px)); padding: 0 24px 20px; }
+body.public .intro-head { padding-top: 16px; padding-bottom: 6px; background: var(--panel); border-bottom: 1px solid var(--line); margin: 0 -24px 14px; padding-inline: 24px; }
+body.public #intro-dialog .intro-head h3 { margin: 0; font-size: 1.25rem; letter-spacing: -.01em; }
+body.public .intro-head h3 { margin: 4px 0; }
+body.public .intro-text { font-size: .98rem; line-height: 1.6; color: var(--text); scrollbar-width: thin; }
+body.public #intro-dialog > p:last-child { margin: 16px 0 0; }
+body.public #intro-dialog > p:last-child button { width: 100%; min-height: 46px; font-size: 1rem; }
+body.public .intro-info { display: flex; gap: 14px; align-items: flex-start; margin: 0 0 16px; padding: 14px 16px; border-radius: var(--r-lg); border: 0;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 78%, #000)); color: var(--on-accent); box-shadow: var(--sh-2); }
+body.public .intro-info strong { font-size: 1rem; letter-spacing: .01em; }
+body.public .intro-info-ico { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; background: rgba(255,255,255,.18); }
+:root[data-theme="dark"] body.public .intro-info-ico { background: rgba(0,0,0,.18); }
+body.public .intro-info-ico .mdi { width: 24px; height: 24px; }
+body.public dialog p { line-height: 1.55; }
+body.public dialog > p:last-child:not(.error) .primary, body.public #install-dialog p .primary { min-width: 8rem; }
+body.public #code-input { font-size: 1.4rem; letter-spacing: .3em; text-align: center; min-height: 52px; font-variant-numeric: tabular-nums; }
+body.public #code-input::placeholder { font-size: .95rem; letter-spacing: 0; }
+body.public .error { min-height: 0; font-size: .88rem; font-weight: 550; margin: 8px 0; }
+body.public .error:empty { display: none; }
+body.public #msg-text { resize: vertical; min-height: 96px; line-height: 1.5; }
+
+/* straten */
+body.public .streets-list { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); overflow-x: hidden; scrollbar-width: thin; }
+body.public .street-row { min-height: 48px; padding: 10px 14px; font-size: .95rem; transition: background-color .12s var(--ease); }
+body.public .street-row:hover { background: var(--surface); }
+body.public .street-row .track { width: 44px; height: 26px; background: color-mix(in srgb, var(--muted) 55%, var(--panel)); box-shadow: inset 0 1px 2px rgba(0,0,0,.18); }
+body.public .street-row .thumb { top: 3px; left: 3px; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+body.public .street-row input:checked + .track { background: var(--accent); }
+body.public .street-row input:checked + .track .thumb { transform: translateX(18px); }
+body.public .streets-total { padding: 0 2px; }
+body.public .streets-total .street-tally { font-weight: 700; }
+
+/* ---------- mijn huis (bewoners) ---------- */
+body.public .house-sheet { border-radius: var(--r-xl); border: 1px solid var(--line); box-shadow: var(--sh-3); padding: 14px 16px 16px; background: var(--panel); }
+body.public .sheet-head { margin-bottom: 4px; }
+body.public .sheet-head strong { font-size: 1.05rem; letter-spacing: -.005em; }
+body.public .house-sheet p { margin: 8px 0; line-height: 1.5; }
+body.public .status-choice { gap: 0; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+body.public .status-choice button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 6px; border: 1px solid transparent; background: transparent; box-shadow: none; border-radius: 9px; font-size: .88rem; white-space: normal; line-height: 1.15; gap: 6px; }
+body.public .status-choice button:hover { background: color-mix(in srgb, var(--panel) 70%, transparent); border-color: var(--line); }
+body.public .status-choice button.active { outline: 0; background: var(--panel); border-color: var(--accent); color: var(--text); font-weight: 650; box-shadow: var(--sh-1), inset 0 0 0 1px var(--accent); }
+body.public .status-choice .dot { margin: 0; }
+body.public .pending-msg { background: var(--warn-soft); color: var(--warn-ink); border-radius: var(--r-md); padding: 10px 12px; }
+body.public .notice { border-radius: var(--r-md); padding: 10px 12px; font-weight: 550; }
+body.public .notice.ok { background: var(--accent-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+body.public .notice.no { background: var(--danger-soft); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
+body.public .qr-hint { padding: 10px 12px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+body.public .mine-badge .mdi { filter: drop-shadow(0 0 3px var(--panel)); }
+
+/* ---------- telefoon: onderbalk ---------- */
+@media (max-width: 640px) {
+  body.public { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
+  body.public header.bar { padding: 6px 12px; padding-top: max(6px, env(safe-area-inset-top)); min-height: 54px; gap: 4px 8px; }
+  body.public header.bar { flex-wrap: nowrap; }
+  body.public header.bar h1 { flex: 1 1 0; min-width: 0; font-size: clamp(.9rem, 4.2vw, 1.05rem); }
+  body.public .bar-switches { margin-left: 0; gap: 8px; }
+  body.public .prefs { margin-left: 0; }
+  body.public .logo { height: 32px; max-width: 24vw; }
+  body.public .actions { gap: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -1px 0 var(--line), 0 -6px 18px rgba(16,32,24,.07); }
+  body.public .actions button { min-height: 52px; gap: 3px; border-radius: 14px; border: 0; background: none; box-shadow: none; color: var(--muted); font-size: .74rem; font-weight: 600; max-width: 160px; }
+  body.public .actions button:hover { background: none; }
+  body.public .actions button.primary { background: var(--accent-soft); color: var(--accent); }
+  body.public .actions button:active { background: var(--accent-soft); transform: none; }
+  body.public .actions .ico .mdi { width: 24px; height: 24px; }
+  body.public .legend { left: 10px; bottom: calc(80px + env(safe-area-inset-bottom)); gap: 6px; padding: 0; background: none; border: 0; box-shadow: none; }
+  body.public .legend > span { background: var(--panel); box-shadow: var(--sh-2); border-color: var(--line-strong); padding: 5px 12px; }
+  body.public .more-pop { top: auto; bottom: calc(76px + env(safe-area-inset-bottom)); right: 10px; }
+  body.public .house-sheet { left: 10px; right: 10px; width: auto; bottom: calc(150px + env(safe-area-inset-bottom)); }
+  body.public .status-choice button { min-height: 48px; }
+  body.public dialog { width: calc(100vw - 20px); }
+  body.public #intro-dialog { padding: 0 18px 16px; }
+  body.public .intro-head { margin-inline: -18px; padding-inline: 18px; }
+}

@@ -1,0 +1,130 @@
+/* ===== Gedeelde interface (beheer en voorpagina) =====
+   Wordt na style.css geladen door /beheer en door de voorpagina; de pagina zelf zet <body class="app admin"> of <body class="app public">.
+   Houdt het systeemlettertype aan (geen externe fonts: de app werkt offline en stuurt geen bezoekersgegevens naar derden).
+   Alle kleuren zijn tokens; licht en donker volgen dezelfde regels als style.css (data-theme gaat voor de instelling van het apparaat).
+   Bewust zonder backdrop-filter: vervaging over de kaart is decoratief en kan op mobiele browsers het tekenen vertragen of blokkeren. */
+:root {
+  --bg: #eef2ef; --panel: #fff; --surface: #f6f8f6; --text: #14221b; --muted: #55655c; --line: #dce4de; --line-strong: #c4d0c8;
+  --accent: #14694a; --accent-hover: #0f5a3f; --on-accent: #fff; --accent-soft: #e3f1ea; --danger: #c62f2f; --danger-soft: #fbeaea;
+  --warn-soft: #fff4d6; --warn-ink: #7a5200;
+  --ring: color-mix(in srgb, var(--accent) 45%, transparent);
+  --r-sm: 8px; --r-md: 10px; --r-lg: 14px; --r-xl: 18px;
+  --sh-1: 0 1px 2px rgba(16,32,24,.06), 0 1px 1px rgba(16,32,24,.04);
+  --sh-2: 0 6px 20px rgba(16,32,24,.12), 0 2px 6px rgba(16,32,24,.06);
+  --sh-3: 0 18px 48px rgba(16,32,24,.22), 0 4px 12px rgba(16,32,24,.1);
+  --shadow: var(--sh-2);
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --panel: #1b231f; --surface: #212b26; --text: #e8f0ea; --muted: #9bada2; --line: #2c3832; --line-strong: #3b4a43;
+  --accent: #4cc38a; --accent-hover: #6ad3a1; --on-accent: #06251a; --accent-soft: #1d3a2d; --danger: #ff7a7a; --danger-soft: #3a2224;
+  --warn-soft: #3a3018; --warn-ink: #f1cf7a;
+  --sh-1: 0 1px 2px rgba(0,0,0,.4);
+  --sh-2: 0 6px 20px rgba(0,0,0,.45);
+  --sh-3: 0 18px 48px rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #121714; --panel: #1b231f; --surface: #212b26; --text: #e8f0ea; --muted: #9bada2; --line: #2c3832; --line-strong: #3b4a43;
+    --accent: #4cc38a; --accent-hover: #6ad3a1; --on-accent: #06251a; --accent-soft: #1d3a2d; --danger: #ff7a7a; --danger-soft: #3a2224;
+    --warn-soft: #3a3018; --warn-ink: #f1cf7a;
+    --sh-1: 0 1px 2px rgba(0,0,0,.4);
+    --sh-2: 0 6px 20px rgba(0,0,0,.45);
+    --sh-3: 0 18px 48px rgba(0,0,0,.6);
+  }
+}
+
+body.app { font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body.app ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
+/* ---------- knoppen ---------- */
+body.app button, body.app .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 7px 14px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--panel); color: var(--text);
+  font-size: .9rem; font-weight: 550; line-height: 1.2; box-shadow: var(--sh-1);
+  transition: background-color .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease), transform .1s var(--ease), color .15s var(--ease);
+}
+body.app button:hover, body.app .btn:hover { background: var(--surface); border-color: var(--accent); }
+body.app button:active, body.app .btn:active { transform: translateY(1px); box-shadow: none; }
+body.app button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+body.app button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+body.app button.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); background: var(--panel); }
+body.app button.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+body.app button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+body.app button.active { outline: 0; }
+body.app button:focus-visible, body.app .btn:focus-visible, body.app a:focus-visible, body.app select:focus-visible,
+body.app input:focus-visible, body.app textarea:focus-visible, body.app [tabindex]:focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; }
+body.app .icon-btn { min-width: 38px; min-height: 38px; padding: 6px; font-size: 1.1rem; border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); }
+body.app .icon-btn:hover { background: var(--surface); color: var(--text); border-color: var(--line); }
+body.app button .mdi, body.app .btn .mdi { width: 18px; height: 18px; vertical-align: 0; }
+body.app button [data-mdi], body.app .btn [data-mdi] { margin-right: 0; }
+
+/* ---------- velden ---------- */
+body.app input[type=text], body.app input[type=password], body.app input[type=number], body.app input[type=datetime-local],
+body.app textarea, body.app select {
+  width: 100%; min-height: 38px; padding: 8px 11px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--panel); color: var(--text);
+  font-size: .92rem; transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+}
+body.app input::placeholder, body.app textarea::placeholder { color: color-mix(in srgb, var(--muted) 80%, transparent); }
+body.app input:hover, body.app textarea:hover, body.app select:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); }
+body.app input:focus-visible, body.app textarea:focus-visible, body.app select:focus-visible { border-color: var(--accent); outline: 3px solid var(--ring); outline-offset: 0; }
+body.app label { color: var(--muted); font-size: .8rem; font-weight: 600; letter-spacing: .01em; }
+body.app code { font: .85em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; }
+body.app .muted { color: var(--muted); }
+body.app .error { color: var(--danger); }
+body.app a { color: var(--accent); text-underline-offset: 3px; }
+
+/* ---------- schakelaar ---------- */
+body.app .switch .track { width: 44px; height: 26px; background: color-mix(in srgb, var(--muted) 55%, var(--panel)); box-shadow: inset 0 1px 2px rgba(0,0,0,.18); transition: background-color .2s var(--ease); }
+body.app .switch .thumb { top: 3px; left: 3px; width: 20px; height: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .2s var(--ease); }
+body.app .switch input:checked + .track { background: var(--accent); }
+body.app .switch input:checked + .track .thumb { transform: translateX(18px); }
+body.app .switch input:focus-visible + .track { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+.brand-mark { display: inline-grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; color: var(--on-accent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 78%, #fff), var(--accent)); box-shadow: 0 1px 2px rgba(16,32,24,.25), inset 0 1px 0 rgba(255,255,255,.25); }
+.brand-mark svg { width: 20px; height: 20px; fill: currentColor; }
+.brand-mark.lg { width: 52px; height: 52px; border-radius: 15px; margin-bottom: 14px; }
+.brand-mark.lg svg { width: 30px; height: 30px; }
+body.app .cog-badge, body.app .count-badge { background: var(--danger); color: #fff; font-weight: 700; box-shadow: 0 0 0 2px var(--panel); }
+:root[data-theme="dark"] body.app .count-badge { color: #2a0b0b; }
+body.app .cog-badge { top: -5px; right: -5px; }
+body.app .prefs .theme-btn, body.app .prefs .lang-btn { min-height: 38px; background: transparent; box-shadow: none; border-color: var(--line); }
+body.app .dot { width: 11px; height: 11px; box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 0%, transparent), inset 0 0 0 1px rgba(0,0,0,.12); flex: none; }
+body.app .dot.green { background: var(--green); } body.app .dot.red { background: var(--red); }
+/* kaart */
+body.app .viewport { background: var(--map-bg); }
+body.app .leaflet-bar { border: 1px solid var(--line-strong) !important; border-radius: var(--r-md) !important; box-shadow: var(--sh-2) !important; overflow: hidden; }
+body.app .leaflet-bar a { background: var(--panel); color: var(--text); border-bottom-color: var(--line); width: 36px; height: 36px; line-height: 36px; }
+body.app .leaflet-bar a:hover { background: var(--surface); color: var(--accent); }
+body.app .leaflet-control-attribution { background: color-mix(in srgb, var(--panel) 80%, transparent); color: var(--muted); border-radius: 8px 0 0 0; }
+body.app .leaflet-control-attribution a { color: var(--accent); }
+body.app .house-stats { top: 12px; right: 12px; min-width: 210px; border-radius: var(--r-lg); padding: 12px 14px; border: 1px solid var(--line); box-shadow: var(--sh-2);
+  background: color-mix(in srgb, var(--panel) 97%, transparent); }
+body.app .house-stats .hs-head { font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; align-items: baseline; margin-bottom: 8px; }
+body.app .house-stats .hs-head strong { font-size: 1.25rem; letter-spacing: 0; line-height: 1; }
+body.app .house-stats .hs-bar { height: 8px; margin-bottom: 10px; }
+body.app .house-stats .hs-row { padding: 2px 0; font-size: .86rem; }
+body.app .toast { background: #14221b; color: #fff; border-radius: 999px; padding: 10px 18px; font-size: .9rem; font-weight: 500; box-shadow: var(--sh-3); border: 1px solid rgba(255,255,255,.08); }
+:root[data-theme="dark"] body.app .toast { background: #e8f0ea; color: #0d1712; }
+
+/* dialogen */
+body.app dialog { padding: 20px 22px 18px; border-radius: var(--r-xl); border: 1px solid var(--line); box-shadow: var(--sh-3); background: var(--panel); }
+body.app dialog::backdrop { background: rgba(8, 18, 13, .5); }
+body.app dialog h3 { margin: 0 0 6px; font-size: 1.15rem; letter-spacing: -.005em; }
+body.app dialog h4 { margin: 20px 0 4px; font-size: .95rem; padding-top: 16px; border-top: 1px solid var(--line); }
+body.app dialog .row { gap: 8px; margin-top: 8px; }
+body.app dialog > .row:last-of-type { margin-top: 18px; }
+@media (max-width: 760px) {
+  body.app .house-stats { top: 8px; right: 8px; }
+  body.app .brand-mark { width: 30px; height: 30px; border-radius: 9px; }
+  body.app button, body.app .btn, body.app input[type=text], body.app select { min-height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.app *, body.app *::before, body.app *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+@media (forced-colors: active) {
+  body.app .switch .track { border: 1px solid ButtonText; }
+  body.app button.active, body.app .row.seg > button.active { outline: 2px solid Highlight; }
+}
+body.app .house-stats, body.app .brand-mark { -webkit-user-select: none; user-select: none; }
