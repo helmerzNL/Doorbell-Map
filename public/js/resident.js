@@ -206,6 +206,7 @@
       on = true;
       clearMine();
       document.body.classList.add('editing');
+      Wijk.setPublicHousesHidden?.(true);
       group = L.layerGroup().addTo(map);
       for (const h of houses) {
         const layer = L.polygon(h.points, styleFor(h)).addTo(group);
@@ -220,6 +221,7 @@
     function leave() {
       on = false;
       document.body.classList.remove('editing');
+      Wijk.setPublicHousesHidden?.(false);
       if (group) { group.remove(); group = null; }
       layers.clear();
       sheet.hidden = true;
