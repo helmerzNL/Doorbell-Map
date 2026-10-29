@@ -179,7 +179,7 @@
 
     // Het eigen huis blijft ook buiten de wijzigmodus zichtbaar (met de nog niet goedgekeurde status).
     let mine = null;
-    function clearMine() { if (mine) { mine.remove(); mine = null; } }
+    function clearMine() { if (mine) { mine.remove(); mine = null; } Wijk.setPublicHouseCovered?.(null); }
     function drawMine() {
       clearMine();
       if (on || !me.claim) return;
@@ -195,6 +195,7 @@
         interactive: false, keyboard: false,
       }).addTo(mine);
       badge.getElement()?.setAttribute('title', me.pending ? 'Jouw huis: wacht op goedkeuring' : 'Jouw huis');
+      Wijk.setPublicHouseCovered?.(h.id);
     }
 
     async function enter() {
