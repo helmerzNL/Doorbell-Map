@@ -84,13 +84,22 @@
     if (box) box.replaceChildren('Totaal op de kaart: ', tallyEl(tally(visibleHouses()), 'street-tally'));
   };
 
+  // Zolang een bewoner "Mijn huis" open heeft, tekent resident.js alle huizen zelf; de publieke laag eronder
+  // blijft dan weg, anders stapelen twee halfdoorzichtige vlakken en lijkt een groen/rood huis ineens donkerder.
+  let editing = false;
+  // Het eigen huis tekent resident.js ook buiten de bewerkmodus zelf (met de nog niet goedgekeurde kleur). Het publieke vlak eronder
+  // blijft dan klikbaar (popup), maar krijgt geen vulling of rand, zodat de kleur niet donkerder wordt.
+  let coveredId = null;
+  const COVERED = { fillOpacity: 0, opacity: 0 };
+  const styleHouses = () => { for (const h of shownHouses) polys.get(h.id)?.setStyle(h.id === coveredId ? COVERED : Wijk.houseStyle(h.status)); };
   function applyStreets() {
     for (const h of shownHouses) {
       const poly = polys.get(h.id);
-      const show = !hidden.has(streetName(h));
+      const show = !editing && !hidden.has(streetName(h));
       if (show && !map.hasLayer(poly)) poly.addTo(map);
       if (!show && map.hasLayer(poly)) { poly.closePopup(); map.removeLayer(poly); }
     }
+    styleHouses();
     nums.rebuild(visibleHouses());
     renderTotal();
     try { localStorage.setItem('sm-hidden-streets', JSON.stringify([...hidden])); } catch {}
@@ -133,6 +142,9 @@
     $('streets-btn').hidden = !(streets.length > 1 || (streets.length === 1 && streets[0] !== OTHER));
     applyStreets();
   }
+
+  Wijk.setPublicHouseCovered = (id) => { coveredId = id || null; styleHouses(); };
+  Wijk.setPublicHousesHidden = (flag) => { editing = flag === true; applyStreets(); };
 
   const setAll = (on) => { streets.forEach((x) => { on ? hidden.delete(x) : hidden.add(x); rows.get(x).checked = on; }); applyStreets(); };
   $('streets-all').onclick = () => setAll(true);

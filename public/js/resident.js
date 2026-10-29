@@ -179,7 +179,7 @@
 
     // Het eigen huis blijft ook buiten de wijzigmodus zichtbaar (met de nog niet goedgekeurde status).
     let mine = null;
-    function clearMine() { if (mine) { mine.remove(); mine = null; } }
+    function clearMine() { if (mine) { mine.remove(); mine = null; } Wijk.setPublicHouseCovered?.(null); }
     function drawMine() {
       clearMine();
       if (on || !me.claim) return;
@@ -195,6 +195,7 @@
         interactive: false, keyboard: false,
       }).addTo(mine);
       badge.getElement()?.setAttribute('title', me.pending ? 'Jouw huis: wacht op goedkeuring' : 'Jouw huis');
+      Wijk.setPublicHouseCovered?.(h.id);
     }
 
     async function enter() {
@@ -206,6 +207,7 @@
       on = true;
       clearMine();
       document.body.classList.add('editing');
+      Wijk.setPublicHousesHidden?.(true);
       group = L.layerGroup().addTo(map);
       for (const h of houses) {
         const layer = L.polygon(h.points, styleFor(h)).addTo(group);
@@ -220,6 +222,7 @@
     function leave() {
       on = false;
       document.body.classList.remove('editing');
+      Wijk.setPublicHousesHidden?.(false);
       if (group) { group.remove(); group = null; }
       layers.clear();
       sheet.hidden = true;
