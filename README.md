@@ -80,6 +80,8 @@ Voorbeeld met willekeurige huizen (kaartgegevens © OpenStreetMap-bijdragers).
 
 **Mijn locatie** – onder de zoomknoppen staat de knop *Mijn locatie* (het richtkruis). Hij doet niets tot je erop tikt: pas dan vraagt de browser om toestemming voor je locatie, en zonder toestemming blijft de kaart zoals hij was. Na een tik verschijnt je positie als blauwe stip met een lichte cirkel voor de nauwkeurigheid en volgt de kaart je terwijl je loopt. Schuif je de kaart zelf weg, dan stopt het volgen (de stip blijft) en brengt een tik op de knop je terug; nog een tik op de volgende stand zet de stip weer uit. Zolang de locatie aan staat blijft het scherm aan, zodat je de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen (als je browser dat ondersteunt; anders dimt het scherm gewoon, en na terugkeren naar de pagina wordt het opnieuw aangevraagd). Je positie blijft op je telefoon: ze wordt nergens opgeslagen of verstuurd, en bij het sluiten of verversen van de pagina staat de knop weer uit. Het tonen van je locatie werkt alleen via **https**. De beheerder kan de knop verbergen (zie *Config*).
 
+**Community** – optioneel, standaard **uit**; de beheerder zet het aan onder *Instellingen → Config → Weergave → Community*. Dan verschijnt onder *Mijn locatie* een tweede knop (de drie poppetjes) om je positie live te delen. Delen is altijd vrijwillig: je moet het eerst bevestigen en stoppen kan met één tik. Wie meedoet ziet de andere deelnemers als **paarse stippen** (met het aantal op de knop); wie niet deelt, ziet niemand. Er staat geen naam bij. De server bewaart posities alleen kort in het geheugen (niet op schijf) en wist ze zodra iemand stopt, de pagina sluit, of na 45 seconden zonder signaal; de beheerder zet de functie uit en alle posities zijn direct weg. In het beheer ziet de beheerder alle deelnemers als paarse stippen op de kaart, met het aantal in de zijbalk. Dit werkt alleen als de knop *Mijn locatie* ook aan staat.
+
 **In het beheer** werkt dit ook: dubbelklik (of druk lang) op een huis en de selecteermodus gaat aan met dat huis geselecteerd, ook als je net aan het tekenen was (zolang er nog geen vlak loopt).
 
 ### Toegang via QR-code (optioneel)
@@ -173,7 +175,7 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 - *Apparaten*: aangemelde apparaten, **alfabetisch** op straat en huisnummer (handig zoeken bij veel huizen), met koppeling verwijderen of **blokkeren** (eventueel met IP-adres), en de lijst *Geblokkeerd*.
 - *Meldingen op dit apparaat*: pushmeldingen voor nieuwe wijzigingen.
 
-**Config** – taal (meertalig en standaardtaal), logo, naam van de site en de app, de eenvoudige weergave, de knop *Mijn locatie* voor bezoekers (aan of uit; standaard aan), de namen van de statussen, het infovlak, de uitleg en de tekst bij delen via WhatsApp (de teksten per taal).
+**Config** – taal (meertalig en standaardtaal), logo, naam van de site en de app, de eenvoudige weergave, de knop *Mijn locatie* voor bezoekers (aan of uit; standaard aan), de *Community* (live deelnemers; standaard uit), de namen van de statussen, het infovlak, de uitleg en de tekst bij delen via WhatsApp (de teksten per taal).
 
 **Beveiliging** – passkeys toevoegen/verwijderen en een optioneel wachtwoord (bevestigen met passkey).
 

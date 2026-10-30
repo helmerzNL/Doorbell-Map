@@ -14,6 +14,7 @@ const auth = require('./auth');
 const { hashPassword, verifyPassword } = require('./password');
 const backups = require('./backups');
 const residents = require('./residents');
+const community = require('./community');
 const appVersion = require('./version');
 const { normalizeHouse, STATUSES, statusLabels, statsShow } = require('./houses');
 
@@ -92,6 +93,7 @@ app.get('/api/map', (req, res) => {
     residentsEnabled: residents.mode() !== 'closed', // ook 'swap': dan blijft de knop zichtbaar voor wie al een huis heeft
     residentsMode: residents.mode(),
     simpleUi: settings?.simpleUi === true,
+    communityEnabled: settings?.communityEnabled === true, // live deelnemers op de kaart (standaard uit)
     locateEnabled: settings?.locateEnabled !== false, // knop "Mijn locatie" op de kaart (standaard beschikbaar, maar uit tot erop getikt wordt)
     statsPublic: settings?.statsPublic === true, // overzichtsoverlay ook op de voorpagina
     statsShow: statsShow(settings),
@@ -479,7 +481,7 @@ admin.get('/settings', (req, res) => {
     const t = lang.translations(l);
     tx[l] = Object.fromEntries([...lang.TEXT_FIELDS.map((f) => [f, t[f] || '']), ['labels', { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' }]]);
   }
-  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
+  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
 });
 
 // Tekstvelden met hun maximale lengte; gelden voor het Nederlands (gewone instellingen) en voor elke vertaling.
@@ -545,6 +547,10 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
   }
   if ('simpleUi' in body) db.settings.simpleUi = body.simpleUi === true;
   if ('locateEnabled' in body) db.settings.locateEnabled = body.locateEnabled === true;
+  if ('communityEnabled' in body) {
+    db.settings.communityEnabled = body.communityEnabled === true;
+    if (!db.settings.communityEnabled) community.clear(); // uitzetten wist meteen alle posities
+  }
   if ('statsPublic' in body) db.settings.statsPublic = body.statsPublic === true;
   if (body.statsShow && typeof body.statsShow === 'object') {
     const next = statsShow(db.settings);
@@ -676,9 +682,11 @@ admin.put('/houses', backups.afterSave('Layout opgeslagen'), (req, res) => {
   }
 });
 
+admin.get('/community', community.adminList);
 admin.use(residents.admin);
 app.use('/api/admin', admin);
 app.use('/api/resident', residents.resident);
+app.use('/api/community', community.router);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Niet gevonden' }));
 
 // ---------- statische bestanden ----------

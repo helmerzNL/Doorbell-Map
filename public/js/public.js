@@ -64,6 +64,7 @@
   const nums = Wijk.createNumberLayer(map);
   const locate = Wijk.createLocate(map, Wijk.toast); // knop "Mijn locatie"; staat uit tot de bezoeker erop tikt
   locate.setEnabled(data.locateEnabled !== false);
+  locate.setCommunity(data.communityEnabled === true); // live deelnemers; alleen als de beheerder de community aanzet
 
   // ---------- huizen, straten en aantallen (opnieuw op te bouwen bij een verversing) ----------
   const OTHER = '';
@@ -284,7 +285,7 @@
   }
 
   // ---------- automatisch verversen (o.a. nadat de beheerder een wijziging goedkeurt) ----------
-  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.logoSmall, d.favicon, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.locateEnabled, d.statsPublic, d.statsShow]);
+  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.logoSmall, d.favicon, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.locateEnabled, d.communityEnabled, d.statsPublic, d.statsShow]);
   let lastSig = signature(data);
   let busy = false;
   let lastSync = new Date();
@@ -302,6 +303,7 @@
         data = next;
         applyMeta(false);
         locate.setEnabled(data.locateEnabled !== false);
+        locate.setCommunity(data.communityEnabled === true);
         buildHouses();
         Wijk.setResidentMode?.(data.residentsMode);
         Wijk.setResidentGeofence?.(data.geofence);

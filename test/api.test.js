@@ -684,6 +684,51 @@ test('knop Mijn locatie: standaard beschikbaar, door de beheerder te verbergen',
   assert.equal((await (await j('/api/map')).json()).locateEnabled, true);
 });
 
+test('community: standaard uit, wederkerig, kort bewaard en door de beheerder uit te zetten', async () => {
+  const ping = (id, lat = 52.1, lng = 5.3) => j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id, lat, lng, acc: 12 }) });
+  const A = 'a'.repeat(32), B = 'b'.repeat(32);
+  // uit: geen positie bewaren of tonen, ook niet via de kaart-API
+  assert.equal((await (await j('/api/map')).json()).communityEnabled, false);
+  assert.equal((await ping(A)).status, 403);
+  assert.equal((await j('/api/admin/community')).status, 401);
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityEnabled: true })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).communityEnabled, true);
+  assert.equal((await (await adminReq('/settings')).json()).communityEnabled, true);
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"communityEnabled":false}' })).status, 401);
+
+  // wederkerig: A deelt en ziet niemand; zodra B deelt, ziet B de positie van A en omgekeerd
+  assert.deepEqual((await (await ping(A, 52.1, 5.3)).json()).peers, []);
+  const forB = (await (await ping(B, 52.2, 5.4)).json()).peers;
+  assert.equal(forB.length, 1);
+  assert.equal(forB[0].lat, 52.1);
+  assert.ok(!('id' in forB[0]) && /^[0-9a-f]{10}$/.test(forB[0].k), 'het apparaat-id lekt niet naar anderen');
+  assert.equal((await (await ping(A, 52.1, 5.3)).json()).peers.length, 1);
+
+  // de beheerder ziet iedereen
+  const list = await (await adminReq('/community')).json();
+  assert.equal(list.enabled, true);
+  assert.equal(list.participants.length, 2);
+
+  // ongeldige invoer
+  assert.equal((await ping('kort')).status, 400);
+  assert.equal((await ping('c'.repeat(32), 91, 5)).status, 400);
+  assert.equal((await ping('c'.repeat(32), 52, 181)).status, 400);
+  assert.equal((await j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id: 'c'.repeat(32), lat: '52', lng: '5' }) })).status, 400);
+
+  // stoppen wist de positie meteen
+  assert.equal((await j('/api/community/leave', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id: B }) })).status, 200);
+  assert.equal((await (await adminReq('/community')).json()).participants.length, 1);
+
+  // uitzetten wist alles en weigert nieuwe posities
+  assert.equal((await adminReq('/settings', 'PUT', { communityEnabled: false })).status, 200);
+  assert.deepEqual(await (await adminReq('/community')).json(), { enabled: false, participants: [] });
+  assert.equal((await ping(A)).status, 403);
+  await adminReq('/settings', 'PUT', { communityEnabled: true });
+  assert.deepEqual((await (await adminReq('/community')).json()).participants, [], 'na uit en aan is er niets blijven staan');
+  await adminReq('/settings', 'PUT', { communityEnabled: false });
+});
+
 test('eenvoudige weergave: instelling in het beheer, zichtbaar op de kaart', async () => {
   assert.equal((await (await j('/api/map')).json()).simpleUi, false);
   assert.equal((await adminReq('/settings', 'PUT', { simpleUi: true })).status, 200);

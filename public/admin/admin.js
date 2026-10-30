@@ -262,6 +262,7 @@
       cfg.st = st;
       $('org-simple').checked = st.simpleUi;
       $('org-locate').checked = st.locateEnabled;
+      $('org-community').checked = st.communityEnabled;
       $('stats-public').checked = st.statsPublic;
       statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
@@ -283,6 +284,13 @@
   $('org-simple').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ simpleUi: $('org-simple').checked }), expectAuth: true }); toast($('org-simple').checked ? 'Eenvoudige weergave staat aan' : 'Eenvoudige weergave staat uit'); }
     catch (e) { $('org-err').textContent = e.message; $('org-simple').checked = !$('org-simple').checked; }
+  };
+  $('org-community').onchange = async () => {
+    try {
+      await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ communityEnabled: $('org-community').checked }), expectAuth: true });
+      toast($('org-community').checked ? 'Community staat aan' : 'Community staat uit, alle posities zijn gewist');
+      pollCommunity();
+    } catch (e) { $('org-err').textContent = e.message; $('org-community').checked = !$('org-community').checked; }
   };
   $('org-locate').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ locateEnabled: $('org-locate').checked }), expectAuth: true }); toast($('org-locate').checked ? 'Knop Mijn locatie staat aan op de voorpagina' : 'Knop Mijn locatie staat uit op de voorpagina'); }
@@ -1305,6 +1313,20 @@
     } catch { toast('Zoeken mislukt'); }
   }
 
+  // Deelnemers van de community (alleen als die aanstaat): paarse stippen op de beheerkaart met het aantal in de zijbalk.
+  let communityLayer = null;
+  async function pollCommunity() {
+    if (!communityLayer || document.hidden) return;
+    try {
+      const { enabled, participants } = await api('/api/admin/community');
+      const chip = $('a-community');
+      if (!enabled) { communityLayer.clear(); chip.hidden = true; return; }
+      communityLayer.update(participants);
+      chip.hidden = false;
+      chip.textContent = participants.length === 1 ? 'Community: 1 deelnemer deelt zijn of haar positie' : `Community: ${participants.length} deelnemers delen hun positie`;
+    } catch { /* offline of uitgelogd: volgende poging */ }
+  }
+
   function initEditor(data) {
     if (map) { map.remove(); layers.clear(); handles = []; draftLayer = null; }
     $('vp').replaceChildren();
@@ -1312,6 +1334,7 @@
     // in het beheer altijd het volledige zoombereik, ook als bezoekers beperkt zijn
     map = Wijk.createMap($('vp'), data.view && { ...data.view, minZoom: 1, maxZoom: 19 }, data.houses);
     Wijk.map = map;
+    communityLayer = Wijk.createCommunityLayer(map);
     map.on('click', onMapClick);
     initLongPress();
     map.on('dblclick', () => { if (mode === 'draw' && draft.length >= 3) finishDraft(); });
@@ -1406,6 +1429,8 @@
     setEditing(false); // standaard de weergave; "Bewerken" opent het bewerkscherm
     setTimeout(() => map.invalidateSize(), 0);
     pollChanges(true);
+    pollCommunity();
+    if (!window.__communityTimer) window.__communityTimer = setInterval(pollCommunity, 10000);
     if (!window.__pollTimer) window.__pollTimer = setInterval(() => pollChanges(), 30000);
     if (location.hash === '#changes') openSettings('changes');
   }

@@ -2,9 +2,18 @@
 // Staat standaard uit: de browser vraagt pas om toestemming nadat de bezoeker op de knop tikt, en er wordt
 // niets onthouden of verstuurd; de positie blijft op het apparaat. Zolang de locatie aan staat blijft het scherm
 // aan (Screen Wake Lock), zodat je de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen. De beheerder kan de knop verbergen.
+//
+// Community (alleen als de beheerder die aanzet): een tweede, eveneens opt-in knop deelt je positie met anderen die ook
+// delen. De bezoeker moet dat eerst bevestigen; de server bewaart de positie kort in het geheugen en verwijdert haar
+// zodra je stopt of de pagina sluit. Wie niet deelt, ziet de anderen niet.
 (function () {
   const FOLLOW_ZOOM = 18; // zoom bij het volgen: huisnummers zijn dan goed leesbaar
   const MAX_ACC_CIRCLE = 500; // m; een nauwkeurigheidscirkel groter dan dit zegt niets bruikbaars
+  const PING_MS = 8000; // hoe vaak de eigen positie wordt doorgegeven (en de anderen worden ververst); de server laat 45 s toe
+  const newId = () => {
+    if (crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
+    return [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
 
   // Geeft { setEnabled(bool), stop() } terug. Zonder geolocation-ondersteuning komt er nooit een knop.
   function createLocate(map, toast) {
@@ -12,6 +21,9 @@
     let watchId = null, following = false, announced = false, fresh = false;
     let dot = null, ring = null;
     let wake = null, asking = false; // Screen Wake Lock: houdt het scherm aan zolang de locatie aan staat
+    // community
+    let communityOn = false, commControl = null, commButton = null, commBadge = null, layer = null;
+    let sharing = false, cid = '', lastFix = null, pingTimer = null, limitToasted = false;
 
     const supported = () => 'geolocation' in navigator;
 
@@ -24,6 +36,19 @@
       const label = !on ? 'Mijn locatie tonen' : following ? 'Mijn locatie verbergen' : 'Naar mijn locatie';
       button.setAttribute('aria-label', label);
       button.title = label;
+      paintCommunity();
+    }
+
+    function paintCommunity() {
+      if (!commButton) return;
+      commButton.classList.toggle('on', sharing);
+      commButton.setAttribute('aria-pressed', String(sharing));
+      const label = sharing ? 'Stoppen met delen met de community' : 'Mijn positie delen met de community';
+      commButton.setAttribute('aria-label', label);
+      commButton.title = label;
+      const n = sharing && layer ? layer.count : 0;
+      commBadge.textContent = n ? String(n) : '';
+      commBadge.hidden = !n;
     }
 
     // zoomIn: bij het starten (en bij "Naar mijn locatie") dicht genoeg inzoomen om huizen te zien;
@@ -49,6 +74,9 @@
 
     function onFix(pos) {
       const latlng = draw(pos);
+      const first = !lastFix;
+      lastFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0 };
+      if (sharing && first) sendPing(); // meteen de eerste positie delen, de timer doet de rest
       if (following) center(latlng, fresh);
       fresh = false;
     }
@@ -95,11 +123,70 @@
 
     function stop() {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      watchId = null; following = false;
+      watchId = null; following = false; lastFix = null;
+      stopSharing();
       releaseScreen();
       dot?.remove(); ring?.remove(); dot = ring = null;
       paint();
     }
+
+    // ---------- community ----------
+    async function sendPing() {
+      if (!sharing || !lastFix) return;
+      try {
+        const r = await fetch('/api/community/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: cid, ...lastFix }) });
+        if (!sharing) return; // intussen gestopt
+        if (r.status === 403) { stopSharing(); toast('De community is uitgezet.'); return; }
+        if (r.status === 429) { if (!limitToasted) { limitToasted = true; toast('Delen lukt nu niet (te druk). We proberen het straks opnieuw.'); } return; }
+        if (!r.ok) return;
+        limitToasted = false;
+        layer.update((await r.json()).peers);
+        paintCommunity();
+      } catch { /* offline: volgende poging */ }
+    }
+
+    function leave() { // best effort; de server verwijdert de positie anders na 45 s vanzelf
+      if (!cid) return;
+      const body = JSON.stringify({ id: cid });
+      if (!navigator.sendBeacon?.('/api/community/leave', new Blob([body], { type: 'application/json' }))) {
+        fetch('/api/community/leave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+      }
+    }
+
+    function stopSharing() {
+      clearInterval(pingTimer); pingTimer = null;
+      if (sharing) leave();
+      sharing = false; cid = '';
+      layer?.clear();
+      paintCommunity();
+    }
+
+    // De bezoeker bevestigt eerst wat er gedeeld wordt; er is geen standaardkeuze en niets wordt onthouden.
+    function consent() {
+      const dlg = document.getElementById('community-dialog');
+      if (!dlg?.showModal) return Promise.resolve(false);
+      return new Promise((resolve) => {
+        let yes = false;
+        dlg.onclose = () => resolve(yes);
+        document.getElementById('community-yes').onclick = () => { yes = true; dlg.close(); };
+        document.getElementById('community-no').onclick = () => dlg.close();
+        document.getElementById('community-x').onclick = () => dlg.close();
+        dlg.showModal();
+      });
+    }
+
+    async function pressCommunity() {
+      if (sharing) return stopSharing();
+      if (!(await consent())) return;
+      if (watchId === null) start(); // delen heeft de positie nodig; ook zonder eerst op "Mijn locatie" te tikken
+      if (watchId === null) return;
+      cid = newId(); sharing = true; limitToasted = false;
+      layer = layer || Wijk.createCommunityLayer(map);
+      pingTimer = setInterval(sendPing, PING_MS);
+      if (lastFix) sendPing();
+      paintCommunity();
+    }
+    window.addEventListener('pagehide', () => { if (sharing) leave(); });
 
     function press() {
       if (watchId === null) return start();
@@ -129,13 +216,45 @@
         },
       });
       control = new Ctl().addTo(map);
+      if (communityOn) mountCommunity();
+    }
+
+    function mountCommunity() {
+      if (commControl || !control) return;
+      const Ctl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd() {
+          const box = L.DomUtil.create('div', 'leaflet-bar locate-ctl community-ctl');
+          commButton = L.DomUtil.create('button', 'locate-btn community-btn', box);
+          commButton.type = 'button';
+          commButton.innerHTML = MDI.html('account-group');
+          commBadge = L.DomUtil.create('span', 'community-badge', commButton);
+          commBadge.hidden = true;
+          L.DomEvent.disableClickPropagation(box);
+          L.DomEvent.on(commButton, 'click', pressCommunity);
+          paintCommunity();
+          return box;
+        },
+      });
+      commControl = new Ctl().addTo(map);
+    }
+
+    function unmountCommunity() {
+      stopSharing();
+      commControl?.remove();
+      commControl = commButton = commBadge = null;
     }
 
     return {
       // aan: knop tonen (de positie blijft uit tot er getikt wordt); uit: knop weg en meteen stoppen met meten
       setEnabled(on) {
         if (on && supported() && !control) mount();
-        if (!on && control) { stop(); control.remove(); control = button = null; }
+        if (!on && control) { stop(); unmountCommunity(); control.remove(); control = button = null; }
+      },
+      // aan: de beheerder heeft de community aangezet; de knop komt er alleen als ook "Mijn locatie" beschikbaar is
+      setCommunity(on) {
+        communityOn = on;
+        if (on) mountCommunity(); else unmountCommunity();
       },
       stop,
     };
