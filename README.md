@@ -246,9 +246,11 @@ Zonder invoer geldt de sitenaam (`SITE_TITLE`). Een al geïnstalleerde app neemt
 Ook het beheer (`/beheer`) is te installeren als eigen app, met een eigen donkerblauwe lantaarn met tandwiel als icoon en een eigen favicon, zodat je het onderscheidt van de publieke kaart (Chrome/Edge: installeer-icoon in de adresbalk of *App installeren*; iPhone/iPad: *Zet in beginscherm*). De app opent direct op `/beheer`; pushmeldingen voor nieuwe wijzigingen gebruiken hetzelfde icoon. Een nieuw icoon maak je met `python3 tools/make-icons.py`.
 
 ## Installeren als app en offline gebruik
-- **Android en Windows (Chrome/Edge)**: je krijgt **eenmalig** een melding om de app te installeren (*Installeren* / *Niet nu*), per apparaat onthouden. Daarna kan het ook via het browsermenu → *App installeren*.
-- **iPhone/iPad**: dezelfde eenmalige melding met uitleg (zie hieronder).
-- **iPhone/iPad (Safari)**: deel-icoon → *Zet in beginscherm*.
+- **Eerste bezoek (iPhone/iPad, Android en Windows met Chrome/Edge)**: je krijgt **eenmalig** een melding *Installeer de app* (per apparaat onthouden) met een knop **Installeer nu** die het installeren start, plus uitleg per platform:
+  - **iPhone/iPad (Safari)**: *Installeer nu* opent het deelvenster; kies daarin *Zet in beginscherm* → *Voeg toe*.
+  - **Android (Chrome)**: *Installeer nu* start de installatie van de browser; kan dat niet, dan staan de stappen erbij (menu ⋮ → *App installeren*).
+  - **Windows (Chrome/Edge)**: *Installeer nu* start de installatie van de browser; anders het installeer-icoon in de adresbalk of menu → *App installeren* (Edge: *Apps* → *Deze site als app installeren*).
+  - Met *Niet nu* sluit je de melding; later kan het nog via het browsermenu.
 - **Offline**: de app bewaart zichzelf, de laatst bekende kaartgegevens, het logo en de kaarttegels van het wijkgebied (en de PDF-uitsnede).
   Zonder verbinding zie je de laatst bekende stand (met de melding *Offline*), en de PDF blijft te maken. Alleen het beheer vereist altijd een verbinding.
 - Dit werkt alleen via **HTTPS** (zie `ORIGIN`). Na een update van de site haalt de app de nieuwe versie bij het eerstvolgende bezoek op.

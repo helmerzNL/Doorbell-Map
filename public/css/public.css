@@ -81,6 +81,8 @@ body.public .intro-info-ico { display: grid; place-items: center; flex: none; wi
 body.public .intro-info-ico .mdi { width: 24px; height: 24px; }
 body.public dialog p { line-height: 1.55; }
 body.public dialog > p:last-child:not(.error) .primary, body.public #install-dialog p .primary { min-width: 8rem; }
+body.public .install-steps { margin: 0 0 14px; padding-left: 1.4rem; line-height: 1.5; }
+body.public .install-steps li { margin: 0 0 6px; padding-left: 2px; }
 body.public #code-input { font-size: 1.4rem; letter-spacing: .3em; text-align: center; min-height: 52px; font-variant-numeric: tabular-nums; }
 body.public #code-input::placeholder { font-size: .95rem; letter-spacing: 0; }
 body.public .error { min-height: 0; font-size: .88rem; font-weight: 550; margin: 8px 0; }
