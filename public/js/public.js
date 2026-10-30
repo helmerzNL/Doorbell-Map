@@ -14,6 +14,15 @@
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', iosTitle);
 
     const headerLogo = data.logoSmall || data.logo; // het kleine logo is bedoeld voor de kopbalk; zonder valt het terug op het gewone logo
+    // Favicon en iOS-beginschermicoon volgen het kleine logo; zonder valt het terug op de standaardlantaarn.
+    for (const rel of ['icon', 'apple-touch-icon']) {
+      const link = document.querySelector(`link[rel="${rel}"]`);
+      if (!link) continue;
+      link.dataset.default ??= JSON.stringify({ href: link.getAttribute('href'), sizes: link.getAttribute('sizes') });
+      const def = JSON.parse(link.dataset.default);
+      link.setAttribute('href', data.logoSmall ? data.logoSmall.url : def.href);
+      if (data.logoSmall || !def.sizes) link.removeAttribute('sizes'); else link.setAttribute('sizes', def.sizes); // het formaat van het kleine logo is niet bekend
+    }
     if (headerLogo) {
       $('logo').src = headerLogo.url;
       $('logo').alt = `Logo ${data.title}`;

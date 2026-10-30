@@ -317,7 +317,7 @@
     "Klein logo voor de kopbalk (optioneel)": "Small logo for the header (optional)",
     "Klein logo uploaden": "Upload small logo",
     "Klein logo verwijderen": "Remove small logo",
-    "Staat linksboven op de kaart, vooral handig op een telefoon. Een vierkant icoon of een compacte variant komt daar mooier tot zijn recht dan een breed logo. Zonder klein logo wordt het gewone logo gebruikt. PDF en QR-kaartjes houden het gewone logo.": "Shown at the top left of the map, especially useful on a phone. A square icon or a compact variant looks better there than a wide logo. Without a small logo the regular logo is used. PDF and QR cards keep the regular logo.",
+    "Staat linksboven op de kaart, vooral handig op een telefoon, en wordt ook het favicon (tabbladicoon) van de kaart. Een vierkant icoon of een compacte variant komt daar mooier tot zijn recht dan een breed logo. Zonder klein logo wordt het gewone logo gebruikt. PDF en QR-kaartjes houden het gewone logo.": "Shown at the top left of the map, especially useful on a phone, and also becomes the favicon (tab icon) of the map. A square icon or a compact variant looks better there than a wide logo. Without a small logo the regular logo is used. PDF and QR cards keep the regular logo.",
     "Naam van de site": "Name of the site",
     "Standaard: de naam uit de serverinstelling (SITE_TITLE)": "Default: the name from the server setting (SITE_TITLE)",
     "Staat naast het logo en bovenaan de PDF.": "Shown next to the logo and at the top of the PDF.",
