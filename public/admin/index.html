@@ -78,6 +78,7 @@
       <span class="track" aria-hidden="true"><span class="thumb"></span></span>
       <span class="switch-text">Huisnummers op de kaart</span>
     </label>
+    <div id="a-community" class="hint" role="status" hidden></div>
     <div class="side-card">
       <h5 class="side-title">Gereedschap</h5>
       <div class="row seg">
@@ -351,6 +352,10 @@
         <div class="set-row">
           <div class="set-text"><div class="set-title">Knop "Mijn locatie"</div><div class="set-hint">Bezoekers kunnen met een knop op de kaart hun eigen positie (GPS) als stip laten zien. De knop doet niets tot een bezoeker erop tikt; de browser vraagt dan om toestemming. Zet uit om de knop te verbergen.</div></div>
           <label class="switch"><input type="checkbox" id="org-locate" role="switch" aria-label="Knop Mijn locatie op de voorpagina tonen"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
+        </div>
+        <div class="set-row">
+          <div class="set-text"><div class="set-title">Community</div><div class="set-hint">Bezoekers kunnen met een tweede knop hun positie live delen; wie meedoet ziet de andere deelnemers als paarse stippen op de kaart, en jij ziet ze hier in het beheer. Delen is altijd vrijwillig en vraagt eerst bevestiging. Posities staan alleen kort in het geheugen van de server en verdwijnen zodra iemand stopt (of na 45 seconden zonder signaal). Werkt alleen als ook de knop "Mijn locatie" aan staat. Uitzetten wist meteen alle posities.</div></div>
+          <label class="switch"><input type="checkbox" id="org-community" role="switch" aria-label="Community: deelnemers live op de kaart"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
         </div>
         <div class="field"><label>Overzichtskaart met aantallen</label>
           <div class="set-row">

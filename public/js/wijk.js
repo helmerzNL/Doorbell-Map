@@ -652,5 +652,31 @@
     $('hs-bar').hidden = !show.green && !show.red;
   }
 
-  window.Wijk = { BETA, renderStats, docTitle, setHeading, loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
+  // Laag met de deelnemers van de community (paarse stippen). update(lijst) vervangt de posities;
+  // elke deelnemer heeft een korte sleutel zodat de stip meeschuift in plaats van opnieuw te verschijnen.
+  function createCommunityLayer(map) {
+    const group = L.layerGroup().addTo(map);
+    const dots = new Map();
+    return {
+      update(list) {
+        const seen = new Set();
+        for (const p of list || []) {
+          seen.add(p.k);
+          const at = [p.lat, p.lng];
+          const dot = dots.get(p.k);
+          if (dot) dot.setLatLng(at);
+          else {
+            const m = L.circleMarker(at, { radius: 8, interactive: false, className: 'community-dot', weight: 3, fillOpacity: 1 });
+            dots.set(p.k, m);
+            group.addLayer(m);
+          }
+        }
+        for (const [k, m] of dots) if (!seen.has(k)) { group.removeLayer(m); dots.delete(k); }
+      },
+      clear() { group.clearLayers(); dots.clear(); },
+      get count() { return dots.size; },
+    };
+  }
+
+  window.Wijk = { BETA, createCommunityLayer, renderStats, docTitle, setHeading, loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
 })();

@@ -455,3 +455,6 @@ button [data-mdi], .btn [data-mdi] { margin-right: 4px; }
 
 /* Beta-build: label naast de naam */
 .beta-tag { display: inline-block; vertical-align: middle; margin-left: .25em; padding: 1px 7px; border-radius: 999px; background: #d9480f; color: #fff; font-size: .62em; font-weight: 800; letter-spacing: .06em; line-height: 1.5; }
+
+/* deelnemers van de community (publieke kaart en beheerkaart) */
+.viewport path.community-dot { fill: #8e44ad; stroke: #fff; }

@@ -54,6 +54,12 @@ body.public .locate-btn.on { color: #1a73e8; }
 body.public .locate-btn.following { background: #1a73e8; color: #fff; }
 body.public .locate-btn.following:hover { background: #1765cc; }
 @media (pointer: coarse) { body.public .locate-btn { width: 44px; height: 44px; } }
+body.public .community-ctl { margin-top: 8px; }
+body.public .community-btn { position: relative; }
+body.public .community-btn.on { background: #8e44ad; color: #fff; }
+body.public .community-btn.on:hover { background: #7d3c98; }
+body.public .community-badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--panel); color: #8e44ad; font: 700 11px/16px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 1px #8e44ad; }
+body.public .community-badge[hidden] { display: none; }
 body.public path.locate-dot { fill: #1a73e8; stroke: #fff; }
 body.public path.locate-ring { fill: #1a73e8; fill-opacity: .15; stroke: #1a73e8; stroke-opacity: .4; }
 body.public path.locate-ring-hidden { display: none; }

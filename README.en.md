@@ -82,6 +82,8 @@ Example with random houses (map data © OpenStreetMap contributors).
 
 **My location** – below the zoom buttons is the *My location* button (the crosshair). It does nothing until you tap it: only then does the browser ask for permission to use your location, and without permission the map stays as it was. After a tap your position appears as a blue dot with a light circle for the accuracy, and the map follows you as you walk. If you move the map yourself, following stops (the dot stays) and a tap on the button takes you back; one more tap on the next state turns the dot off again. While location is on the screen stays awake, so you do not have to keep unlocking your phone while walking (if your browser supports it; otherwise the screen simply dims, and it is requested again when you return to the page). Your position stays on your phone: it is never stored or sent anywhere, and when you close or reload the page the button is off again. Showing your location only works over **https**. The administrator can hide the button (see *Config*).
 
+**Community** – optional, **off** by default; the administrator switches it on under *Settings → Config → Display → Community*. A second button (the three people) then appears below *My location* to share your position live. Sharing is always voluntary: you must confirm it first and one tap stops it. Anyone taking part sees the other participants as **purple dots** (with the count on the button); anyone who does not share sees nobody. No name is attached. The server only keeps positions briefly in memory (not on disk) and deletes them as soon as someone stops, closes the page, or after 45 seconds without a signal; when the administrator switches the feature off every position is gone immediately. In the admin area the administrator sees all participants as purple dots on the map, with the count in the side bar. This only works if the *My location* button is on as well.
+
 **In the admin area** this works too: double-click (or long-press) a house and select mode switches on with that house selected, even if you were just drawing (as long as no area is in progress).
 
 ### Access via QR code (optional)
@@ -175,7 +177,7 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 - *Devices*: registered devices, **alphabetical** by street and house number (handy for searching with many houses), with removing the link or **blocking** (optionally with IP address), and the *Blocked* list.
 - *Notifications on this device*: push notifications for new changes.
 
-**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the *My location* button for visitors (on or off; on by default), the names of the statuses, the info box, the explanation and the text when sharing via WhatsApp (the texts per language).
+**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the *My location* button for visitors (on or off; on by default), the *Community* (live participants; off by default), the names of the statuses, the info box, the explanation and the text when sharing via WhatsApp (the texts per language).
 
 **Security** – add/remove passkeys and an optional password (confirm with passkey).
 
