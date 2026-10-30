@@ -37,7 +37,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - Wijzigingen van bewoners **goedkeuren of afwijzen**, met **pushmeldingen**; apparaten **blokkeren** (ook op IP); wijzigen **plannen** tot een datum en tijd.
 - **QR-codes** per huis: tonen, link kopiëren, vernieuwen en een **afdrukbare PDF** met een kaartje per huis om bij de bewoners te bezorgen.
 - Instellingen in vijf overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
-- Eigen **logo (met een optioneel klein logo voor de kopbalk en het favicon), uitleg, infovlak, site- en appnaam** en eigen namen voor de statussen.
+- Eigen **logo (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (standaard de lantaarn), uitleg, infovlak, site- en appnaam** en eigen namen voor de statussen.
 - Automatische **backups** na elke opslagpoging, met korte titels en handmatige backups.
 - Versienummer en commit zichtbaar in het instellingenmenu.
 
