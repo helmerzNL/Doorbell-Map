@@ -125,8 +125,14 @@
     <h3 id="community-title">Positie delen met de community?</h3>
     <button id="community-x" class="icon-btn" type="button" aria-label="Sluiten"><i data-mdi="close"></i></button>
   </div>
-  <p>Andere bezoekers die hun positie ook delen, zien jouw positie live als stip op de kaart. Jij ziet hen ook. Wie niet deelt, ziet niemand.</p>
-  <p class="muted">Je positie wordt alleen tijdelijk op de server bewaard en direct gewist zodra je stopt met delen of de pagina sluit. Er staat geen naam bij. Kinderen delen alleen met toestemming van een ouder.</p>
+  <div id="community-text"><p>Andere bezoekers die hun positie ook delen, zien jouw positie live als stip op de kaart. Jij ziet hen ook. Wie niet deelt, ziet niemand.</p>
+  <p class="muted">Je positie wordt alleen tijdelijk op de server bewaard en direct gewist zodra je stopt met delen of de pagina sluit. Er staat geen naam bij. Kinderen delen alleen met toestemming van een ouder.</p></div>
+  <fieldset id="community-looks" class="community-looks" hidden>
+    <legend>Zo zien anderen jou</legend>
+    <div id="community-colors" class="look-grid" role="radiogroup" aria-label="Kleur"></div>
+    <div id="community-icons" class="look-grid" role="radiogroup" aria-label="Symbool"></div>
+    <p id="community-preview-row" class="muted look-preview"><span id="community-preview" class="community-pin" aria-hidden="true"></span> <span>Zo staat jouw stip op de kaart.</span></p>
+  </fieldset>
   <div class="row"><button id="community-yes" class="primary" type="button">Ja, deel mijn positie</button><button id="community-no" type="button">Annuleren</button></div>
 </dialog>
 

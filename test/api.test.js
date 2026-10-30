@@ -929,6 +929,68 @@ test('Tekst bij delen via WhatsApp is instelbaar per taal (standaard, opslaan, t
   assert.equal(d2.shareTexts.en, d0.defaultShareTexts.en);
 });
 
+test('community: kleur en symbool kiezen (standaard aan), alleen geldige waarden, uit te zetten in het beheer', async () => {
+  const ping = (id, extra = {}) => j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id, lat: 52.1, lng: 5.3, acc: 12, ...extra }) });
+  const A = 'd'.repeat(32), B = 'e'.repeat(32), C = 'f'.repeat(32);
+  assert.equal((await adminReq('/settings', 'PUT', { communityEnabled: true })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).communityLooks, true, 'standaard aan');
+  assert.equal((await (await adminReq('/settings')).json()).communityLooks, true);
+
+  // A kiest een kleur en symbool; B ziet dat terug, ongeldige waarden worden genegeerd
+  await ping(A, { color: '#E67E22', icon: 'fox' });
+  const seenByB = (await (await ping(B, { color: 'rood', icon: 'undefined<script>' })).json()).peers;
+  assert.equal(seenByB[0].c, '#e67e22');
+  assert.equal(seenByB[0].i, 'fox');
+  const seenByA = (await (await ping(A, { color: '#E67E22', icon: 'fox' })).json()).peers;
+  assert.ok(!('c' in seenByA[0]) && !('i' in seenByA[0]), 'zonder (geldige) keuze geen kleur of symbool');
+  assert.equal((await ping(C, { color: 7, icon: null })).status, 200, 'verkeerde types geven geen fout');
+  assert.ok(!(await (await adminReq('/community')).json()).participants.some((p) => p.k === seenByA[0].k && 'i' in p));
+
+  // uit: iedereen is meteen de standaardstip, ook voor de beheerkaart; nieuwe keuzes worden niet bewaard
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"communityLooks":false}' })).status, 401);
+  assert.equal((await adminReq('/settings', 'PUT', { communityLooks: false })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).communityLooks, false);
+  const off = (await (await adminReq('/community')).json()).participants;
+  assert.ok(off.length >= 2 && off.every((p) => !('c' in p) && !('i' in p)));
+  await ping(A, { color: '#2980b9', icon: 'owl' });
+  assert.ok((await (await ping(B)).json()).peers.every((p) => !('c' in p) && !('i' in p)));
+  assert.equal((await adminReq('/settings', 'PUT', { communityLooks: true })).status, 200);
+  assert.equal((await (await adminReq('/settings')).json()).communityLooks, true);
+  await adminReq('/settings', 'PUT', { communityEnabled: false });
+});
+
+test('Titel en tekst van het communityvenster zijn instelbaar per taal (standaard, opslaan, te lang, leeg = standaard)', async () => {
+  const admin = async () => (await adminReq('/settings')).json();
+  const map = async () => (await j('/api/map')).json();
+  const a0 = await admin(), m0 = await map();
+  assert.equal(a0.defaultCommunity.nl.title, 'Positie delen met de community?');
+  assert.match(a0.defaultCommunity.nl.text, /\n\n/, 'twee alinea\'s');
+  assert.equal(a0.defaultCommunity.en.title, 'Share your position with the community?');
+  assert.match(a0.defaultCommunity.en.text, /^Other visitors .*\n\nYour position is only kept/s, 'ook de Engelse standaard heeft beide alinea\'s');
+  assert.equal(m0.communityTitle, a0.defaultCommunity.nl.title);
+  assert.equal(m0.communityText, a0.defaultCommunity.nl.text);
+  assert.equal(a0.communityTitle, '', 'niets opgeslagen = standaardtekst');
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityTitle: 'Doe mee op de kaart?', communityText: 'Kies een kleur.\r\n\r\nJe positie wordt niet bewaard.', translations: { en: { communityTitle: 'Join the map?', communityText: 'Pick a colour.' } } })).status, 200);
+  const m1 = await map();
+  assert.equal(m1.communityTitle, 'Doe mee op de kaart?');
+  assert.equal(m1.communityText, 'Kies een kleur.\n\nJe positie wordt niet bewaard.');
+  assert.equal(m1.translations.en.communityTitle, 'Join the map?');
+  assert.equal(m1.translations.en.communityText, 'Pick a colour.');
+  assert.equal((await admin()).translations.en.communityTitle, 'Join the map?');
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityTitle: 'x'.repeat(81) })).status, 400);
+  assert.equal((await adminReq('/settings', 'PUT', { communityText: 'x'.repeat(1001) })).status, 400);
+  assert.equal((await adminReq('/settings', 'PUT', { translations: { en: { communityText: 'x'.repeat(1001) } } })).status, 400);
+  assert.equal((await map()).communityTitle, 'Doe mee op de kaart?', 'een afgewezen wijziging verandert niets');
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityTitle: ' ', communityText: '', translations: { en: { communityTitle: '', communityText: '' } } })).status, 200);
+  const m2 = await map();
+  assert.equal(m2.communityTitle, m0.communityTitle);
+  assert.equal(m2.communityText, m0.communityText);
+  assert.equal(m2.translations.en.communityTitle, '');
+});
+
 test('QR-code per huis: alleen via QR koppelen (schakelaar), een apparaat per huis, vernieuwen', async () => {
   const mkh = (id) => ({ id, street: 'Dorpsstraat', number: id.slice(1), status: 'none', points: ptsR });
   await adminReq('/settings', 'PUT', { residentsEnabled: true, residentsAppOnly: false, residentsOff: false, residentsGeofence: false, residentsCodeOn: false, residentsQrOnly: false });

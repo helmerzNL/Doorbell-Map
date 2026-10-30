@@ -457,4 +457,6 @@ button [data-mdi], .btn [data-mdi] { margin-right: 4px; }
 .beta-tag { display: inline-block; vertical-align: middle; margin-left: .25em; padding: 1px 7px; border-radius: 999px; background: #d9480f; color: #fff; font-size: .62em; font-weight: 800; letter-spacing: .06em; line-height: 1.5; }
 
 /* deelnemers van de community (publieke kaart en beheerkaart) */
-.viewport path.community-dot { fill: #8e44ad; stroke: #fff; }
+/* de kleur komt uit --pin (de gekozen kleur van de deelnemer); het symbool staat als emoji in de cirkel */
+.community-pin { --pin: #8e44ad; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: var(--pin); border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.25); line-height: 1; }
+.community-pin.has-icon { font-size: 14px; border-width: 2px; }

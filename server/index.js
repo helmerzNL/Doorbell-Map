@@ -75,6 +75,7 @@ function publicTranslations() {
     out[l] = {
       siteTitle: t.siteTitle || '', appName: t.appName || '', appShortName: t.appShortName || '', intro: t.intro || '',
       residentInfo: residents.enabled() ? t.residentInfo || '' : '',
+      communityTitle: t.communityTitle || '', communityText: t.communityText || '',
       labels: { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' },
     };
   }
@@ -94,6 +95,8 @@ app.get('/api/map', (req, res) => {
     residentsMode: residents.mode(),
     simpleUi: settings?.simpleUi === true,
     communityEnabled: settings?.communityEnabled === true, // live deelnemers op de kaart (standaard uit)
+    communityLooks: community.looksEnabled(), // deelnemers kiezen zelf een kleur en symbool (standaard aan)
+    communityTitle: community.title('nl'), communityText: community.text('nl'), // het vlakje "Positie delen met de community?"
     locateEnabled: settings?.locateEnabled !== false, // knop "Mijn locatie" op de kaart (standaard beschikbaar, maar uit tot erop getikt wordt)
     statsPublic: settings?.statsPublic === true, // overzichtsoverlay ook op de voorpagina
     statsShow: statsShow(settings),
@@ -388,7 +391,7 @@ function sanitizeBackup(b) {
   for (const l of lang.LANGS) {
     const o = t.translations?.[l];
     if (!o || typeof o !== 'object' || l === 'nl') continue;
-    texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), labels: labelsOf(o.labels) };
+    texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), communityTitle: txt(o, 'communityTitle'), communityText: txt(o, 'communityText'), labels: labelsOf(o.labels) };
   }
   return { houses, view, pdfView, texts };
 }
@@ -510,7 +513,7 @@ admin.get('/settings', (req, res) => {
     const t = lang.translations(l);
     tx[l] = Object.fromEntries([...lang.TEXT_FIELDS.map((f) => [f, t[f] || '']), ['labels', { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' }]]);
   }
-  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
+  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, communityLooks: community.looksEnabled(), communityTitle: s.communityTitle || '', communityText: s.communityText || '', defaultCommunity: community.defaults(), statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
 });
 
 // Tekstvelden met hun maximale lengte; gelden voor het Nederlands (gewone instellingen) en voor elke vertaling.
@@ -521,6 +524,8 @@ const TEXT_RULES = {
   intro: { max: 5000, multiline: true, error: 'De uitleg mag maximaal 5000 tekens zijn' },
   residentInfo: { max: 1000, multiline: true, error: 'Het infovlak mag maximaal 1000 tekens zijn' },
   qrShareText: { max: 500, multiline: true, error: 'De deeltekst mag maximaal 500 tekens zijn' },
+  communityTitle: { max: 80, error: 'De titel van het communityvlak mag maximaal 80 tekens zijn' },
+  communityText: { max: 1000, multiline: true, error: 'De tekst van het communityvlak mag maximaal 1000 tekens zijn' },
 };
 // { value } of { error }
 function cleanText(field, raw) {
@@ -533,11 +538,15 @@ function cleanText(field, raw) {
 admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (req, res) => {
   const body = req.body || {};
   const db = store.db();
-  for (const f of ['intro', 'residentInfo', 'qrShareText']) {
+  for (const f of ['intro', 'residentInfo', 'qrShareText', 'communityTitle', 'communityText']) {
     if (!(f in body)) continue;
     const r = cleanText(f, body[f]);
     if (r.error) return res.status(400).json({ error: r.error });
-    db.settings[f] = r.value; // qrShareText leeg = standaardtekst
+    db.settings[f] = r.value; // qrShareText, communityTitle en communityText: leeg = standaardtekst
+  }
+  if ('communityLooks' in body) {
+    db.settings.communityLooks = body.communityLooks === true;
+    // uit: de deelnemers verschijnen meteen als standaardstip (listOthers geeft dan geen kleur of symbool meer mee)
   }
   if ('multilingual' in body) db.settings.multilingual = body.multilingual === true;
   if ('defaultLang' in body) {
@@ -606,7 +615,7 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     if (r.error) return res.status(400).json({ error: r.error });
     db.settings[f] = r.value;
   }
-  // Teksten in andere talen: { en: { siteTitle, appName, appShortName, intro, residentInfo, qrShareText, labels: { green, red, none } } }
+  // Teksten in andere talen: { en: { siteTitle, appName, appShortName, intro, residentInfo, qrShareText, communityTitle, communityText, labels: { green, red, none } } }
   if (body.translations !== undefined) {
     if (!body.translations || typeof body.translations !== 'object') return res.status(400).json({ error: 'Ongeldige vertalingen' });
     const next = JSON.parse(JSON.stringify(db.settings.translations || {}));
