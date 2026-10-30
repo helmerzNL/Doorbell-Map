@@ -4,23 +4,6 @@
   let data = await getData();
 
   I18n.mountPrefs($('prefs'));
-  // Knop naast licht/donker: het blok met het totaal aantal huizen verbergen of weer tonen. Standaard zichtbaar (als de beheerder
-  // het blok aanzet); alleen de keuze van de bezoeker wordt op dit apparaat onthouden.
-  const STATS_KEY = 'sm-stats-hidden';
-  const statsBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'theme-btn stats-btn', hidden: true });
-  statsBtn.innerHTML = MDI.html('chart-bar');
-  const statsHidden = () => { try { return localStorage.getItem(STATS_KEY) === '1'; } catch { return false; } };
-  function paintStatsBtn() {
-    const off = statsHidden();
-    $('house-stats').classList.toggle('user-hidden', off);
-    statsBtn.classList.toggle('off', off);
-    statsBtn.setAttribute('aria-pressed', String(!off));
-    const label = I18n.tr(off ? 'Totaal aantal huizen tonen' : 'Totaal aantal huizen verbergen');
-    statsBtn.title = label; statsBtn.setAttribute('aria-label', label);
-  }
-  statsBtn.onclick = () => { try { statsHidden() ? localStorage.removeItem(STATS_KEY) : localStorage.setItem(STATS_KEY, '1'); } catch {} paintStatsBtn(); };
-  $('prefs').append(statsBtn);
-  paintStatsBtn();
 
   // ---------- kop, logo en uitleg ----------
   function applyMeta(first) {
@@ -142,7 +125,6 @@
     polys.clear();
     shownHouses = data.houses.filter((h) => h.status !== 'none');
     if (data.statsPublic) Wijk.renderStats(data.houses, data.statsShow); else $('house-stats').hidden = true;
-    statsBtn.hidden = !data.statsPublic; // de knop bestaat alleen als de beheerder het blok op de voorpagina aanzet
     for (const h of shownHouses) {
       const poly = L.polygon(h.points, Wijk.houseStyle(h.status));
       const box = document.createElement('div');

@@ -343,7 +343,7 @@ body.simple-ui #num-switch-wrap, body.simple-ui #edit-switch-wrap, body.simple-u
 /* overlay met verdeling groen/rood op de beheerkaart */
 .house-stats { position: absolute; top: 10px; right: 10px; z-index: 900; min-width: 190px; max-width: calc(100% - 20px); background: var(--panel); color: var(--text); border: 1px solid var(--line);
   border-radius: 12px; box-shadow: var(--shadow); padding: 9px 12px 10px; font-size: .85rem; font-variant-numeric: tabular-nums; pointer-events: none; }
-.house-stats[hidden], .house-stats [hidden], .house-stats.user-hidden { display: none !important; }
+.house-stats[hidden], .house-stats [hidden] { display: none !important; }
 .house-stats .hs-head { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
 .house-stats .hs-head strong { color: var(--text); }
 .house-stats .hs-bar { display: flex; height: 6px; border-radius: 999px; overflow: hidden; background: var(--none); margin-bottom: 7px; }

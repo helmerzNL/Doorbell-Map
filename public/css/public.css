@@ -17,11 +17,6 @@ body.public .bar-switches { gap: 14px; }
 body.public .switch-text { font-weight: 550; }
 body.public .switch .num-icon, body.public .switch .edit-icon { color: var(--accent); }
 body.public .prefs { gap: 8px; }
-/* knop om het totaal aantal huizen te verbergen: doorgestreept als het blok verborgen is */
-body.public .stats-btn { position: relative; }
-body.public .stats-btn[hidden] { display: none; }
-body.public .stats-btn.off { color: var(--muted); }
-body.public .stats-btn.off::after { content: ''; position: absolute; left: 22%; right: 22%; top: 50%; border-top: 2px solid currentColor; transform: rotate(-45deg); }
 
 /* acties: Uitleg, Mijn huis, Straten, PDF, Meer */
 body.public .actions { gap: 8px; }
