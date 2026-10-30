@@ -1,15 +1,25 @@
-// "Mijn locatie": optionele knop op de publieke kaart die de GPS-positie van het apparaat als stip toont.
-// Staat standaard uit: de browser vraagt pas om toestemming nadat de bezoeker op de knop tikt, en er wordt
-// niets onthouden of verstuurd; de positie blijft op het apparaat. Zolang de locatie aan staat blijft het scherm
-// aan (Screen Wake Lock), zodat je de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen. De beheerder kan de knop verbergen.
+// "Mijn locatie": knop op de publieke kaart die de GPS-positie van het apparaat als stip toont.
+// Staat standaard aan: bij het openen van de kaart vraagt de browser om toestemming (zodra er geen venster meer open staat).
+// Na toestemming staat de knop aan, verschijnt de stip, volgt de kaart de positie en blijft het scherm aan (Screen Wake Lock),
+// precies als na een tik op de knop; zonder toestemming blijft alles zoals het was en volgt er geen melding. Zet de bezoeker
+// de locatie zelf uit, dan onthoudt dit apparaat dat (alleen die keuze, in localStorage) en start hij niet meer vanzelf.
+// Er wordt niets verstuurd; de positie blijft op het apparaat. De beheerder kan de knop verbergen.
 //
 // Community (alleen als de beheerder die aanzet): een tweede, eveneens opt-in knop deelt je positie met anderen die ook
 // delen. De bezoeker moet dat eerst bevestigen; de server bewaart de positie kort in het geheugen en verwijdert haar
 // zodra je stopt of de pagina sluit. Wie niet deelt, ziet de anderen niet.
 (function () {
+  const OFF_KEY = 'sm-locate-off'; // de bezoeker heeft "Mijn locatie" zelf uitgezet: niet meer vanzelf starten
   const FOLLOW_ZOOM = 18; // zoom bij het volgen: huisnummers zijn dan goed leesbaar
   const MAX_ACC_CIRCLE = 500; // m; een nauwkeurigheidscirkel groter dan dit zegt niets bruikbaars
   const PING_MS = 8000; // hoe vaak de eigen positie wordt doorgegeven (en de anderen worden ververst); de server laat 45 s toe
+  // Meldt dat de locatiekeuze van de bezoeker bekend is (toegestaan, geweigerd of niet van toepassing). De installatiemelding
+  // (pwa.js) wacht daarop, zodat de uitleg, de locatievraag en de installatiemelding na elkaar komen en niet door elkaar.
+  function settle() {
+    if (window.Wijk.locateSettled) return;
+    window.Wijk.locateSettled = true;
+    window.dispatchEvent(new Event('sm-locate-settled'));
+  }
   const newId = () => {
     if (crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
     return [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -21,11 +31,14 @@
     let watchId = null, following = false, announced = false, fresh = false;
     let dot = null, ring = null;
     let wake = null, asking = false; // Screen Wake Lock: houdt het scherm aan zolang de locatie aan staat
+    let silent = false, autoTried = false; // silent: vanzelf gestart, dus geen meldingen als de bezoeker niets deed
     // community
     let communityOn = false, commControl = null, commButton = null, commBadge = null, layer = null;
     let sharing = false, cid = '', lastFix = null, pingTimer = null, limitToasted = false;
 
     const supported = () => 'geolocation' in navigator;
+    const isOff = () => { try { return localStorage.getItem(OFF_KEY) === '1'; } catch { return false; } };
+    const setOff = (off) => { try { if (off) localStorage.setItem(OFF_KEY, '1'); else localStorage.removeItem(OFF_KEY); } catch {} };
 
     function paint() {
       if (!button) return;
@@ -73,6 +86,7 @@
     }
 
     function onFix(pos) {
+      settle();
       const latlng = draw(pos);
       const first = !lastFix;
       lastFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0 };
@@ -82,8 +96,9 @@
     }
 
     function onError(err) {
+      settle();
       if (err.code === 1) { // toestemming geweigerd: terug naar uit
-        toast('Je hebt geen toegang tot je locatie gegeven. Sta locatie toe voor deze site in de instellingen van je browser of telefoon en probeer het opnieuw.');
+        if (!silent) toast('Je hebt geen toegang tot je locatie gegeven. Sta locatie toe voor deze site in de instellingen van je browser of telefoon en probeer het opnieuw.');
         stop();
       } else if (!announced) { // tijdelijk geen signaal: de browser blijft proberen, we melden het één keer
         announced = true;
@@ -111,14 +126,31 @@
     }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') holdScreen(); });
 
-    function start() {
-      if (!window.isSecureContext) { toast('Je locatie tonen kan alleen via een beveiligde (https) verbinding.'); return; }
-      announced = false;
+    // auto: vanzelf gestart bij het openen; werkt als een tik op de knop, maar meldt niets als het niet lukt
+    function start(auto) {
+      if (!window.isSecureContext) { if (!auto) toast('Je locatie tonen kan alleen via een beveiligde (https) verbinding.'); return; }
+      silent = !!auto;
+      announced = silent;
       following = true;
       fresh = true; // de eerste positie zoomt de kaart erheen
       watchId = navigator.geolocation.watchPosition(onFix, onError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
       holdScreen();
       paint();
+    }
+
+    // Standaard aan: één keer per paginalading proberen, behalve als de bezoeker de locatie zelf uitzette of de browser
+    // de toestemming al geweigerd heeft. Een open venster (uitleg, installatiemelding) gaat voor.
+    async function autoStart() {
+      if (autoTried) return;
+      if (!supported() || !window.isSecureContext || watchId !== null || isOff()) return settle();
+      autoTried = true;
+      try { if ((await navigator.permissions?.query({ name: 'geolocation' }))?.state === 'denied') return settle(); } catch { /* geen Permissions API: gewoon proberen */ }
+      const go = () => {
+        if (!control || watchId !== null || isOff()) return settle();
+        if (document.querySelector('dialog[open]')) return setTimeout(go, 1500);
+        start(true);
+      };
+      go();
     }
 
     function stop() {
@@ -189,12 +221,13 @@
     window.addEventListener('pagehide', () => { if (sharing) leave(); });
 
     function press() {
-      if (watchId === null) return start();
+      if (watchId === null) { setOff(false); return start(); }
       if (!following) { // kaart is weggeschoven: terug naar de positie en weer volgen
         following = true;
         if (dot) center(dot.getLatLng(), true);
         return paint();
       }
+      setOff(true); // de bezoeker zet de locatie uit: onthouden, zodat hij niet meer vanzelf start
       stop();
     }
 
@@ -246,9 +279,11 @@
     }
 
     return {
-      // aan: knop tonen (de positie blijft uit tot er getikt wordt); uit: knop weg en meteen stoppen met meten
+      // aan: knop tonen en de locatie vanzelf starten (tenzij de bezoeker die zelf uitzette); uit: knop weg en meteen stoppen met meten
       setEnabled(on) {
         if (on && supported() && !control) mount();
+        if (on && control) autoStart();
+        if (!on || !supported()) settle(); // geen locatie bij deze kaart: er valt niets af te wachten
         if (!on && control) { stop(); unmountCommunity(); control.remove(); control = button = null; }
       },
       // aan: de beheerder heeft de community aangezet; de knop komt er alleen als ook "Mijn locatie" beschikbaar is

@@ -399,7 +399,7 @@
     "Eenvoudige weergave staat aan": "Simple display is on",
     "Eenvoudige weergave staat uit": "Simple display is off",
     "Knop \"Mijn locatie\"": "\"My location\" button",
-    "Bezoekers kunnen met een knop op de kaart hun eigen positie (GPS) als stip laten zien. De knop doet niets tot een bezoeker erop tikt; de browser vraagt dan om toestemming. Zet uit om de knop te verbergen.": "Visitors can use a button on the map to show their own position (GPS) as a dot. The button does nothing until a visitor taps it; the browser then asks for permission. Turn off to hide the button.",
+    "Bezoekers kunnen met een knop op de kaart hun eigen positie (GPS) als stip laten zien. De locatie staat standaard aan: bij het openen vraagt de browser om toestemming en verschijnt de stip. Een bezoeker kan hem met de knop uitzetten. Zet uit om de knop en de locatie te verbergen.": "Visitors can use a button on the map to show their own position (GPS) as a dot. Location is on by default: when the map opens the browser asks for permission and the dot appears. A visitor can turn it off with the button. Turn off to hide the button and the location.",
     "Knop Mijn locatie op de voorpagina tonen": "Show the My location button on the front page",
     "Knop Mijn locatie staat aan op de voorpagina": "The My location button is on for the front page",
     "Knop Mijn locatie staat uit op de voorpagina": "The My location button is off for the front page",

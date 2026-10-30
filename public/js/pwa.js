@@ -5,6 +5,7 @@
   }
 
   // Eenmalig (per apparaat) een melding om de app te installeren: Android, iOS en Windows.
+  // Volgorde bij het eerste bezoek: uitleg, dan de locatievraag, dan deze melding.
   // De melding heeft een knop "Installeer nu" die het installeren start, plus de stappen voor het platform.
   const KEY = 'sm-install-asked';
   const ua = navigator.userAgent;
@@ -39,6 +40,7 @@
   };
 
   let deferred = null, shown = false;
+  const t0 = Date.now();
   const $ = (id) => document.getElementById(id);
 
   // "Installeer nu" start het installatieproces: met de installatieprompt van de browser (Android, Windows) direct,
@@ -74,6 +76,8 @@
     if (shown || !$('install-dialog') || !platform || standalone() || asked()) return;
     // wacht tot er geen ander venster (bijv. de uitleg) open staat
     if (document.querySelector('dialog[open]')) return setTimeout(show, 1500);
+    // daarna de locatievraag van de browser (zie locate.js); één ding tegelijk, met een noodrem van 90 s
+    if (!window.Wijk?.locateSettled && Date.now() - t0 < 90000) return setTimeout(show, 1500);
     shown = true;
     markAsked();
     open();
