@@ -44,6 +44,20 @@ body.public .popup { border-radius: var(--r-lg); border: 1px solid var(--line); 
 body.public .popup h3 { font-weight: 700; }
 body.public .house-stats { pointer-events: none; }
 
+/* knop "Mijn locatie" en de stip op de kaart */
+body.public .locate-ctl { border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2); overflow: hidden; }
+body.public .locate-btn { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 0; background: var(--panel); color: var(--text); box-shadow: none; cursor: pointer; }
+body.public .locate-btn:hover { background: var(--surface); }
+body.public .locate-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; }
+body.public .locate-btn .mdi { width: 22px; height: 22px; }
+body.public .locate-btn.on { color: #1a73e8; }
+body.public .locate-btn.following { background: #1a73e8; color: #fff; }
+body.public .locate-btn.following:hover { background: #1765cc; }
+@media (pointer: coarse) { body.public .locate-btn { width: 44px; height: 44px; } }
+body.public path.locate-dot { fill: #1a73e8; stroke: #fff; }
+body.public path.locate-ring { fill: #1a73e8; fill-opacity: .15; stroke: #1a73e8; stroke-opacity: .4; }
+body.public path.locate-ring-hidden { display: none; }
+
 /* ---------- dialogen ---------- */
 body.public dialog { width: min(480px, calc(100vw - 24px)); max-width: none; }
 body.public #intro-dialog { width: min(640px, calc(100vw - 24px)); padding: 0 24px 20px; }

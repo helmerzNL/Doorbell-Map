@@ -261,6 +261,7 @@
       const st = await api('/api/admin/settings');
       cfg.st = st;
       $('org-simple').checked = st.simpleUi;
+      $('org-locate').checked = st.locateEnabled;
       $('stats-public').checked = st.statsPublic;
       statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
@@ -282,6 +283,10 @@
   $('org-simple').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ simpleUi: $('org-simple').checked }), expectAuth: true }); toast($('org-simple').checked ? 'Eenvoudige weergave staat aan' : 'Eenvoudige weergave staat uit'); }
     catch (e) { $('org-err').textContent = e.message; $('org-simple').checked = !$('org-simple').checked; }
+  };
+  $('org-locate').onchange = async () => {
+    try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ locateEnabled: $('org-locate').checked }), expectAuth: true }); toast($('org-locate').checked ? 'Knop Mijn locatie staat aan op de voorpagina' : 'Knop Mijn locatie staat uit op de voorpagina'); }
+    catch (e) { $('org-err').textContent = e.message; $('org-locate').checked = !$('org-locate').checked; }
   };
   $('stats-public').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ statsPublic: $('stats-public').checked }), expectAuth: true }); toast($('stats-public').checked ? 'Overzichtskaart staat aan op de voorpagina' : 'Overzichtskaart staat uit op de voorpagina'); }
