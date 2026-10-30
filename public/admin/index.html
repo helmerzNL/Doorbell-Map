@@ -78,6 +78,7 @@
       <span class="track" aria-hidden="true"><span class="thumb"></span></span>
       <span class="switch-text">Huisnummers op de kaart</span>
     </label>
+    <div id="a-community" class="hint" role="status" hidden></div>
     <div class="side-card">
       <h5 class="side-title">Gereedschap</h5>
       <div class="row seg">
@@ -321,6 +322,18 @@
           <input type="file" id="org-file" accept="image/png,image/jpeg,image/webp" hidden>
           <div class="row row-tight"><button id="org-upload">Logo uploaden</button><button id="org-remove" class="danger">Logo verwijderen</button></div>
         </div>
+        <div class="field"><label>Klein logo voor de kopbalk (optioneel)</label>
+          <img id="org-logo-small" class="logo-preview" alt="" hidden>
+          <input type="file" id="org-file-small" accept="image/png,image/jpeg,image/webp" hidden>
+          <div class="row row-tight"><button id="org-upload-small">Klein logo uploaden</button><button id="org-remove-small" class="danger">Klein logo verwijderen</button></div>
+          <div class="set-hint">Staat linksboven op de kaart, vooral handig op een telefoon. Een vierkant icoon of een compacte variant komt daar mooier tot zijn recht dan een breed logo. Zonder klein logo wordt het gewone logo gebruikt. PDF en QR-kaartjes houden het gewone logo.</div>
+        </div>
+        <div class="field"><label>Favicon (optioneel, PNG, JPEG of WebP, max 5 MB)</label>
+          <img id="org-favicon" class="logo-preview" alt="" hidden>
+          <input type="file" id="org-file-favicon" accept="image/png,image/jpeg,image/webp" hidden>
+          <div class="row row-tight"><button id="org-upload-favicon">Favicon uploaden</button><button id="org-remove-favicon" class="danger">Favicon verwijderen</button></div>
+          <div class="set-hint">Het icoontje in het tabblad van de browser en op het beginscherm van een iPhone of iPad. Kies een vierkante afbeelding, bij voorkeur 512 × 512 pixels (minstens 192 × 192). Ook het icoon van de geïnstalleerde app volgt dit favicon. Zonder favicon staat daar de standaardlantaarn.</div>
+        </div>
         <div class="field" data-perlang><label for="org-title">Naam van de site</label><input type="text" id="org-title" maxlength="60" placeholder="Standaard: de naam uit de serverinstelling (SITE_TITLE)"><div class="set-hint">Staat naast het logo en bovenaan de PDF.</div></div>
       </div>
 
@@ -335,6 +348,18 @@
         <div class="set-row">
           <div class="set-text"><div class="set-title">Eenvoudige weergave</div><div class="set-hint">Verbergt <em>Huisnummers</em>, <em>Bewerken</em> en <em>Straten</em>. <em>Mijn huis</em> en <em>PDF opslaan</em> blijven in de menubalk.</div></div>
           <label class="switch"><input type="checkbox" id="org-simple" role="switch" aria-label="Eenvoudige weergave voor bezoekers"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
+        </div>
+        <div class="set-row">
+          <div class="set-text"><div class="set-title">Knop "Mijn locatie"</div><div class="set-hint">Bezoekers kunnen met een knop op de kaart hun eigen positie (GPS) als stip laten zien. De locatie staat standaard aan: bij het openen vraagt de browser om toestemming en verschijnt de stip. Een bezoeker kan hem met de knop uitzetten. Zet uit om de knop en de locatie te verbergen.</div></div>
+          <label class="switch"><input type="checkbox" id="org-locate" role="switch" aria-label="Knop Mijn locatie op de voorpagina tonen"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
+        </div>
+        <div class="set-row">
+          <div class="set-text"><div class="set-title">Community</div><div class="set-hint">Bezoekers kunnen met een tweede knop hun positie live delen; wie meedoet ziet de andere deelnemers als paarse stippen op de kaart, en jij ziet ze hier in het beheer. Delen is altijd vrijwillig en vraagt eerst bevestiging. Posities staan alleen kort in het geheugen van de server en verdwijnen zodra iemand stopt (of na 45 seconden zonder signaal). Werkt alleen als ook de knop "Mijn locatie" aan staat. Uitzetten wist meteen alle posities.</div></div>
+          <label class="switch"><input type="checkbox" id="org-community" role="switch" aria-label="Community: deelnemers live op de kaart"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
+        </div>
+        <div class="set-row">
+          <div class="set-text"><div class="set-title">Kleur en symbool kiezen</div><div class="set-hint">Deelnemers kiezen zelf een kleur en een symbool (bijvoorbeeld een dier) waarmee anderen hen op de kaart zien. Zet uit om iedereen als dezelfde paarse stip te tonen. Dit heeft geen invloed op wat er verder gedeeld wordt: er staat nog steeds geen naam bij.</div></div>
+          <label class="switch"><input type="checkbox" id="org-community-looks" role="switch" aria-label="Kleur en symbool kiezen: deelnemers kiezen hun eigen stip"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
         </div>
         <div class="field"><label>Overzichtskaart met aantallen</label>
           <div class="set-row">
@@ -364,6 +389,14 @@
           <textarea id="org-share" rows="4" maxlength="500"></textarea>
           <div class="set-hint">Gebruik <code>{adres}</code> voor het adres van het huis en <code>{link}</code> voor de persoonlijke link (ontbreekt <code>{link}</code>, dan komt de link achter de tekst). Het bericht gaat in de standaardtaal van de site; met meertalig aan kies je de taal in de popup van het huis. Leeg = standaardtekst.</div>
           <div class="set-actions"><button id="org-share-default" type="button">Standaardtekst</button></div>
+        </div>
+        <div class="field" data-perlang><label for="org-ctitle">Titel van het communityvenster</label>
+          <input type="text" id="org-ctitle" maxlength="80">
+        </div>
+        <div class="field" data-perlang><label for="org-ctext">Tekst van het communityvenster</label>
+          <textarea id="org-ctext" rows="6" maxlength="1000"></textarea>
+          <div class="set-hint">Het venster waarin een bezoeker bevestigt dat hij of zij de positie deelt. Een lege regel begint een nieuwe alinea; de eerste is de uitleg, de rest de toelichting (kleiner gedrukt). Let op: pas de toelichting over wat er met de positie gebeurt alleen aan als dat klopt. Leeg = standaardtekst.</div>
+          <div class="set-actions"><button id="org-community-default" type="button">Standaardtekst</button></div>
         </div>
         <p class="error" id="org-err"></p>
         <div class="set-actions"><button id="org-save" class="primary">Opslaan</button></div>

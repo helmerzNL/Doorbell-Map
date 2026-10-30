@@ -66,6 +66,53 @@ test('logo upload controleert inhoud en kan verwijderd worden', async () => {
   assert.equal((await (await j('/api/map')).json()).logo, null);
 });
 
+test('klein logo voor de kopbalk is los van het gewone logo en kan verwijderd worden', async () => {
+  const bad = await j('/api/admin/logo-small', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: Buffer.from('<svg onload=alert(1)>') });
+  assert.equal(bad.status, 400);
+  const ok = await j('/api/admin/logo-small', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: PNG });
+  assert.equal(ok.status, 200);
+  const { logoSmall } = await ok.json();
+  assert.match(logoSmall.url, /^\/uploads\/logo-small-\d+\.png$/);
+  assert.equal((await j(logoSmall.url)).status, 200);
+  const map = await (await j('/api/map')).json();
+  assert.equal(map.logoSmall.url, logoSmall.url);
+  assert.equal(map.logo, null);
+  assert.equal((await j('/api/admin/logo-small', { method: 'DELETE', headers: { cookie } })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).logoSmall, null);
+});
+
+test('favicon is los van het logo, optioneel en kan verwijderd worden', async () => {
+  const bad = await j('/api/admin/favicon', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: Buffer.from('<svg onload=alert(1)>') });
+  assert.equal(bad.status, 400);
+  assert.equal((await (await j('/api/map')).json()).favicon, null);
+  const ok = await j('/api/admin/favicon', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: PNG });
+  assert.equal(ok.status, 200);
+  const { favicon } = await ok.json();
+  assert.match(favicon.url, /^\/uploads\/favicon-\d+\.png$/);
+  assert.equal((await j(favicon.url)).status, 200);
+  const map = await (await j('/api/map')).json();
+  assert.equal(map.favicon.url, favicon.url);
+  assert.equal(map.logo, null);
+  assert.equal(map.logoSmall, null);
+  assert.equal((await j('/api/admin/favicon', { method: 'DELETE', headers: { cookie } })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).favicon, null);
+});
+
+test('favicon wordt ook het icoon in het manifest, als het vierkant en groot genoeg is', async () => {
+  const png = (w, h) => { const b = Buffer.alloc(40); Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(b); b.writeUInt32BE(w, 16); b.writeUInt32BE(h, 20); return b; };
+  const up = (body) => j('/api/admin/favicon', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body });
+  const icons = async () => (await (await j('/manifest.webmanifest')).json()).icons;
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png')); // standaard: de lantaarn
+  const { favicon } = await (await up(png(512, 512))).json();
+  assert.deepEqual(await icons(), [{ src: favicon.url, sizes: '512x512', type: 'image/png', purpose: 'any' }]);
+  await up(png(512, 256)); // niet vierkant: terug naar de lantaarn
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png'));
+  await up(png(64, 64)); // te klein
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png'));
+  await j('/api/admin/favicon', { method: 'DELETE', headers: { cookie } });
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png'));
+});
+
 test('manifest en service worker zijn beschikbaar', async () => {
   const m = await (await j('/manifest.webmanifest')).json();
   assert.equal(m.display, 'standalone');
@@ -640,6 +687,63 @@ test('geofence: wijzigen alleen in de wijk (schakelaar in het beheer)', async ()
   for (const rr of (await (await adminReq('/changes')).json()).residents) await adminReq(`/residents/${rr.rid}`, 'DELETE');
 });
 
+test('knop Mijn locatie: standaard beschikbaar, door de beheerder te verbergen', async () => {
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, true);
+  assert.equal((await (await adminReq('/settings')).json()).locateEnabled, true);
+  assert.equal((await adminReq('/settings', 'PUT', { locateEnabled: false })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, false);
+  assert.equal((await (await adminReq('/settings')).json()).locateEnabled, false);
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"locateEnabled":true}' })).status, 401);
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, false);
+  await adminReq('/settings', 'PUT', { locateEnabled: true });
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, true);
+});
+
+test('community: standaard uit, wederkerig, kort bewaard en door de beheerder uit te zetten', async () => {
+  const ping = (id, lat = 52.1, lng = 5.3) => j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id, lat, lng, acc: 12 }) });
+  const A = 'a'.repeat(32), B = 'b'.repeat(32);
+  // uit: geen positie bewaren of tonen, ook niet via de kaart-API
+  assert.equal((await (await j('/api/map')).json()).communityEnabled, false);
+  assert.equal((await ping(A)).status, 403);
+  assert.equal((await j('/api/admin/community')).status, 401);
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityEnabled: true })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).communityEnabled, true);
+  assert.equal((await (await adminReq('/settings')).json()).communityEnabled, true);
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"communityEnabled":false}' })).status, 401);
+
+  // wederkerig: A deelt en ziet niemand; zodra B deelt, ziet B de positie van A en omgekeerd
+  assert.deepEqual((await (await ping(A, 52.1, 5.3)).json()).peers, []);
+  const forB = (await (await ping(B, 52.2, 5.4)).json()).peers;
+  assert.equal(forB.length, 1);
+  assert.equal(forB[0].lat, 52.1);
+  assert.ok(!('id' in forB[0]) && /^[0-9a-f]{10}$/.test(forB[0].k), 'het apparaat-id lekt niet naar anderen');
+  assert.equal((await (await ping(A, 52.1, 5.3)).json()).peers.length, 1);
+
+  // de beheerder ziet iedereen
+  const list = await (await adminReq('/community')).json();
+  assert.equal(list.enabled, true);
+  assert.equal(list.participants.length, 2);
+
+  // ongeldige invoer
+  assert.equal((await ping('kort')).status, 400);
+  assert.equal((await ping('c'.repeat(32), 91, 5)).status, 400);
+  assert.equal((await ping('c'.repeat(32), 52, 181)).status, 400);
+  assert.equal((await j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id: 'c'.repeat(32), lat: '52', lng: '5' }) })).status, 400);
+
+  // stoppen wist de positie meteen
+  assert.equal((await j('/api/community/leave', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id: B }) })).status, 200);
+  assert.equal((await (await adminReq('/community')).json()).participants.length, 1);
+
+  // uitzetten wist alles en weigert nieuwe posities
+  assert.equal((await adminReq('/settings', 'PUT', { communityEnabled: false })).status, 200);
+  assert.deepEqual(await (await adminReq('/community')).json(), { enabled: false, participants: [] });
+  assert.equal((await ping(A)).status, 403);
+  await adminReq('/settings', 'PUT', { communityEnabled: true });
+  assert.deepEqual((await (await adminReq('/community')).json()).participants, [], 'na uit en aan is er niets blijven staan');
+  await adminReq('/settings', 'PUT', { communityEnabled: false });
+});
+
 test('eenvoudige weergave: instelling in het beheer, zichtbaar op de kaart', async () => {
   assert.equal((await (await j('/api/map')).json()).simpleUi, false);
   assert.equal((await adminReq('/settings', 'PUT', { simpleUi: true })).status, 200);
@@ -823,6 +927,68 @@ test('Tekst bij delen via WhatsApp is instelbaar per taal (standaard, opslaan, t
   const d2 = await get();
   assert.equal(d2.shareTexts.nl, d0.defaultShareTexts.nl);
   assert.equal(d2.shareTexts.en, d0.defaultShareTexts.en);
+});
+
+test('community: kleur en symbool kiezen (standaard aan), alleen geldige waarden, uit te zetten in het beheer', async () => {
+  const ping = (id, extra = {}) => j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id, lat: 52.1, lng: 5.3, acc: 12, ...extra }) });
+  const A = 'd'.repeat(32), B = 'e'.repeat(32), C = 'f'.repeat(32);
+  assert.equal((await adminReq('/settings', 'PUT', { communityEnabled: true })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).communityLooks, true, 'standaard aan');
+  assert.equal((await (await adminReq('/settings')).json()).communityLooks, true);
+
+  // A kiest een kleur en symbool; B ziet dat terug, ongeldige waarden worden genegeerd
+  await ping(A, { color: '#E67E22', icon: 'fox' });
+  const seenByB = (await (await ping(B, { color: 'rood', icon: 'undefined<script>' })).json()).peers;
+  assert.equal(seenByB[0].c, '#e67e22');
+  assert.equal(seenByB[0].i, 'fox');
+  const seenByA = (await (await ping(A, { color: '#E67E22', icon: 'fox' })).json()).peers;
+  assert.ok(!('c' in seenByA[0]) && !('i' in seenByA[0]), 'zonder (geldige) keuze geen kleur of symbool');
+  assert.equal((await ping(C, { color: 7, icon: null })).status, 200, 'verkeerde types geven geen fout');
+  assert.ok(!(await (await adminReq('/community')).json()).participants.some((p) => p.k === seenByA[0].k && 'i' in p));
+
+  // uit: iedereen is meteen de standaardstip, ook voor de beheerkaart; nieuwe keuzes worden niet bewaard
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"communityLooks":false}' })).status, 401);
+  assert.equal((await adminReq('/settings', 'PUT', { communityLooks: false })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).communityLooks, false);
+  const off = (await (await adminReq('/community')).json()).participants;
+  assert.ok(off.length >= 2 && off.every((p) => !('c' in p) && !('i' in p)));
+  await ping(A, { color: '#2980b9', icon: 'owl' });
+  assert.ok((await (await ping(B)).json()).peers.every((p) => !('c' in p) && !('i' in p)));
+  assert.equal((await adminReq('/settings', 'PUT', { communityLooks: true })).status, 200);
+  assert.equal((await (await adminReq('/settings')).json()).communityLooks, true);
+  await adminReq('/settings', 'PUT', { communityEnabled: false });
+});
+
+test('Titel en tekst van het communityvenster zijn instelbaar per taal (standaard, opslaan, te lang, leeg = standaard)', async () => {
+  const admin = async () => (await adminReq('/settings')).json();
+  const map = async () => (await j('/api/map')).json();
+  const a0 = await admin(), m0 = await map();
+  assert.equal(a0.defaultCommunity.nl.title, 'Positie delen met de community?');
+  assert.match(a0.defaultCommunity.nl.text, /\n\n/, 'twee alinea\'s');
+  assert.equal(a0.defaultCommunity.en.title, 'Share your position with the community?');
+  assert.match(a0.defaultCommunity.en.text, /^Other visitors .*\n\nYour position is only kept/s, 'ook de Engelse standaard heeft beide alinea\'s');
+  assert.equal(m0.communityTitle, a0.defaultCommunity.nl.title);
+  assert.equal(m0.communityText, a0.defaultCommunity.nl.text);
+  assert.equal(a0.communityTitle, '', 'niets opgeslagen = standaardtekst');
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityTitle: 'Doe mee op de kaart?', communityText: 'Kies een kleur.\r\n\r\nJe positie wordt niet bewaard.', translations: { en: { communityTitle: 'Join the map?', communityText: 'Pick a colour.' } } })).status, 200);
+  const m1 = await map();
+  assert.equal(m1.communityTitle, 'Doe mee op de kaart?');
+  assert.equal(m1.communityText, 'Kies een kleur.\n\nJe positie wordt niet bewaard.');
+  assert.equal(m1.translations.en.communityTitle, 'Join the map?');
+  assert.equal(m1.translations.en.communityText, 'Pick a colour.');
+  assert.equal((await admin()).translations.en.communityTitle, 'Join the map?');
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityTitle: 'x'.repeat(81) })).status, 400);
+  assert.equal((await adminReq('/settings', 'PUT', { communityText: 'x'.repeat(1001) })).status, 400);
+  assert.equal((await adminReq('/settings', 'PUT', { translations: { en: { communityText: 'x'.repeat(1001) } } })).status, 400);
+  assert.equal((await map()).communityTitle, 'Doe mee op de kaart?', 'een afgewezen wijziging verandert niets');
+
+  assert.equal((await adminReq('/settings', 'PUT', { communityTitle: ' ', communityText: '', translations: { en: { communityTitle: '', communityText: '' } } })).status, 200);
+  const m2 = await map();
+  assert.equal(m2.communityTitle, m0.communityTitle);
+  assert.equal(m2.communityText, m0.communityText);
+  assert.equal(m2.translations.en.communityTitle, '');
 });
 
 test('QR-code per huis: alleen via QR koppelen (schakelaar), een apparaat per huis, vernieuwen', async () => {

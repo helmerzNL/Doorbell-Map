@@ -175,11 +175,17 @@
 
   // ---------- logo & uitleg ----------
   let statsShow = { green: true, red: true, none: true }; // welke statusregels de overlay op de kaart toont (instelling)
-  let org = { intro: '', logo: null, siteTitle: '', appName: '', appShortName: '', labels: null };
+  let org = { intro: '', logo: null, logoSmall: null, favicon: null, siteTitle: '', appName: '', appShortName: '', labels: null };
   function renderOrg() {
     $('org-logo').hidden = !org.logo;
     if (org.logo) $('org-logo').src = org.logo.url;
     $('org-remove').disabled = !org.logo;
+    $('org-logo-small').hidden = !org.logoSmall;
+    if (org.logoSmall) $('org-logo-small').src = org.logoSmall.url;
+    $('org-remove-small').disabled = !org.logoSmall;
+    $('org-favicon').hidden = !org.favicon;
+    if (org.favicon) $('org-favicon').src = org.favicon.url;
+    $('org-remove-favicon').disabled = !org.favicon;
     $('org-count').textContent = $('org-intro').value.length;
   }
   const DEFAULT_LABELS = { green: 'Groen', red: 'Rood', none: 'Niet gemarkeerd' };
@@ -193,7 +199,8 @@
   $('org-multi').onchange = () => saveLang({ multilingual: $('org-multi').checked });
   // ---- Config: teksten per taal ----
   // De velden onder de taalbalk bestaan per taal. Wat je typt blijft per taal bewaard (cfg.drafts) tot je opslaat.
-  const FIELD_IDS = { siteTitle: 'org-title', appName: 'org-appname', appShortName: 'org-short', residentInfo: 'org-info', intro: 'org-intro', qrShareText: 'org-share' };
+  const FIELD_IDS = { siteTitle: 'org-title', appName: 'org-appname', appShortName: 'org-short', residentInfo: 'org-info', intro: 'org-intro', qrShareText: 'org-share', communityTitle: 'org-ctitle', communityText: 'org-ctext' };
+  const WITH_DEFAULT = new Set(['qrShareText', 'communityTitle', 'communityText']); // leeg = standaardtekst: het veld toont die tekst
   const cfg = { st: null, drafts: {}, lang: I18n.defaultLang };
   const cfgLang = () => (I18n.multi ? cfg.lang : I18n.defaultLang); // zonder meertalig bewerk je de standaardtaal
   const draftFrom = (src, l, def) => {
@@ -202,6 +209,8 @@
       siteTitle: src.siteTitle || '', appName: src.appName || '', appShortName: src.appShortName || '',
       residentInfo: src.residentInfo || '', intro: src.intro || '',
       qrShareText: src.qrShareText || def.shareText[l],
+      communityTitle: src.communityTitle || def.community[l].title,
+      communityText: src.communityText || def.community[l].text,
       labels: { green: lab.green || '', red: lab.red || '', none: lab.none || '' },
     };
   };
@@ -219,7 +228,7 @@
       el.value = d[f];
       if (el.dataset.ph === undefined) el.dataset.ph = el.getAttribute('placeholder') || '';
       // een andere taal toont de Nederlandse tekst als hint: leeg = die tekst
-      const fallback = l !== 'nl' && f !== 'qrShareText' ? base[f] : '';
+      const fallback = l !== 'nl' && !WITH_DEFAULT.has(f) ? base[f] : '';
       el.setAttribute('placeholder', fallback ? I18n.t('Nederlands: {tekst}', { tekst: fallback.slice(0, 80) }) : el.dataset.ph);
     }
     for (const k of ['green', 'red', 'none']) {
@@ -255,12 +264,15 @@
       const st = await api('/api/admin/settings');
       cfg.st = st;
       $('org-simple').checked = st.simpleUi;
+      $('org-locate').checked = st.locateEnabled;
+      $('org-community').checked = st.communityEnabled;
+      $('org-community-looks').checked = st.communityLooks;
       $('stats-public').checked = st.statsPublic;
       statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
       langPicker.setValue(st.defaultLang);
-      const def = { shareText: st.defaultShareTexts };
-      const nl = draftFrom({ siteTitle: org.siteTitle, appName: org.appName, appShortName: org.appShortName, intro: org.intro, residentInfo: st.residentInfo, qrShareText: st.qrShareText, labels: customLabels(org.labels) }, 'nl', def);
+      const def = { shareText: st.defaultShareTexts, community: st.defaultCommunity };
+      const nl = draftFrom({ siteTitle: org.siteTitle, appName: org.appName, appShortName: org.appShortName, intro: org.intro, residentInfo: st.residentInfo, qrShareText: st.qrShareText, communityTitle: st.communityTitle, communityText: st.communityText, labels: customLabels(org.labels) }, 'nl', def);
       cfg.drafts = { nl };
       for (const [l, t] of Object.entries(st.translations || {})) cfg.drafts[l] = draftFrom(t, l, def);
       buildLangBar();
@@ -270,12 +282,31 @@
   }
   // namen die van de standaardnaam afwijken (een gelijke naam is niet "eigen" en blijft leeg)
   const customLabels = (labels) => Object.fromEntries(['green', 'red', 'none'].map((k) => [k, labels && labels[k] !== DEFAULT_LABELS[k] ? labels[k] : '']));
+  $('org-community-default').onclick = () => { const d = cfg.st.defaultCommunity[cfg.shown]; $('org-ctitle').value = d.title; $('org-ctext').value = d.text; };
   $('org-share-default').onclick = () => { $('org-share').value = cfg.st.defaultShareTexts[cfg.shown]; };
   $('qr-share-goto').onclick = () => { openTab('org'); setTimeout(() => { $('org-share').scrollIntoView({ block: 'center' }); $('org-share').focus(); }, 150); };
   $('org-intro').oninput = renderOrg;
   $('org-simple').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ simpleUi: $('org-simple').checked }), expectAuth: true }); toast($('org-simple').checked ? 'Eenvoudige weergave staat aan' : 'Eenvoudige weergave staat uit'); }
     catch (e) { $('org-err').textContent = e.message; $('org-simple').checked = !$('org-simple').checked; }
+  };
+  $('org-community').onchange = async () => {
+    try {
+      await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ communityEnabled: $('org-community').checked }), expectAuth: true });
+      toast($('org-community').checked ? 'Community staat aan' : 'Community staat uit, alle posities zijn gewist');
+      pollCommunity();
+    } catch (e) { $('org-err').textContent = e.message; $('org-community').checked = !$('org-community').checked; }
+  };
+  $('org-community-looks').onchange = async () => {
+    try {
+      await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ communityLooks: $('org-community-looks').checked }), expectAuth: true });
+      toast($('org-community-looks').checked ? 'Kiezen van kleur en symbool staat aan' : 'Kiezen van kleur en symbool staat uit');
+      pollCommunity();
+    } catch (e) { $('org-err').textContent = e.message; $('org-community-looks').checked = !$('org-community-looks').checked; }
+  };
+  $('org-locate').onchange = async () => {
+    try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ locateEnabled: $('org-locate').checked }), expectAuth: true }); toast($('org-locate').checked ? 'Knop Mijn locatie staat aan op de voorpagina' : 'Knop Mijn locatie staat uit op de voorpagina'); }
+    catch (e) { $('org-err').textContent = e.message; $('org-locate').checked = !$('org-locate').checked; }
   };
   $('stats-public').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ statsPublic: $('stats-public').checked }), expectAuth: true }); toast($('stats-public').checked ? 'Overzichtskaart staat aan op de voorpagina' : 'Overzichtskaart staat uit op de voorpagina'); }
@@ -309,11 +340,53 @@
     try { await api('/api/admin/logo', { method: 'DELETE', expectAuth: true }); org.logo = null; renderOrg(); }
     catch (e) { $('org-err').textContent = e.message; }
   };
+  $('org-upload-small').onclick = () => $('org-file-small').click();
+  $('org-file-small').onchange = async () => {
+    const f = $('org-file-small').files[0];
+    $('org-file-small').value = '';
+    if (!f) return;
+    $('org-err').textContent = '';
+    try {
+      const res = await api('/api/admin/logo-small', { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' }, expectAuth: true });
+      org.logoSmall = res.logoSmall;
+      renderOrg();
+      toast('Klein logo geüpload ✔');
+    } catch (e) { $('org-err').textContent = e.message; }
+  };
+  $('org-remove-small').onclick = async () => {
+    if (!confirmT('Klein logo verwijderen?')) return;
+    try { await api('/api/admin/logo-small', { method: 'DELETE', expectAuth: true }); org.logoSmall = null; renderOrg(); }
+    catch (e) { $('org-err').textContent = e.message; }
+  };
+  $('org-upload-favicon').onclick = () => $('org-file-favicon').click();
+  $('org-file-favicon').onchange = async () => {
+    const f = $('org-file-favicon').files[0];
+    $('org-file-favicon').value = '';
+    if (!f) return;
+    $('org-err').textContent = '';
+    try {
+      const res = await api('/api/admin/favicon', { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' }, expectAuth: true });
+      org.favicon = res.favicon;
+      renderOrg();
+      toast('Favicon geüpload ✔');
+    } catch (e) { $('org-err').textContent = e.message; }
+  };
+  $('org-remove-favicon').onclick = async () => {
+    if (!confirmT('Favicon verwijderen?')) return;
+    try { await api('/api/admin/favicon', { method: 'DELETE', expectAuth: true }); org.favicon = null; renderOrg(); }
+    catch (e) { $('org-err').textContent = e.message; }
+  };
   $('org-save').onclick = async () => {
     $('org-err').textContent = '';
     try {
       storeFields();
-      const norm = (l, d) => ({ ...d, qrShareText: d.qrShareText.trim() === cfg.st.defaultShareTexts[l] ? '' : d.qrShareText }); // gelijk aan de standaardtekst = leeg
+      const same = (a, b) => a.trim().replace(/\r\n?/g, '\n') === b;
+      const norm = (l, d) => ({
+        ...d,
+        qrShareText: same(d.qrShareText, cfg.st.defaultShareTexts[l]) ? '' : d.qrShareText,
+        communityTitle: same(d.communityTitle, cfg.st.defaultCommunity[l].title) ? '' : d.communityTitle,
+        communityText: same(d.communityText, cfg.st.defaultCommunity[l].text) ? '' : d.communityText,
+      }); // gelijk aan de standaardtekst = leeg
       const nl = norm('nl', cfg.drafts.nl);
       const translations = Object.fromEntries(Object.entries(cfg.drafts).filter(([l]) => l !== 'nl').map(([l, d]) => [l, norm(l, d)]));
       const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ ...nl, translations }), expectAuth: true });
@@ -1258,6 +1331,20 @@
     } catch { toast('Zoeken mislukt'); }
   }
 
+  // Deelnemers van de community (alleen als die aanstaat): paarse stippen op de beheerkaart met het aantal in de zijbalk.
+  let communityLayer = null;
+  async function pollCommunity() {
+    if (!communityLayer || document.hidden) return;
+    try {
+      const { enabled, participants } = await api('/api/admin/community');
+      const chip = $('a-community');
+      if (!enabled) { communityLayer.clear(); chip.hidden = true; return; }
+      communityLayer.update(participants);
+      chip.hidden = false;
+      chip.textContent = participants.length === 1 ? 'Community: 1 deelnemer deelt zijn of haar positie' : `Community: ${participants.length} deelnemers delen hun positie`;
+    } catch { /* offline of uitgelogd: volgende poging */ }
+  }
+
   function initEditor(data) {
     if (map) { map.remove(); layers.clear(); handles = []; draftLayer = null; }
     $('vp').replaceChildren();
@@ -1265,6 +1352,7 @@
     // in het beheer altijd het volledige zoombereik, ook als bezoekers beperkt zijn
     map = Wijk.createMap($('vp'), data.view && { ...data.view, minZoom: 1, maxZoom: 19 }, data.houses);
     Wijk.map = map;
+    communityLayer = Wijk.createCommunityLayer(map);
     map.on('click', onMapClick);
     initLongPress();
     map.on('dblclick', () => { if (mode === 'draw' && draft.length >= 3) finishDraft(); });
@@ -1337,7 +1425,7 @@
     const data = I18n.localize(raw);
     houses = data.houses;
     savedView = data.view; savedPdf = data.pdfView || null;
-    org = { intro: raw.intro || '', logo: raw.logo, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
+    org = { intro: raw.intro || '', logo: raw.logo, logoSmall: raw.logoSmall || null, favicon: raw.favicon || null, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     selectedId = null; draft = [];
     setDirty(false);
@@ -1351,7 +1439,7 @@
     const data = I18n.localize(raw);
     houses = data.houses;
     try { statsShow = (await api('/api/admin/settings', { expectAuth: true })).statsShow; } catch { /* standaard: alles tonen */ }
-    org = { intro: raw.intro || '', logo: raw.logo, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
+    org = { intro: raw.intro || '', logo: raw.logo, logoSmall: raw.logoSmall || null, favicon: raw.favicon || null, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     initEditor(data);
     setDirty(false);
@@ -1359,6 +1447,8 @@
     setEditing(false); // standaard de weergave; "Bewerken" opent het bewerkscherm
     setTimeout(() => map.invalidateSize(), 0);
     pollChanges(true);
+    pollCommunity();
+    if (!window.__communityTimer) window.__communityTimer = setInterval(pollCommunity, 10000);
     if (!window.__pollTimer) window.__pollTimer = setInterval(() => pollChanges(), 30000);
     if (location.hash === '#changes') openSettings('changes');
   }

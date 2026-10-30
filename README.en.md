@@ -24,13 +24,16 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - Map based on OpenStreetMap (no API key) with coloured areas over the houses; click a house for its note.
 - House numbers on the map (switch), a street filter with green/red counts, and an information window.
 - **PDF** (A4 landscape) with map, legend, totals, logo, explanation and an overview of the marked houses, including date and time.
-- **Installable as an app (PWA)** with its own app icon and **offline** use.
+- **Installable as an app (PWA)** with its own app icon and **offline** use; on the first visit a prompt with an *Install now* button and the steps per platform helps you. See [Installing as an app](#installing-as-an-app-and-offline-use).
+- The **overview with totals** (total and per status) is also shown on the front page when the admin switches it on; a button next to light/dark hides or shows the block.
 - Works on phone (menu bar at the bottom, floating status bar) and desktop.
 - **Multilingual** (Dutch and English, can be switched on in the admin area) and a **dark/light mode** with a button at the top right. See [Languages and dark mode](#languages-and-dark-mode).
 
 **For residents**
 - Residents change the status of **their own house** (one house per device); the admin approves it. See [Residents: My house](#residents-my-house).
 - Quickly go to your house with a double-click or long-press.
+- The **My location** button (below the zoom buttons) shows your own position as a blue dot, on by default (the browser asks for permission), so you only need one phone.
+- Optional (switched on by the admin): the **Community** to share your position live and see the other participants as dots, with their own colour and symbol. See [My location and Community](#the-website-for-visitors).
 - Optional: choose a house **only with the QR code** from the letter (one device per house), with a location check (geofence) and/or an access code for devices without GPS. See [Access via QR code](#access-via-qr-code-optional).
 
 **For the admin**
@@ -39,7 +42,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - **Approve or reject** changes by residents, with **push notifications**; **block** devices (also by IP); **schedule** changes until a date and time.
 - **QR codes** per house: show, copy the link, renew, and a **printable PDF** with a card per house to deliver to the residents.
 - Settings in five clear tabs; the admin area can also be installed as its own **app**.
-- Your own **logo, explanation, info box, site and app name** and your own names for the statuses.
+- Your own **logo** (with an optional small logo for the header), an optional **favicon** (also the icon of the installed app; the lantern by default), explanation, info box, **site and app name** and your own names for the statuses.
 - Automatic **backups** after every save attempt, with short titles and manual backups.
 - Version number and commit visible in the settings menu.
 
@@ -63,6 +66,12 @@ Example with random houses (map data © OpenStreetMap contributors).
 
 **Explanation and info box** – the association's text; it is shown automatically the first time and closes with the cross at the top right. At the top is the eye-catching green **info box** explaining that residents can change their own house; it disappears as soon as changing is switched off.
 
+**Overview with totals** – at the top right of the map are the *total number of houses* and, per status, the number and the percentage, with a distribution bar. The admin switches the block on for visitors with *Also show on the front page* (*Settings → Config → Display*; off by default). When it is visible, a button next to the light/dark button lets a visitor hide or show the block; that choice is remembered on that device only.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/voorpagina-totaal.png"><img src="docs/screenshots/voorpagina-totaal.png" width="400" alt="Overview with totals"></a><br><sub>Overview with totals</sub></td><td align="center" valign="top"><a href="docs/screenshots/voorpagina-totaal-verborgen.png"><img src="docs/screenshots/voorpagina-totaal-verborgen.png" width="400" alt="Hidden with the button at the top right"></a><br><sub>Hidden with the button at the top right</sub></td></tr>
+</table>
+
 **PDF export** – A4 landscape with legend, totals and the date and time (HH:MM) of the status. Page 2 contains the logo, the explanation and the overview of the marked houses. The PDF follows the chosen streets and the house numbers.
 
 <table>
@@ -78,6 +87,18 @@ Example with random houses (map data © OpenStreetMap contributors).
 </table>
 
 **Quickly to your house** – with a mouse you double-click a house, on a touchscreen you long-press it (a little over half a second). *Edit* is then switched on (in the browser), the map jumps to the house and change mode starts; if you have not chosen a house yet, the app asks whether it is your house. A double-click outside the houses simply zooms in. In the admin area the same gesture selects the house in select mode.
+
+**My location** – below the zoom buttons is the *My location* button (the crosshair). Your location is **on by default**: when the map opens, the browser asks for permission to use your location (after the explanation has been closed). On a first visit everything comes one after another: first the explanation, then the location question, and only then the install notice. If you allow it, the button switches on (blue), your position appears as a blue dot with a light circle for the accuracy, the map zooms to you and follows you as you walk. Without permission the map stays as it was and no message follows. If you move the map yourself, following stops (the dot stays) and a tap on the button takes you back; one more tap on the next state turns the location off. If you turn the location off yourself, it no longer starts by itself on that device (only that choice is remembered, in the browser); a tap on the button turns it back on. While the location is on the screen stays awake, so you do not have to keep unlocking your phone while walking (if your browser supports it; otherwise the screen simply dims, and it is requested again when you return to the page). Your position stays on your phone: it is never stored or sent anywhere, unless you choose to share it with the Community (see below). Showing your location only works over **https**. The administrator can hide the button, and with it the location (see *Config*).
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/mijn-locatie-mobiel.png"><img src="docs/screenshots/mijn-locatie-mobiel.png" width="220" alt="My location: blue dot with accuracy circle"></a><br><sub>My location: blue dot with accuracy circle</sub></td></tr>
+</table>
+
+**Community** – optional, **off** by default; the administrator switches it on under *Settings → Config → Display → Community*. A second button (the three people) then appears below *My location* to share your position live. Sharing is always voluntary: you must confirm it first and one tap stops it. Anyone taking part sees the other participants as **dots** (with the count on the button); anyone who does not share sees nobody. No name is attached. In the confirmation window a participant also picks a **colour and a symbol** (for example an animal) that others see; without a choice it is the default purple dot. The administrator can switch this choice off with *Choose colour and symbol* (on by default), after which every dot is purple. The **title and text** of the confirmation window are set by the administrator under *Config → Texts* (per language; empty = default text). The server only keeps positions briefly in memory (not on disk) and deletes them as soon as someone stops, closes the page, or after 45 seconds without a signal; when the administrator switches the feature off every position is gone immediately. In the admin area the administrator sees all participants as dots on the map, with the count in the side bar. This only works if the *My location* button is on as well.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/community-venster-mobiel.png"><img src="docs/screenshots/community-venster-mobiel.png" width="220" alt="Confirm sharing, with colour and symbol"></a><br><sub>Confirm sharing, with colour and symbol</sub></td><td align="center" valign="top"><a href="docs/screenshots/community-kaart-mobiel.png"><img src="docs/screenshots/community-kaart-mobiel.png" width="220" alt="Participants as dots, the number on the button"></a><br><sub>Participants as dots, the number on the button</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-community.png"><img src="docs/screenshots/beheer-community.png" width="220" alt="Admin area: all participants on the map"></a><br><sub>Admin area: all participants on the map</sub></td></tr>
+</table>
 
 **In the admin area** this works too: double-click (or long-press) a house and select mode switches on with that house selected, even if you were just drawing (as long as no area is in progress).
 
@@ -172,7 +193,11 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 - *Devices*: registered devices, **alphabetical** by street and house number (handy for searching with many houses), with removing the link or **blocking** (optionally with IP address), and the *Blocked* list.
 - *Notifications on this device*: push notifications for new changes.
 
-**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the names of the statuses, the info box, the explanation and the text when sharing via WhatsApp (the texts per language).
+**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the *My location* button for visitors (on or off; on by default), the *Community* (live participants; off by default), *Choose colour and symbol* for the community (on or off; on by default), the names of the statuses, the info box, the explanation, the text when sharing via WhatsApp and the title and text of the community window (the texts per language).
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-afbeeldingen.png"><img src="docs/screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, small logo and favicon"></a><br><sub>Config: logo, small logo and favicon</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-locatie.png"><img src="docs/screenshots/instellingen-config-locatie.png" width="270" alt="Config: My location and Community"></a><br><sub>Config: My location and Community</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-communityteksten.png"><img src="docs/screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: title and text of the community window"></a><br><sub>Config: title and text of the community window</sub></td></tr>
+</table>
 
 **Security** – add/remove passkeys and an optional password (confirm with passkey).
 
@@ -243,9 +268,17 @@ Without input the site name (`SITE_TITLE`) applies. An already installed app onl
 The admin area (`/beheer`) can also be installed as its own app, with its own dark blue lantern with a cog as the icon and its own favicon, so you can tell it apart from the public map (Chrome/Edge: install icon in the address bar or *Install app*; iPhone/iPad: *Add to Home Screen*). The app opens directly at `/beheer`; push notifications for new changes use the same icon. You make a new icon with `python3 tools/make-icons.py`.
 
 ## Installing as an app and offline use
-- **Android and Windows (Chrome/Edge)**: you get a **one-time** prompt to install the app (*Install* / *Not now*), remembered per device. After that it is also possible via the browser menu → *Install app*.
-- **iPhone/iPad**: the same one-time prompt with instructions (see below).
-- **iPhone/iPad (Safari)**: share icon → *Add to Home Screen*.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/installatiemelding-ios.png"><img src="docs/screenshots/installatiemelding-ios.png" width="220" alt="Install prompt on iPhone/iPad"></a><br><sub>Install prompt on iPhone/iPad</sub></td><td align="center" valign="top"><a href="docs/screenshots/installatiemelding-android.png"><img src="docs/screenshots/installatiemelding-android.png" width="220" alt="Install prompt on Android"></a><br><sub>Install prompt on Android</sub></td></tr>
+</table>
+
+- **First visit (iPhone/iPad, Android and Windows with Chrome/Edge)**: you get a **one-time** prompt *Install the app* (remembered per device) with an **Install now** button that starts the installation, plus instructions per platform:
+  - **iPhone/iPad (Safari)**: *Install now* opens the share sheet; choose *Add to Home Screen* → *Add*.
+  - **Android (Chrome)**: *Install now* starts the browser's installation; if that is not possible, the steps are shown (menu ⋮ → *Install app*).
+  - **Windows (Chrome/Edge)**: *Install now* starts the browser's installation; otherwise use the install icon in the address bar or the menu → *Install app* (Edge: *Apps* → *Install this site as an app*).
+  - With *Not now* you close the prompt; you can still install later via the browser menu.
+- On the very first visit the messages come one after the other: first the explanation, then the location question, then the install prompt.
 - **Offline**: the app stores itself, the last known map data, the logo and the map tiles of the neighbourhood (and the PDF section).
   Without a connection you see the last known state (with the message *Offline*), and the PDF can still be made. Only the admin area always requires a connection.
 - This only works over **HTTPS** (see `ORIGIN`). After an update of the site the app fetches the new version on the next visit.

@@ -4,6 +4,23 @@
   let data = await getData();
 
   I18n.mountPrefs($('prefs'));
+  // Knop naast licht/donker: het blok met het totaal aantal huizen verbergen of weer tonen. Standaard zichtbaar (als de beheerder
+  // het blok aanzet); alleen de keuze van de bezoeker wordt op dit apparaat onthouden.
+  const STATS_KEY = 'sm-stats-hidden';
+  const statsBtn = Object.assign(document.createElement('button'), { type: 'button', className: 'theme-btn stats-btn', hidden: true });
+  statsBtn.innerHTML = MDI.html('chart-bar');
+  const statsHidden = () => { try { return localStorage.getItem(STATS_KEY) === '1'; } catch { return false; } };
+  function paintStatsBtn() {
+    const off = statsHidden();
+    $('house-stats').classList.toggle('user-hidden', off);
+    statsBtn.classList.toggle('off', off);
+    statsBtn.setAttribute('aria-pressed', String(!off));
+    const label = I18n.tr(off ? 'Totaal aantal huizen tonen' : 'Totaal aantal huizen verbergen');
+    statsBtn.title = label; statsBtn.setAttribute('aria-label', label);
+  }
+  statsBtn.onclick = () => { try { statsHidden() ? localStorage.removeItem(STATS_KEY) : localStorage.setItem(STATS_KEY, '1'); } catch {} paintStatsBtn(); };
+  $('prefs').append(statsBtn);
+  paintStatsBtn();
 
   // ---------- kop, logo en uitleg ----------
   function applyMeta(first) {
@@ -13,8 +30,18 @@
     const iosTitle = data.appShortName || data.appName || data.title;
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', iosTitle);
 
-    if (data.logo) {
-      $('logo').src = data.logo.url;
+    const headerLogo = data.logoSmall || data.logo; // het kleine logo is bedoeld voor de kopbalk; zonder valt het terug op het gewone logo
+    // Favicon en iOS-beginschermicoon: het ingestelde favicon; zonder valt het terug op de standaardlantaarn.
+    for (const rel of ['icon', 'apple-touch-icon']) {
+      const link = document.querySelector(`link[rel="${rel}"]`);
+      if (!link) continue;
+      link.dataset.default ??= JSON.stringify({ href: link.getAttribute('href'), sizes: link.getAttribute('sizes') });
+      const def = JSON.parse(link.dataset.default);
+      link.setAttribute('href', data.favicon ? data.favicon.url : def.href);
+      if (data.favicon || !def.sizes) link.removeAttribute('sizes'); else link.setAttribute('sizes', def.sizes); // het formaat van het favicon is niet bekend
+    }
+    if (headerLogo) {
+      $('logo').src = headerLogo.url;
       $('logo').alt = `Logo ${data.title}`;
       $('logo').hidden = false;
     } else {
@@ -52,6 +79,11 @@
   const map = Wijk.createMap($('vp'), data.view, data.houses);
   Wijk.map = map;
   const nums = Wijk.createNumberLayer(map);
+  const locate = Wijk.createLocate(map, Wijk.toast); // knop "Mijn locatie"; staat uit tot de bezoeker erop tikt
+  locate.setEnabled(data.locateEnabled !== false);
+  // live deelnemers; alleen als de beheerder de community aanzet (met zijn tekst voor het bevestigingsvenster)
+  const communityOpts = () => ({ title: data.communityTitle, text: data.communityText, looks: data.communityLooks !== false });
+  locate.setCommunity(data.communityEnabled === true, communityOpts());
 
   // ---------- huizen, straten en aantallen (opnieuw op te bouwen bij een verversing) ----------
   const OTHER = '';
@@ -84,13 +116,22 @@
     if (box) box.replaceChildren('Totaal op de kaart: ', tallyEl(tally(visibleHouses()), 'street-tally'));
   };
 
+  // Zolang een bewoner "Mijn huis" open heeft, tekent resident.js alle huizen zelf; de publieke laag eronder
+  // blijft dan weg, anders stapelen twee halfdoorzichtige vlakken en lijkt een groen/rood huis ineens donkerder.
+  let editing = false;
+  // Het eigen huis tekent resident.js ook buiten de bewerkmodus zelf (met de nog niet goedgekeurde kleur). Het publieke vlak eronder
+  // blijft dan klikbaar (popup), maar krijgt geen vulling of rand, zodat de kleur niet donkerder wordt.
+  let coveredId = null;
+  const COVERED = { fillOpacity: 0, opacity: 0 };
+  const styleHouses = () => { for (const h of shownHouses) polys.get(h.id)?.setStyle(h.id === coveredId ? COVERED : Wijk.houseStyle(h.status)); };
   function applyStreets() {
     for (const h of shownHouses) {
       const poly = polys.get(h.id);
-      const show = !hidden.has(streetName(h));
+      const show = !editing && !hidden.has(streetName(h));
       if (show && !map.hasLayer(poly)) poly.addTo(map);
       if (!show && map.hasLayer(poly)) { poly.closePopup(); map.removeLayer(poly); }
     }
+    styleHouses();
     nums.rebuild(visibleHouses());
     renderTotal();
     try { localStorage.setItem('sm-hidden-streets', JSON.stringify([...hidden])); } catch {}
@@ -101,6 +142,7 @@
     polys.clear();
     shownHouses = data.houses.filter((h) => h.status !== 'none');
     if (data.statsPublic) Wijk.renderStats(data.houses, data.statsShow); else $('house-stats').hidden = true;
+    statsBtn.hidden = !data.statsPublic; // de knop bestaat alleen als de beheerder het blok op de voorpagina aanzet
     for (const h of shownHouses) {
       const poly = L.polygon(h.points, Wijk.houseStyle(h.status));
       const box = document.createElement('div');
@@ -133,6 +175,9 @@
     $('streets-btn').hidden = !(streets.length > 1 || (streets.length === 1 && streets[0] !== OTHER));
     applyStreets();
   }
+
+  Wijk.setPublicHouseCovered = (id) => { coveredId = id || null; styleHouses(); };
+  Wijk.setPublicHousesHidden = (flag) => { editing = flag === true; applyStreets(); };
 
   const setAll = (on) => { streets.forEach((x) => { on ? hidden.delete(x) : hidden.add(x); rows.get(x).checked = on; }); applyStreets(); };
   $('streets-all').onclick = () => setAll(true);
@@ -260,7 +305,7 @@
   }
 
   // ---------- automatisch verversen (o.a. nadat de beheerder een wijziging goedkeurt) ----------
-  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.statsPublic, d.statsShow]);
+  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.logoSmall, d.favicon, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.locateEnabled, d.communityEnabled, d.communityLooks, d.communityTitle, d.communityText, d.statsPublic, d.statsShow]);
   let lastSig = signature(data);
   let busy = false;
   let lastSync = new Date();
@@ -277,6 +322,8 @@
         lastSig = signature(next);
         data = next;
         applyMeta(false);
+        locate.setEnabled(data.locateEnabled !== false);
+        locate.setCommunity(data.communityEnabled === true, communityOpts());
         buildHouses();
         Wijk.setResidentMode?.(data.residentsMode);
         Wijk.setResidentGeofence?.(data.geofence);

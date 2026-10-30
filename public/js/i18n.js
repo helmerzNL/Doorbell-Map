@@ -154,6 +154,8 @@
       const has = (v) => typeof v === 'string' && v.trim();
       const out = { ...d };
       for (const k of ['siteTitle', 'appName', 'appShortName', 'intro', 'residentInfo']) if (has(own[k])) out[k] = own[k];
+      // het communityvenster: eigen tekst in die taal, anders de standaardtekst vertaald (een eigen Nederlandse tekst blijft Nederlands)
+      for (const k of ['communityTitle', 'communityText']) out[k] = has(own[k]) ? own[k] : String(d[k] || '').split('\n\n').map((p) => T.tr(p)).join('\n\n');
       out.title = has(own.siteTitle) ? own.siteTitle : T.tr(d.title);
       out.labels = { ...(d.labels || {}) };
       for (const k of Object.keys(out.labels)) if (has(own.labels && own.labels[k])) out.labels[k] = own.labels[k];

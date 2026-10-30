@@ -14,6 +14,7 @@ const auth = require('./auth');
 const { hashPassword, verifyPassword } = require('./password');
 const backups = require('./backups');
 const residents = require('./residents');
+const community = require('./community');
 const appVersion = require('./version');
 const { normalizeHouse, STATUSES, statusLabels, statsShow } = require('./houses');
 
@@ -74,6 +75,7 @@ function publicTranslations() {
     out[l] = {
       siteTitle: t.siteTitle || '', appName: t.appName || '', appShortName: t.appShortName || '', intro: t.intro || '',
       residentInfo: residents.enabled() ? t.residentInfo || '' : '',
+      communityTitle: t.communityTitle || '', communityText: t.communityText || '',
       labels: { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' },
     };
   }
@@ -85,13 +87,17 @@ app.get('/api/map', (req, res) => {
   res.set('Cache-Control', 'no-cache');
   res.json({
     title: settings?.siteTitle || config.siteTitle, siteTitle: settings?.siteTitle || '', view, pdfView: pdfView || null, houses,
-    intro: settings?.intro || '', logo: settings?.logo || null,
+    intro: settings?.intro || '', logo: settings?.logo || null, logoSmall: settings?.logoSmall || null, favicon: settings?.favicon || null,
     multilingual: lang.multilingual(), defaultLang: lang.defaultLang(),
     translations: publicTranslations(),
     appName: settings?.appName || '', appShortName: settings?.appShortName || '',
     residentsEnabled: residents.mode() !== 'closed', // ook 'swap': dan blijft de knop zichtbaar voor wie al een huis heeft
     residentsMode: residents.mode(),
     simpleUi: settings?.simpleUi === true,
+    communityEnabled: settings?.communityEnabled === true, // live deelnemers op de kaart (standaard uit)
+    communityLooks: community.looksEnabled(), // deelnemers kiezen zelf een kleur en symbool (standaard aan)
+    communityTitle: community.title('nl'), communityText: community.text('nl'), // het vlakje "Positie delen met de community?"
+    locateEnabled: settings?.locateEnabled !== false, // knop "Mijn locatie" op de kaart (standaard beschikbaar, maar uit tot erop getikt wordt)
     statsPublic: settings?.statsPublic === true, // overzichtsoverlay ook op de voorpagina
     statsShow: statsShow(settings),
     qrOnly: residents.qrOnly(),
@@ -104,6 +110,18 @@ app.get('/api/map', (req, res) => {
 });
 
 app.use('/uploads', express.static(store.uploadDir, { immutable: true, maxAge: '365d', index: false }));
+
+// Icoontjes van de geïnstalleerde app: het ingestelde favicon als dat vierkant is en minstens 192 px meet, anders de standaardlantaarn.
+// (Een upload wordt niet geschaald; daarom staat in het beheer dat 512 x 512 px het best is.)
+function manifestIcons() {
+  const f = store.db().settings?.favicon;
+  if (f?.width && f.width === f.height && f.width >= 192) return [{ src: f.url, sizes: `${f.width}x${f.height}`, type: f.type, purpose: 'any' }];
+  return [
+    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ];
+}
 
 // PWA-manifest met de naam van de site
 app.get('/manifest.webmanifest', (req, res) => {
@@ -121,11 +139,7 @@ app.get('/manifest.webmanifest', (req, res) => {
     display: 'standalone',
     background_color: '#f4f6f4',
     theme_color: '#1f6f4a',
-    icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    ],
+    icons: manifestIcons(),
   });
 });
 
@@ -377,7 +391,7 @@ function sanitizeBackup(b) {
   for (const l of lang.LANGS) {
     const o = t.translations?.[l];
     if (!o || typeof o !== 'object' || l === 'nl') continue;
-    texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), labels: labelsOf(o.labels) };
+    texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), communityTitle: txt(o, 'communityTitle'), communityText: txt(o, 'communityText'), labels: labelsOf(o.labels) };
   }
   return { houses, view, pdfView, texts };
 }
@@ -432,6 +446,27 @@ admin.delete('/passkeys/:id', auth.requirePasskeySession, (req, res) => {
   res.json({ ok: true });
 });
 
+// Afmetingen uit de kop van de afbeelding (PNG, JPEG, WebP); null als ze niet te lezen zijn.
+function imageSize(b, ext) {
+  try {
+    if (ext === 'png') return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
+    if (ext === 'jpg') {
+      for (let i = 2; i + 9 < b.length && b[i] === 0xff;) {
+        const m = b[i + 1];
+        if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) return { width: b.readUInt16BE(i + 7), height: b.readUInt16BE(i + 5) };
+        i += 2 + b.readUInt16BE(i + 2);
+      }
+      return null;
+    }
+    const kind = b.subarray(12, 16).toString();
+    if (kind === 'VP8X') return { width: 1 + b.readUIntLE(24, 3), height: 1 + b.readUIntLE(27, 3) };
+    if (kind === 'VP8L') return { width: 1 + (((b[22] & 0x3f) << 8) | b[21]), height: 1 + (((b[24] & 0x0f) << 10) | (b[23] << 2) | ((b[22] & 0xc0) >> 6)) };
+    if (kind === 'VP8 ') return { width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
+  } catch { /* afgekapt bestand: geen afmetingen */ }
+  return null;
+}
+const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
+
 const IMAGE_TYPES = [
   { ext: 'png', test: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
   { ext: 'jpg', test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
@@ -442,29 +477,32 @@ const removeLogoFile = (logo) => {
   if (logo?.file) fs.rm(path.join(store.uploadDir, path.basename(logo.file)), () => {});
 };
 
-admin.post('/logo',
-  express.raw({ type: 'application/octet-stream', limit: '5mb' }),
-  (req, res) => {
-    const buf = req.body;
-    const type = Buffer.isBuffer(buf) && IMAGE_TYPES.find((t) => t.test(buf));
-    if (!type) return res.status(400).json({ error: 'Alleen PNG, JPEG of WebP is toegestaan (max 5 MB)' });
-    const db = store.db();
-    const old = db.settings.logo;
-    const file = `logo-${Date.now()}.${type.ext}`;
-    fs.writeFileSync(path.join(store.uploadDir, file), buf);
-    db.settings.logo = { file, url: `/uploads/${file}` };
-    store.save();
-    removeLogoFile(old);
-    res.json({ logo: db.settings.logo });
-  });
+// Het logo (PDF, QR-kaartjes), het kleine logo (kopbalk) en het favicon worden op dezelfde manier bewaard; de laatste twee zijn optioneel.
+for (const [route, key, prefix] of [['/logo', 'logo', 'logo'], ['/logo-small', 'logoSmall', 'logo-small'], ['/favicon', 'favicon', 'favicon']]) {
+  admin.post(route,
+    express.raw({ type: 'application/octet-stream', limit: '5mb' }),
+    (req, res) => {
+      const buf = req.body;
+      const type = Buffer.isBuffer(buf) && IMAGE_TYPES.find((t) => t.test(buf));
+      if (!type) return res.status(400).json({ error: 'Alleen PNG, JPEG of WebP is toegestaan (max 5 MB)' });
+      const db = store.db();
+      const old = db.settings[key];
+      const file = `${prefix}-${Date.now()}.${type.ext}`;
+      fs.writeFileSync(path.join(store.uploadDir, file), buf);
+      db.settings[key] = { file, url: `/uploads/${file}`, ...(key === 'favicon' ? { type: IMAGE_MIME[type.ext], ...imageSize(buf, type.ext) } : {}) };
+      store.save();
+      removeLogoFile(old);
+      res.json({ [key]: db.settings[key] });
+    });
 
-admin.delete('/logo', (req, res) => {
-  const db = store.db();
-  removeLogoFile(db.settings.logo);
-  db.settings.logo = null;
-  store.save();
-  res.json({ ok: true });
-});
+  admin.delete(route, (req, res) => {
+    const db = store.db();
+    removeLogoFile(db.settings[key]);
+    db.settings[key] = null;
+    store.save();
+    res.json({ ok: true });
+  });
+}
 
 // Instellingen zoals bewaard (voor het beheerscherm); /api/map geeft de actuele, effectieve waarden.
 admin.get('/settings', (req, res) => {
@@ -475,7 +513,7 @@ admin.get('/settings', (req, res) => {
     const t = lang.translations(l);
     tx[l] = Object.fromEntries([...lang.TEXT_FIELDS.map((f) => [f, t[f] || '']), ['labels', { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' }]]);
   }
-  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
+  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, communityLooks: community.looksEnabled(), communityTitle: s.communityTitle || '', communityText: s.communityText || '', defaultCommunity: community.defaults(), statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
 });
 
 // Tekstvelden met hun maximale lengte; gelden voor het Nederlands (gewone instellingen) en voor elke vertaling.
@@ -486,6 +524,8 @@ const TEXT_RULES = {
   intro: { max: 5000, multiline: true, error: 'De uitleg mag maximaal 5000 tekens zijn' },
   residentInfo: { max: 1000, multiline: true, error: 'Het infovlak mag maximaal 1000 tekens zijn' },
   qrShareText: { max: 500, multiline: true, error: 'De deeltekst mag maximaal 500 tekens zijn' },
+  communityTitle: { max: 80, error: 'De titel van het communityvlak mag maximaal 80 tekens zijn' },
+  communityText: { max: 1000, multiline: true, error: 'De tekst van het communityvlak mag maximaal 1000 tekens zijn' },
 };
 // { value } of { error }
 function cleanText(field, raw) {
@@ -498,11 +538,15 @@ function cleanText(field, raw) {
 admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (req, res) => {
   const body = req.body || {};
   const db = store.db();
-  for (const f of ['intro', 'residentInfo', 'qrShareText']) {
+  for (const f of ['intro', 'residentInfo', 'qrShareText', 'communityTitle', 'communityText']) {
     if (!(f in body)) continue;
     const r = cleanText(f, body[f]);
     if (r.error) return res.status(400).json({ error: r.error });
-    db.settings[f] = r.value; // qrShareText leeg = standaardtekst
+    db.settings[f] = r.value; // qrShareText, communityTitle en communityText: leeg = standaardtekst
+  }
+  if ('communityLooks' in body) {
+    db.settings.communityLooks = body.communityLooks === true;
+    // uit: de deelnemers verschijnen meteen als standaardstip (listOthers geeft dan geen kleur of symbool meer mee)
   }
   if ('multilingual' in body) db.settings.multilingual = body.multilingual === true;
   if ('defaultLang' in body) {
@@ -540,6 +584,11 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     db.settings.residentsCodeOn = on;
   }
   if ('simpleUi' in body) db.settings.simpleUi = body.simpleUi === true;
+  if ('locateEnabled' in body) db.settings.locateEnabled = body.locateEnabled === true;
+  if ('communityEnabled' in body) {
+    db.settings.communityEnabled = body.communityEnabled === true;
+    if (!db.settings.communityEnabled) community.clear(); // uitzetten wist meteen alle posities
+  }
   if ('statsPublic' in body) db.settings.statsPublic = body.statsPublic === true;
   if (body.statsShow && typeof body.statsShow === 'object') {
     const next = statsShow(db.settings);
@@ -566,7 +615,7 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     if (r.error) return res.status(400).json({ error: r.error });
     db.settings[f] = r.value;
   }
-  // Teksten in andere talen: { en: { siteTitle, appName, appShortName, intro, residentInfo, qrShareText, labels: { green, red, none } } }
+  // Teksten in andere talen: { en: { siteTitle, appName, appShortName, intro, residentInfo, qrShareText, communityTitle, communityText, labels: { green, red, none } } }
   if (body.translations !== undefined) {
     if (!body.translations || typeof body.translations !== 'object') return res.status(400).json({ error: 'Ongeldige vertalingen' });
     const next = JSON.parse(JSON.stringify(db.settings.translations || {}));
@@ -671,9 +720,11 @@ admin.put('/houses', backups.afterSave('Layout opgeslagen'), (req, res) => {
   }
 });
 
+admin.get('/community', community.adminList);
 admin.use(residents.admin);
 app.use('/api/admin', admin);
 app.use('/api/resident', residents.resident);
+app.use('/api/community', community.router);
 app.use('/api', (req, res) => res.status(404).json({ error: 'Niet gevonden' }));
 
 // ---------- statische bestanden ----------

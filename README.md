@@ -22,13 +22,16 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - Kaart op basis van OpenStreetMap (geen API-sleutel) met gekleurde vlakken over de huizen; klik op een huis voor de notitie.
 - Huisnummers op de kaart (schakelaar), straten-filter met tellingen groen/rood, en een uitleg- en infovenster.
 - **PDF** (A4 liggend) met kaart, legenda, aantallen, logo, uitleg en een overzicht van de gemarkeerde huizen, inclusief datum en tijd.
-- **Installeerbaar als app (PWA)** met eigen app-icoon en **offline** gebruik.
+- **Installeerbaar als app (PWA)** met eigen app-icoon en **offline** gebruik; bij het eerste bezoek helpt een melding met een knop *Installeer nu* en de stappen per platform. Zie [Installeren als app](#installeren-als-app-en-offline-gebruik).
+- Het **overzicht met aantallen** (totaal en per status) staat, als de beheerder dat aanzet, ook op de voorpagina; een knop naast licht/donker verbergt of toont het blok.
 - Werkt op telefoon (menubalk onderin, zwevend statusbalkje) en desktop.
 - **Meertalig** (Nederlands en Engels, in te schakelen in het beheer) en een **donkere/lichte weergave** met een knop rechtsboven. Zie [Talen en donkere weergave](#talen-en-donkere-weergave).
 
 **Voor bewoners**
 - Bewoners wijzigen de status van **hun eigen huis** (één huis per apparaat); de beheerder keurt dat goed. Zie [Bewoners: Mijn huis](#bewoners-mijn-huis).
 - Snel naar je huis met dubbelklikken of lang indrukken.
+- De knop **Mijn locatie** (onder de zoomknoppen) toont je eigen positie standaard als blauwe stip, zodat je maar één telefoon nodig hebt.
+- Optioneel (door de beheerder aan te zetten): de **Community** om je positie live te delen en de andere deelnemers als stippen te zien, met een eigen kleur en symbool. Zie [Mijn locatie en Community](#de-website-voor-bezoekers).
 - Optioneel: huis kiezen **alleen met de QR-code** uit de brief (één apparaat per huis), met locatiecontrole (geofence) en/of een toegangscode voor apparaten zonder GPS. Zie [Toegang via QR-code](#toegang-via-qr-code-optioneel).
 
 **Voor de beheerder**
@@ -37,7 +40,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - Wijzigingen van bewoners **goedkeuren of afwijzen**, met **pushmeldingen**; apparaten **blokkeren** (ook op IP); wijzigen **plannen** tot een datum en tijd.
 - **QR-codes** per huis: tonen, link kopiëren, vernieuwen en een **afdrukbare PDF** met een kaartje per huis om bij de bewoners te bezorgen.
 - Instellingen in vijf overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
-- Eigen **logo, uitleg, infovlak, site- en appnaam** en eigen namen voor de statussen.
+- Eigen **logo** (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (ook het icoon van de geïnstalleerde app; standaard de lantaarn), uitleg, infovlak, **site- en appnaam** en eigen namen voor de statussen.
 - Automatische **backups** na elke opslagpoging, met korte titels en handmatige backups.
 - Versienummer en commit zichtbaar in het instellingenmenu.
 
@@ -61,6 +64,12 @@ Voorbeeld met willekeurige huizen (kaartgegevens © OpenStreetMap-bijdragers).
 
 **Uitleg en infovlak** – de tekst van de vereniging; wordt de eerste keer automatisch getoond en sluit met het kruisje rechtsboven. Bovenaan staat het opvallende groene **infovlak** dat uitlegt dat bewoners hun eigen huis kunnen wijzigen; dat verdwijnt zodra wijzigen is uitgeschakeld.
 
+**Overzicht met aantallen** – rechtsboven op de kaart staat het *totaal aantal huizen* en per status het aantal en het percentage, met een verdelingsbalk. De beheerder zet het blok voor bezoekers aan met *Ook op de voorpagina tonen* (*Instellingen → Config → Weergave*; standaard uit). Is het zichtbaar, dan staat naast de licht/donker-knop een knop waarmee een bezoeker het blok verbergt of weer toont; die keuze wordt alleen op dat apparaat onthouden.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/voorpagina-totaal.png"><img src="docs/screenshots/voorpagina-totaal.png" width="400" alt="Overzicht met aantallen"></a><br><sub>Overzicht met aantallen</sub></td><td align="center" valign="top"><a href="docs/screenshots/voorpagina-totaal-verborgen.png"><img src="docs/screenshots/voorpagina-totaal-verborgen.png" width="400" alt="Verborgen met de knop rechtsboven"></a><br><sub>Verborgen met de knop rechtsboven</sub></td></tr>
+</table>
+
 **PDF-export** – A4 liggend met legenda, aantallen en de datum en het tijdstip (HH:MM) van de stand. Pagina 2 bevat het logo, de uitleg en het overzicht van de gemarkeerde huizen. De PDF volgt de gekozen straten en de huisnummers.
 
 <table>
@@ -76,6 +85,18 @@ Voorbeeld met willekeurige huizen (kaartgegevens © OpenStreetMap-bijdragers).
 </table>
 
 **Snel naar jouw huis** – met een muis dubbelklik je op een huis, op een touchscreen druk je er lang op (ruim een halve seconde). Dan gaat *Bewerken* aan (in de browser), springt de kaart naar het huis en start de wijzigmodus; heb je nog geen huis gekozen, dan vraagt de app of het jouw huis is. Een dubbelklik buiten de huizen zoomt gewoon in. In het beheer selecteert hetzelfde gebaar het huis in de selecteermodus.
+
+**Mijn locatie** – onder de zoomknoppen staat de knop *Mijn locatie* (het richtkruis). De locatie staat **standaard aan**: bij het openen van de kaart vraagt de browser om toestemming (nadat de uitleg is gesloten). Bij het eerste bezoek komt alles na elkaar: eerst de uitleg, dan de locatievraag, en pas daarna de installatiemelding. Geef je die, dan schakelt de knop in (blauw), verschijnt je positie als blauwe stip met een lichte cirkel voor de nauwkeurigheid, zoomt de kaart naar je toe en volgt hij je terwijl je loopt. Zonder toestemming blijft de kaart zoals hij was en volgt er geen melding. Schuif je de kaart zelf weg, dan stopt het volgen (de stip blijft) en brengt een tik op de knop je terug; nog een tik op de volgende stand zet de locatie uit. Wie de locatie zelf uitzet, krijgt hem op dat apparaat niet meer vanzelf aan (alleen die keuze wordt onthouden, in de browser); een tik op de knop zet hem weer aan. Zolang de locatie aan staat blijft het scherm aan, zodat je de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen (als je browser dat ondersteunt; anders dimt het scherm gewoon, en na terugkeren naar de pagina wordt het opnieuw aangevraagd). Je positie blijft op je telefoon: ze wordt nergens opgeslagen of verstuurd, behalve als je zelf kiest voor delen met de Community (zie hieronder). Het tonen van je locatie werkt alleen via **https**. De beheerder kan de knop, en daarmee de locatie, verbergen (zie *Config*).
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/mijn-locatie-mobiel.png"><img src="docs/screenshots/mijn-locatie-mobiel.png" width="220" alt="Mijn locatie: blauwe stip met nauwkeurigheidscirkel"></a><br><sub>Mijn locatie: blauwe stip met nauwkeurigheidscirkel</sub></td></tr>
+</table>
+
+**Community** – optioneel, standaard **uit**; de beheerder zet het aan onder *Instellingen → Config → Weergave → Community*. Dan verschijnt onder *Mijn locatie* een tweede knop (de drie poppetjes) om je positie live te delen. Delen is altijd vrijwillig: je moet het eerst bevestigen en stoppen kan met één tik. Wie meedoet ziet de andere deelnemers als **stippen** (met het aantal op de knop); wie niet deelt, ziet niemand. Er staat geen naam bij. In het bevestigingsvenster kiest een deelnemer ook een **kleur en een symbool** (bijvoorbeeld een dier) waarmee anderen hem zien; zonder keuze is het de standaard paarse stip. De beheerder zet die keuze uit met *Kleur en symbool kiezen* (standaard aan), dan zijn alle stippen paars. De **titel en de tekst** van het bevestigingsvenster stelt de beheerder in onder *Config → Teksten* (per taal; leeg = standaardtekst). De server bewaart posities alleen kort in het geheugen (niet op schijf) en wist ze zodra iemand stopt, de pagina sluit, of na 45 seconden zonder signaal; de beheerder zet de functie uit en alle posities zijn direct weg. In het beheer ziet de beheerder alle deelnemers als stippen op de kaart, met het aantal in de zijbalk. Dit werkt alleen als de knop *Mijn locatie* ook aan staat.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/community-venster-mobiel.png"><img src="docs/screenshots/community-venster-mobiel.png" width="220" alt="Delen bevestigen, met kleur en symbool"></a><br><sub>Delen bevestigen, met kleur en symbool</sub></td><td align="center" valign="top"><a href="docs/screenshots/community-kaart-mobiel.png"><img src="docs/screenshots/community-kaart-mobiel.png" width="220" alt="Deelnemers als stippen, het aantal op de knop"></a><br><sub>Deelnemers als stippen, het aantal op de knop</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-community.png"><img src="docs/screenshots/beheer-community.png" width="220" alt="Beheer: alle deelnemers op de kaart"></a><br><sub>Beheer: alle deelnemers op de kaart</sub></td></tr>
+</table>
 
 **In het beheer** werkt dit ook: dubbelklik (of druk lang) op een huis en de selecteermodus gaat aan met dat huis geselecteerd, ook als je net aan het tekenen was (zolang er nog geen vlak loopt).
 
@@ -170,7 +191,11 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 - *Apparaten*: aangemelde apparaten, **alfabetisch** op straat en huisnummer (handig zoeken bij veel huizen), met koppeling verwijderen of **blokkeren** (eventueel met IP-adres), en de lijst *Geblokkeerd*.
 - *Meldingen op dit apparaat*: pushmeldingen voor nieuwe wijzigingen.
 
-**Config** – taal (meertalig en standaardtaal), logo, naam van de site en de app, de eenvoudige weergave, de namen van de statussen, het infovlak, de uitleg en de tekst bij delen via WhatsApp (de teksten per taal).
+**Config** – taal (meertalig en standaardtaal), logo, naam van de site en de app, de eenvoudige weergave, de knop *Mijn locatie* voor bezoekers (aan of uit; standaard aan), de *Community* (live deelnemers; standaard uit), *Kleur en symbool kiezen* voor de community (aan of uit; standaard aan), de namen van de statussen, het infovlak, de uitleg, de tekst bij delen via WhatsApp en de titel en tekst van het communityvenster (de teksten per taal).
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-afbeeldingen.png"><img src="docs/screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, klein logo en favicon"></a><br><sub>Config: logo, klein logo en favicon</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-locatie.png"><img src="docs/screenshots/instellingen-config-locatie.png" width="270" alt="Config: Mijn locatie en Community"></a><br><sub>Config: Mijn locatie en Community</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-communityteksten.png"><img src="docs/screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: titel en tekst van het communityvenster"></a><br><sub>Config: titel en tekst van het communityvenster</sub></td></tr>
+</table>
 
 **Beveiliging** – passkeys toevoegen/verwijderen en een optioneel wachtwoord (bevestigen met passkey).
 
@@ -241,9 +266,16 @@ Zonder invoer geldt de sitenaam (`SITE_TITLE`). Een al geïnstalleerde app neemt
 Ook het beheer (`/beheer`) is te installeren als eigen app, met een eigen donkerblauwe lantaarn met tandwiel als icoon en een eigen favicon, zodat je het onderscheidt van de publieke kaart (Chrome/Edge: installeer-icoon in de adresbalk of *App installeren*; iPhone/iPad: *Zet in beginscherm*). De app opent direct op `/beheer`; pushmeldingen voor nieuwe wijzigingen gebruiken hetzelfde icoon. Een nieuw icoon maak je met `python3 tools/make-icons.py`.
 
 ## Installeren als app en offline gebruik
-- **Android en Windows (Chrome/Edge)**: je krijgt **eenmalig** een melding om de app te installeren (*Installeren* / *Niet nu*), per apparaat onthouden. Daarna kan het ook via het browsermenu → *App installeren*.
-- **iPhone/iPad**: dezelfde eenmalige melding met uitleg (zie hieronder).
-- **iPhone/iPad (Safari)**: deel-icoon → *Zet in beginscherm*.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/installatiemelding-ios.png"><img src="docs/screenshots/installatiemelding-ios.png" width="220" alt="Installatiemelding op iPhone/iPad"></a><br><sub>Installatiemelding op iPhone/iPad</sub></td><td align="center" valign="top"><a href="docs/screenshots/installatiemelding-android.png"><img src="docs/screenshots/installatiemelding-android.png" width="220" alt="Installatiemelding op Android"></a><br><sub>Installatiemelding op Android</sub></td></tr>
+</table>
+
+- **Eerste bezoek (iPhone/iPad, Android en Windows met Chrome/Edge)**: je krijgt **eenmalig** een melding *Installeer de app* (per apparaat onthouden) met een knop **Installeer nu** die het installeren start, plus uitleg per platform:
+  - **iPhone/iPad (Safari)**: *Installeer nu* opent het deelvenster; kies daarin *Zet in beginscherm* → *Voeg toe*.
+  - **Android (Chrome)**: *Installeer nu* start de installatie van de browser; kan dat niet, dan staan de stappen erbij (menu ⋮ → *App installeren*).
+  - **Windows (Chrome/Edge)**: *Installeer nu* start de installatie van de browser; anders het installeer-icoon in de adresbalk of menu → *App installeren* (Edge: *Apps* → *Deze site als app installeren*).
+  - Met *Niet nu* sluit je de melding; later kan het nog via het browsermenu.
 - **Offline**: de app bewaart zichzelf, de laatst bekende kaartgegevens, het logo en de kaarttegels van het wijkgebied (en de PDF-uitsnede).
   Zonder verbinding zie je de laatst bekende stand (met de melding *Offline*), en de PDF blijft te maken. Alleen het beheer vereist altijd een verbinding.
 - Dit werkt alleen via **HTTPS** (zie `ORIGIN`). Na een update van de site haalt de app de nieuwe versie bij het eerstvolgende bezoek op.

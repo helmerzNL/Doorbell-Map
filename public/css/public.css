@@ -17,6 +17,11 @@ body.public .bar-switches { gap: 14px; }
 body.public .switch-text { font-weight: 550; }
 body.public .switch .num-icon, body.public .switch .edit-icon { color: var(--accent); }
 body.public .prefs { gap: 8px; }
+/* knop om het totaal aantal huizen te verbergen: doorgestreept als het blok verborgen is */
+body.public .stats-btn { position: relative; }
+body.public .stats-btn[hidden] { display: none; }
+body.public .stats-btn.off { color: var(--muted); }
+body.public .stats-btn.off::after { content: ''; position: absolute; left: 22%; right: 22%; top: 50%; border-top: 2px solid currentColor; transform: rotate(-45deg); }
 
 /* acties: Uitleg, Mijn huis, Straten, PDF, Meer */
 body.public .actions { gap: 8px; }
@@ -44,6 +49,38 @@ body.public .popup { border-radius: var(--r-lg); border: 1px solid var(--line); 
 body.public .popup h3 { font-weight: 700; }
 body.public .house-stats { pointer-events: none; }
 
+/* knop "Mijn locatie" en de stip op de kaart */
+body.public .locate-ctl { border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2); overflow: hidden; }
+body.public .locate-btn { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 0; background: var(--panel); color: var(--text); box-shadow: none; cursor: pointer; }
+body.public .locate-btn:hover { background: var(--surface); }
+body.public .locate-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -3px; }
+body.public .locate-btn .mdi { width: 22px; height: 22px; }
+body.public .locate-btn.on { color: #1a73e8; }
+body.public .locate-btn.following { background: #1a73e8; color: #fff; }
+body.public .locate-btn.following:hover { background: #1765cc; }
+@media (pointer: coarse) { body.public .locate-btn { width: 44px; height: 44px; } }
+body.public .community-ctl { margin-top: 8px; }
+body.public .community-btn { position: relative; }
+body.public .community-btn.on { background: #8e44ad; color: #fff; }
+body.public .community-btn.on:hover { background: #7d3c98; }
+body.public .community-badge { position: absolute; top: 1px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--panel); color: #8e44ad; font: 700 11px/16px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 1px #8e44ad; }
+body.public .community-badge[hidden] { display: none; }
+/* kleur- en symboolkeuze in het communityvenster */
+body.public .community-looks { border: 0; margin: 12px 0 0; padding: 0; min-width: 0; }
+body.public .community-looks[hidden] { display: none; }
+body.public .community-looks legend { padding: 0; font-size: .8rem; font-weight: 600; margin-bottom: 6px; }
+body.public .look-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+body.public .look-btn { width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; border: 2px solid var(--line); background: var(--panel); }
+body.public .look-btn.swatch { background: var(--sw); border-color: transparent; box-shadow: inset 0 0 0 2px var(--panel); }
+body.public .look-btn[aria-checked="true"] { border-color: var(--text); box-shadow: 0 0 0 2px var(--panel) inset; }
+body.public .look-btn.swatch[aria-checked="true"] { border-color: var(--text); box-shadow: inset 0 0 0 3px var(--panel); }
+body.public .look-btn.none { font-size: 12px; }
+body.public .look-preview { display: flex; align-items: center; gap: 10px; margin: 4px 0 0; }
+body.public .look-preview .community-pin { flex: none; position: static; width: 26px; height: 26px; }
+body.public path.locate-dot { fill: #1a73e8; stroke: #fff; }
+body.public path.locate-ring { fill: #1a73e8; fill-opacity: .15; stroke: #1a73e8; stroke-opacity: .4; }
+body.public path.locate-ring-hidden { display: none; }
+
 /* ---------- dialogen ---------- */
 body.public dialog { width: min(480px, calc(100vw - 24px)); max-width: none; }
 body.public #intro-dialog { width: min(640px, calc(100vw - 24px)); padding: 0 24px 20px; }
@@ -61,6 +98,8 @@ body.public .intro-info-ico { display: grid; place-items: center; flex: none; wi
 body.public .intro-info-ico .mdi { width: 24px; height: 24px; }
 body.public dialog p { line-height: 1.55; }
 body.public dialog > p:last-child:not(.error) .primary, body.public #install-dialog p .primary { min-width: 8rem; }
+body.public .install-steps { margin: 0 0 14px; padding-left: 1.4rem; line-height: 1.5; }
+body.public .install-steps li { margin: 0 0 6px; padding-left: 2px; }
 body.public #code-input { font-size: 1.4rem; letter-spacing: .3em; text-align: center; min-height: 52px; font-variant-numeric: tabular-nums; }
 body.public #code-input::placeholder { font-size: .95rem; letter-spacing: 0; }
 body.public .error { min-height: 0; font-size: .88rem; font-weight: 550; margin: 8px 0; }

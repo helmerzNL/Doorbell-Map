@@ -652,5 +652,60 @@
     $('hs-bar').hidden = !show.green && !show.red;
   }
 
-  window.Wijk = { BETA, renderStats, docTitle, setHeading, loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
+  // Kleuren en symbolen waaruit een deelnemer van de community kiest (de server bewaart alleen de hex-kleur en de sleutel).
+  // De eerste kleur is de standaard (paars); symbolen zijn emoji en bewust neutraal (geen evenement).
+  const COMMUNITY_COLORS = [
+    { c: '#8e44ad', name: 'Paars' }, { c: '#2980b9', name: 'Blauw' }, { c: '#e67e22', name: 'Oranje' }, { c: '#e84393', name: 'Roze' },
+    { c: '#00a8a8', name: 'Turquoise' }, { c: '#f1c40f', name: 'Geel' }, { c: '#8d6e63', name: 'Bruin' }, { c: '#2d3436', name: 'Zwart' },
+  ];
+  const COMMUNITY_ICONS = [
+    { i: '', e: '', name: 'Geen symbool' }, { i: 'smile', e: '🙂', name: 'Smiley' }, { i: 'dog', e: '🐶', name: 'Hond' }, { i: 'cat', e: '🐱', name: 'Kat' },
+    { i: 'fox', e: '🦊', name: 'Vos' }, { i: 'bear', e: '🐻', name: 'Beer' }, { i: 'owl', e: '🦉', name: 'Uil' }, { i: 'star', e: '⭐', name: 'Ster' },
+    { i: 'heart', e: '❤️', name: 'Hart' }, { i: 'bike', e: '🚲', name: 'Fiets' }, { i: 'tree', e: '🌳', name: 'Boom' },
+  ];
+  const communityEmoji = (key) => (COMMUNITY_ICONS.find((x) => x.i === key) || COMMUNITY_ICONS[0]).e;
+  const HEX = /^#[0-9a-f]{6}$/i;
+  // Kleur en symbool van een deelnemer (c, i); onbekende of ontbrekende waarden vallen terug op de standaard.
+  const communityLook = (c, i) => ({ c: HEX.test(c || '') ? c : COMMUNITY_COLORS[0].c, e: communityEmoji(i) });
+  // Eén stip: gekleurde cirkel, met het symbool erin als er een gekozen is.
+  const communityPin = (c, i) => {
+    const look = communityLook(c, i);
+    return L.divIcon({
+      className: 'community-pin' + (look.e ? ' has-icon' : ''),
+      html: look.e, iconSize: look.e ? [26, 26] : [18, 18], iconAnchor: look.e ? [13, 13] : [9, 9],
+    });
+  };
+  const pinStyle = (m, c) => { const el = m.getElement(); if (el) el.style.setProperty('--pin', communityLook(c).c); };
+
+  // Laag met de deelnemers van de community. update(lijst) vervangt de posities; elke deelnemer heeft een korte sleutel
+  // zodat de stip meeschuift in plaats van opnieuw te verschijnen, en een kleur (c) en symbool (i) die ze zelf kozen.
+  function createCommunityLayer(map) {
+    const group = L.layerGroup().addTo(map);
+    const dots = new Map(); // sleutel -> { m: marker, look: 'kleur|symbool' }
+    return {
+      update(list) {
+        const seen = new Set();
+        for (const p of list || []) {
+          seen.add(p.k);
+          const at = [p.lat, p.lng];
+          const look = `${p.c || ''}|${p.i || ''}`;
+          const dot = dots.get(p.k);
+          if (dot) {
+            dot.m.setLatLng(at);
+            if (dot.look !== look) { dot.m.setIcon(communityPin(p.c, p.i)); pinStyle(dot.m, p.c); dot.look = look; }
+          } else {
+            const m = L.marker(at, { icon: communityPin(p.c, p.i), interactive: false, keyboard: false, zIndexOffset: 500 });
+            dots.set(p.k, { m, look });
+            group.addLayer(m);
+            pinStyle(m, p.c);
+          }
+        }
+        for (const [k, d] of dots) if (!seen.has(k)) { group.removeLayer(d.m); dots.delete(k); }
+      },
+      clear() { group.clearLayers(); dots.clear(); },
+      get count() { return dots.size; },
+    };
+  }
+
+  window.Wijk = { BETA, createCommunityLayer, COMMUNITY_COLORS, COMMUNITY_ICONS, communityLook, renderStats, docTitle, setHeading, loadQrIcon, qrDataUrl, qrCardDataUrl, buildQrPdf, toast, setLabels, applyLabels, STATUS, createMap, houseStyle, buildPdf, prefetchTiles, pdfBounds, PDF_W, DEFAULT_VIEW, houseTitle, compareHouses, natCompare, labelPoint, createNumberLayer };
 })();
