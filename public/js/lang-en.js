@@ -606,6 +606,8 @@
     "Deze taal geldt voor iedereen die niet zelf een taal kiest, en voor iedereen als meertalig uit staat. Is meertalig aan, dan kies je hieronder met de vlaggen de taal waarin je de velden bewerkt.": "This language applies to everyone who does not choose a language themselves, and to everyone when multilingual is off. When multilingual is on, use the flags below to choose the language in which you edit the fields.",
     "Gebruik <code>{adres}</code> voor het adres van het huis en <code>{link}</code> voor de persoonlijke link (ontbreekt <code>{link}</code>, dan komt de link achter de tekst). Het bericht gaat in de standaardtaal van de site; met meertalig aan kies je de taal in de popup van het huis. Leeg = standaardtekst.": "Use <code>{adres}</code> for the address of the house and <code>{link}</code> for the personal link (if <code>{link}</code> is missing, the link is added after the text). The message is sent in the default language of the site; when multilingual is on you choose the language in the popup of the house. Empty = default text.",
     "Het bericht dat bij <em>Delen via WhatsApp</em> wordt voorgevuld stel je in onder <em>Config → Teksten</em>, per taal.": "The message that is pre-filled by <em>Share via WhatsApp</em> is set under <em>Config → Texts</em>, per language.",
+    "Totaal aantal huizen tonen": "Show total number of houses",
+    "Totaal aantal huizen verbergen": "Hide total number of houses",
     "Naar Config": "Go to Config",
     "Taal om te bewerken": "Language to edit",
     "Nederlands: {tekst}": "Dutch: {tekst}",
