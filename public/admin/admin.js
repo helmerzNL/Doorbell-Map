@@ -199,7 +199,8 @@
   $('org-multi').onchange = () => saveLang({ multilingual: $('org-multi').checked });
   // ---- Config: teksten per taal ----
   // De velden onder de taalbalk bestaan per taal. Wat je typt blijft per taal bewaard (cfg.drafts) tot je opslaat.
-  const FIELD_IDS = { siteTitle: 'org-title', appName: 'org-appname', appShortName: 'org-short', residentInfo: 'org-info', intro: 'org-intro', qrShareText: 'org-share' };
+  const FIELD_IDS = { siteTitle: 'org-title', appName: 'org-appname', appShortName: 'org-short', residentInfo: 'org-info', intro: 'org-intro', qrShareText: 'org-share', communityTitle: 'org-ctitle', communityText: 'org-ctext' };
+  const WITH_DEFAULT = new Set(['qrShareText', 'communityTitle', 'communityText']); // leeg = standaardtekst: het veld toont die tekst
   const cfg = { st: null, drafts: {}, lang: I18n.defaultLang };
   const cfgLang = () => (I18n.multi ? cfg.lang : I18n.defaultLang); // zonder meertalig bewerk je de standaardtaal
   const draftFrom = (src, l, def) => {
@@ -208,6 +209,8 @@
       siteTitle: src.siteTitle || '', appName: src.appName || '', appShortName: src.appShortName || '',
       residentInfo: src.residentInfo || '', intro: src.intro || '',
       qrShareText: src.qrShareText || def.shareText[l],
+      communityTitle: src.communityTitle || def.community[l].title,
+      communityText: src.communityText || def.community[l].text,
       labels: { green: lab.green || '', red: lab.red || '', none: lab.none || '' },
     };
   };
@@ -225,7 +228,7 @@
       el.value = d[f];
       if (el.dataset.ph === undefined) el.dataset.ph = el.getAttribute('placeholder') || '';
       // een andere taal toont de Nederlandse tekst als hint: leeg = die tekst
-      const fallback = l !== 'nl' && f !== 'qrShareText' ? base[f] : '';
+      const fallback = l !== 'nl' && !WITH_DEFAULT.has(f) ? base[f] : '';
       el.setAttribute('placeholder', fallback ? I18n.t('Nederlands: {tekst}', { tekst: fallback.slice(0, 80) }) : el.dataset.ph);
     }
     for (const k of ['green', 'red', 'none']) {
@@ -263,12 +266,13 @@
       $('org-simple').checked = st.simpleUi;
       $('org-locate').checked = st.locateEnabled;
       $('org-community').checked = st.communityEnabled;
+      $('org-community-looks').checked = st.communityLooks;
       $('stats-public').checked = st.statsPublic;
       statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
       langPicker.setValue(st.defaultLang);
-      const def = { shareText: st.defaultShareTexts };
-      const nl = draftFrom({ siteTitle: org.siteTitle, appName: org.appName, appShortName: org.appShortName, intro: org.intro, residentInfo: st.residentInfo, qrShareText: st.qrShareText, labels: customLabels(org.labels) }, 'nl', def);
+      const def = { shareText: st.defaultShareTexts, community: st.defaultCommunity };
+      const nl = draftFrom({ siteTitle: org.siteTitle, appName: org.appName, appShortName: org.appShortName, intro: org.intro, residentInfo: st.residentInfo, qrShareText: st.qrShareText, communityTitle: st.communityTitle, communityText: st.communityText, labels: customLabels(org.labels) }, 'nl', def);
       cfg.drafts = { nl };
       for (const [l, t] of Object.entries(st.translations || {})) cfg.drafts[l] = draftFrom(t, l, def);
       buildLangBar();
@@ -278,6 +282,7 @@
   }
   // namen die van de standaardnaam afwijken (een gelijke naam is niet "eigen" en blijft leeg)
   const customLabels = (labels) => Object.fromEntries(['green', 'red', 'none'].map((k) => [k, labels && labels[k] !== DEFAULT_LABELS[k] ? labels[k] : '']));
+  $('org-community-default').onclick = () => { const d = cfg.st.defaultCommunity[cfg.shown]; $('org-ctitle').value = d.title; $('org-ctext').value = d.text; };
   $('org-share-default').onclick = () => { $('org-share').value = cfg.st.defaultShareTexts[cfg.shown]; };
   $('qr-share-goto').onclick = () => { openTab('org'); setTimeout(() => { $('org-share').scrollIntoView({ block: 'center' }); $('org-share').focus(); }, 150); };
   $('org-intro').oninput = renderOrg;
@@ -291,6 +296,13 @@
       toast($('org-community').checked ? 'Community staat aan' : 'Community staat uit, alle posities zijn gewist');
       pollCommunity();
     } catch (e) { $('org-err').textContent = e.message; $('org-community').checked = !$('org-community').checked; }
+  };
+  $('org-community-looks').onchange = async () => {
+    try {
+      await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ communityLooks: $('org-community-looks').checked }), expectAuth: true });
+      toast($('org-community-looks').checked ? 'Kiezen van kleur en symbool staat aan' : 'Kiezen van kleur en symbool staat uit');
+      pollCommunity();
+    } catch (e) { $('org-err').textContent = e.message; $('org-community-looks').checked = !$('org-community-looks').checked; }
   };
   $('org-locate').onchange = async () => {
     try { await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ locateEnabled: $('org-locate').checked }), expectAuth: true }); toast($('org-locate').checked ? 'Knop Mijn locatie staat aan op de voorpagina' : 'Knop Mijn locatie staat uit op de voorpagina'); }
@@ -368,7 +380,13 @@
     $('org-err').textContent = '';
     try {
       storeFields();
-      const norm = (l, d) => ({ ...d, qrShareText: d.qrShareText.trim() === cfg.st.defaultShareTexts[l] ? '' : d.qrShareText }); // gelijk aan de standaardtekst = leeg
+      const same = (a, b) => a.trim().replace(/\r\n?/g, '\n') === b;
+      const norm = (l, d) => ({
+        ...d,
+        qrShareText: same(d.qrShareText, cfg.st.defaultShareTexts[l]) ? '' : d.qrShareText,
+        communityTitle: same(d.communityTitle, cfg.st.defaultCommunity[l].title) ? '' : d.communityTitle,
+        communityText: same(d.communityText, cfg.st.defaultCommunity[l].text) ? '' : d.communityText,
+      }); // gelijk aan de standaardtekst = leeg
       const nl = norm('nl', cfg.drafts.nl);
       const translations = Object.fromEntries(Object.entries(cfg.drafts).filter(([l]) => l !== 'nl').map(([l, d]) => [l, norm(l, d)]));
       const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ ...nl, translations }), expectAuth: true });

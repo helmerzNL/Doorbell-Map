@@ -21,7 +21,7 @@ const trIn = (l, s) => (translators[l] ? translators[l].tr(s) : s);
 
 // Teksten per taal: Nederlands staat in de gewone instellingen, andere talen in settings.translations[taal].
 // Een lege vertaling valt terug op de Nederlandse tekst.
-const TEXT_FIELDS = ['siteTitle', 'appName', 'appShortName', 'intro', 'residentInfo', 'qrShareText'];
+const TEXT_FIELDS = ['siteTitle', 'appName', 'appShortName', 'intro', 'residentInfo', 'qrShareText', 'communityTitle', 'communityText'];
 const translations = (l) => store.db().settings?.translations?.[l] || {};
 const text = (field, l = defaultLang()) => {
   const own = l === 'nl' ? '' : translations(l)[field];
