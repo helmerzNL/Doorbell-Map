@@ -377,6 +377,121 @@ async function main() {
     await ctx.close();
   }
 
+  // ---------- Mijn locatie, community, installatiemelding en de instellingen daarvoor ----------
+  console.log('locatie en community');
+  const HERE = { latitude: 52.02605, longitude: 5.16535, accuracy: 18 };
+  const geo = { geolocation: HERE, permissions: ['geolocation'] };
+  const seen = () => { try { localStorage.setItem('sm-intro-seen', 'x'); localStorage.setItem('sm-install-asked', '1'); } catch { /* geen opslag */ } };
+  // Andere deelnemers van de community (alleen coördinaten, kleur en symbool); ze verlopen na 45 s, dus vlak voor elke foto opnieuw.
+  const PEERS = [
+    ['screenshot-peer-000000001', 52.02634, 5.16572, '#e67e22', 'dog'], ['screenshot-peer-000000002', 52.02588, 5.16611, '#2980b9', 'bike'],
+    ['screenshot-peer-000000003', 52.02641, 5.16506, '#e84393', 'cat'], ['screenshot-peer-000000004', 52.02572, 5.16548, '#00a8a8', ''],
+  ];
+  const pingPeers = async () => { for (const [id, lat, lng, color, icon] of PEERS) await ap.request.post(`${BASE}/api/community/ping`, { data: { id, lat, lng, acc: 15, color, icon } }); };
+  // Opent de publieke kaart en sluit de uitleg (die staat anders open en houdt de locatie en de installatiemelding tegen).
+  const openPublic = async (p) => { await p.goto(`${BASE}/`); await p.waitForSelector('#intro-dialog[open]', { timeout: 5000 }).catch(() => {}); await closeIntro(p); };
+  const MIJN_LOCATIE = { viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
+  {
+    const ctx = await browser.newContext(ctxOpts(MIJN_LOCATIE, geo));
+    await ctx.addInitScript(seen);
+    const p = await ctx.newPage();
+    await openPublic(p);
+    await p.waitForSelector('.locate-btn.on', { timeout: 10000 });
+    await p.waitForTimeout(2500);
+    await shot(p, 'mijn-locatie-mobiel');
+    await ctx.close();
+  }
+  await put('/api/admin/settings', { communityEnabled: true, communityLooks: true });
+  {
+    const ctx = await browser.newContext(ctxOpts(MIJN_LOCATIE, geo));
+    await ctx.addInitScript(seen);
+    const p = await ctx.newPage();
+    await openPublic(p);
+    await p.waitForSelector('.community-btn', { timeout: 10000 });
+    await p.waitForTimeout(1500);
+    await p.click('.community-btn');
+    await p.waitForSelector('#community-dialog[open]', { timeout: 5000 });
+    await p.click('#community-colors .look-btn:nth-child(3)');
+    await p.click('#community-icons .look-btn:nth-child(5)');
+    await p.waitForTimeout(400);
+    await shot(p, 'community-venster-mobiel');
+    await p.click('#community-yes');
+    await pingPeers();
+    await p.waitForTimeout(500);
+    await pingPeers();
+    await p.waitForTimeout(6000);
+    await pingPeers();
+    await p.waitForTimeout(4000);
+    await shot(p, 'community-kaart-mobiel');
+    await ctx.close();
+  }
+  {
+    // beheer: alle deelnemers als stippen, het aantal in de zijbalk
+    const ctx = await browser.newContext(ctxOpts(DESKTOP, { storageState: state }));
+    const p = await ctx.newPage();
+    await openAdmin(p);
+    await pingPeers();
+    await p.waitForTimeout(6000);
+    await pingPeers();
+    await p.waitForTimeout(3000);
+    await shot(p, 'beheer-community');
+    await ctx.close();
+  }
+  // instellingen: knop Mijn locatie, community en de afbeeldingen (klein logo en favicon)
+  for (const route of ['logo-small', 'favicon']) {
+    const r = await ap.request.post(`${BASE}/api/admin/${route}`, { data: logo, headers: { 'Content-Type': 'application/octet-stream' } });
+    if (!r.ok()) throw new Error(`${route} ${r.status()}`);
+  }
+  {
+    const ctx = await browser.newContext(ctxOpts({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 }, { storageState: state }));
+    const p = await ctx.newPage();
+    await openAdmin(p);
+    await openTab(p, 'org');
+    await p.evaluate(() => document.getElementById('org-logo-small').closest('.set-card').scrollIntoView({ block: 'start' }));
+    await p.waitForTimeout(400);
+    await shot(p, 'instellingen-config-afbeeldingen');
+    await p.evaluate(() => document.getElementById('org-locate').closest('.set-card').scrollIntoView({ block: 'start' }));
+    await p.waitForTimeout(400);
+    await shot(p, 'instellingen-config-locatie');
+    await p.evaluate(() => document.getElementById('org-community-default').scrollIntoView({ block: 'center' }));
+    await p.waitForTimeout(400);
+    await shot(p, 'instellingen-config-communityteksten');
+    await ctx.close();
+  }
+  for (const route of ['logo-small', 'favicon']) await ap.request.delete(`${BASE}/api/admin/${route}`);
+  await put('/api/admin/settings', { communityEnabled: false });
+  // totaalblok op de voorpagina met de knop om het te verbergen
+  await put('/api/admin/settings', { statsPublic: true });
+  {
+    const ctx = await browser.newContext(ctxOpts(DESKTOP));
+    await ctx.addInitScript(seen);
+    const p = await ctx.newPage();
+    await openPublic(p);
+    await p.waitForSelector('.stats-btn:not([hidden])', { timeout: 10000 });
+    await p.waitForTimeout(1500);
+    await shot(p, 'voorpagina-totaal');
+    await p.click('.stats-btn');
+    await p.waitForTimeout(500);
+    await shot(p, 'voorpagina-totaal-verborgen');
+    await ctx.close();
+  }
+  await put('/api/admin/settings', { statsPublic: false });
+  // eerste bezoek: de installatiemelding met de stappen per platform
+  const PLATFORMS = {
+    ios: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+    android: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+  };
+  for (const [name, userAgent] of Object.entries(PLATFORMS)) {
+    if (!wanted(`installatiemelding-${name}`)) continue;
+    const ctx = await browser.newContext(ctxOpts({ ...MOBILE, userAgent }));
+    const p = await ctx.newPage();
+    await openPublic(p);
+    await p.waitForSelector('#install-dialog[open]', { timeout: 20000 });
+    await p.waitForTimeout(600);
+    await shot(p, `installatiemelding-${name}`);
+    await ctx.close();
+  }
+
   // ---------- meertalig en donker: Config met taalbalk en de Engelse/donkere site ----------
   console.log('talen');
   await put('/api/admin/settings', { multilingual: true, defaultLang: 'nl', translations: { en: { siteTitle: 'Our neighbourhood', intro: 'Welcome to the neighbourhood map of our association! Green houses are happy to receive visitors, red houses prefer not.', labels: { green: '', red: '', none: '' } } } });
