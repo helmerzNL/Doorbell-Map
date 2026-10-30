@@ -175,11 +175,14 @@
 
   // ---------- logo & uitleg ----------
   let statsShow = { green: true, red: true, none: true }; // welke statusregels de overlay op de kaart toont (instelling)
-  let org = { intro: '', logo: null, siteTitle: '', appName: '', appShortName: '', labels: null };
+  let org = { intro: '', logo: null, logoSmall: null, siteTitle: '', appName: '', appShortName: '', labels: null };
   function renderOrg() {
     $('org-logo').hidden = !org.logo;
     if (org.logo) $('org-logo').src = org.logo.url;
     $('org-remove').disabled = !org.logo;
+    $('org-logo-small').hidden = !org.logoSmall;
+    if (org.logoSmall) $('org-logo-small').src = org.logoSmall.url;
+    $('org-remove-small').disabled = !org.logoSmall;
     $('org-count').textContent = $('org-intro').value.length;
   }
   const DEFAULT_LABELS = { green: 'Groen', red: 'Rood', none: 'Niet gemarkeerd' };
@@ -307,6 +310,24 @@
   $('org-remove').onclick = async () => {
     if (!confirmT('Logo verwijderen?')) return;
     try { await api('/api/admin/logo', { method: 'DELETE', expectAuth: true }); org.logo = null; renderOrg(); }
+    catch (e) { $('org-err').textContent = e.message; }
+  };
+  $('org-upload-small').onclick = () => $('org-file-small').click();
+  $('org-file-small').onchange = async () => {
+    const f = $('org-file-small').files[0];
+    $('org-file-small').value = '';
+    if (!f) return;
+    $('org-err').textContent = '';
+    try {
+      const res = await api('/api/admin/logo-small', { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' }, expectAuth: true });
+      org.logoSmall = res.logoSmall;
+      renderOrg();
+      toast('Klein logo geüpload ✔');
+    } catch (e) { $('org-err').textContent = e.message; }
+  };
+  $('org-remove-small').onclick = async () => {
+    if (!confirmT('Klein logo verwijderen?')) return;
+    try { await api('/api/admin/logo-small', { method: 'DELETE', expectAuth: true }); org.logoSmall = null; renderOrg(); }
     catch (e) { $('org-err').textContent = e.message; }
   };
   $('org-save').onclick = async () => {
@@ -1337,7 +1358,7 @@
     const data = I18n.localize(raw);
     houses = data.houses;
     savedView = data.view; savedPdf = data.pdfView || null;
-    org = { intro: raw.intro || '', logo: raw.logo, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
+    org = { intro: raw.intro || '', logo: raw.logo, logoSmall: raw.logoSmall || null, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     selectedId = null; draft = [];
     setDirty(false);
@@ -1351,7 +1372,7 @@
     const data = I18n.localize(raw);
     houses = data.houses;
     try { statsShow = (await api('/api/admin/settings', { expectAuth: true })).statsShow; } catch { /* standaard: alles tonen */ }
-    org = { intro: raw.intro || '', logo: raw.logo, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
+    org = { intro: raw.intro || '', logo: raw.logo, logoSmall: raw.logoSmall || null, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     initEditor(data);
     setDirty(false);
