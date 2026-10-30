@@ -672,6 +672,18 @@ test('geofence: wijzigen alleen in de wijk (schakelaar in het beheer)', async ()
   for (const rr of (await (await adminReq('/changes')).json()).residents) await adminReq(`/residents/${rr.rid}`, 'DELETE');
 });
 
+test('knop Mijn locatie: standaard beschikbaar, door de beheerder te verbergen', async () => {
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, true);
+  assert.equal((await (await adminReq('/settings')).json()).locateEnabled, true);
+  assert.equal((await adminReq('/settings', 'PUT', { locateEnabled: false })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, false);
+  assert.equal((await (await adminReq('/settings')).json()).locateEnabled, false);
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"locateEnabled":true}' })).status, 401);
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, false);
+  await adminReq('/settings', 'PUT', { locateEnabled: true });
+  assert.equal((await (await j('/api/map')).json()).locateEnabled, true);
+});
+
 test('eenvoudige weergave: instelling in het beheer, zichtbaar op de kaart', async () => {
   assert.equal((await (await j('/api/map')).json()).simpleUi, false);
   assert.equal((await adminReq('/settings', 'PUT', { simpleUi: true })).status, 200);

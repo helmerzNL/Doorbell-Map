@@ -29,6 +29,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 **Voor bewoners**
 - Bewoners wijzigen de status van **hun eigen huis** (één huis per apparaat); de beheerder keurt dat goed. Zie [Bewoners: Mijn huis](#bewoners-mijn-huis).
 - Snel naar je huis met dubbelklikken of lang indrukken.
+- Optioneel: de knop **Mijn locatie** (onder de zoomknoppen) toont je eigen positie als blauwe stip, zodat je maar één telefoon nodig hebt.
 - Optioneel: huis kiezen **alleen met de QR-code** uit de brief (één apparaat per huis), met locatiecontrole (geofence) en/of een toegangscode voor apparaten zonder GPS. Zie [Toegang via QR-code](#toegang-via-qr-code-optioneel).
 
 **Voor de beheerder**
@@ -76,6 +77,8 @@ Voorbeeld met willekeurige huizen (kaartgegevens © OpenStreetMap-bijdragers).
 </table>
 
 **Snel naar jouw huis** – met een muis dubbelklik je op een huis, op een touchscreen druk je er lang op (ruim een halve seconde). Dan gaat *Bewerken* aan (in de browser), springt de kaart naar het huis en start de wijzigmodus; heb je nog geen huis gekozen, dan vraagt de app of het jouw huis is. Een dubbelklik buiten de huizen zoomt gewoon in. In het beheer selecteert hetzelfde gebaar het huis in de selecteermodus.
+
+**Mijn locatie** – onder de zoomknoppen staat de knop *Mijn locatie* (het richtkruis). Hij doet niets tot je erop tikt: pas dan vraagt de browser om toestemming voor je locatie, en zonder toestemming blijft de kaart zoals hij was. Na een tik verschijnt je positie als blauwe stip met een lichte cirkel voor de nauwkeurigheid en volgt de kaart je terwijl je loopt. Schuif je de kaart zelf weg, dan stopt het volgen (de stip blijft) en brengt een tik op de knop je terug; nog een tik op de volgende stand zet de stip weer uit. Je positie blijft op je telefoon: ze wordt nergens opgeslagen of verstuurd, en bij het sluiten of verversen van de pagina staat de knop weer uit. Het tonen van je locatie werkt alleen via **https**. De beheerder kan de knop verbergen (zie *Config*).
 
 **In het beheer** werkt dit ook: dubbelklik (of druk lang) op een huis en de selecteermodus gaat aan met dat huis geselecteerd, ook als je net aan het tekenen was (zolang er nog geen vlak loopt).
 
@@ -170,7 +173,7 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 - *Apparaten*: aangemelde apparaten, **alfabetisch** op straat en huisnummer (handig zoeken bij veel huizen), met koppeling verwijderen of **blokkeren** (eventueel met IP-adres), en de lijst *Geblokkeerd*.
 - *Meldingen op dit apparaat*: pushmeldingen voor nieuwe wijzigingen.
 
-**Config** – taal (meertalig en standaardtaal), logo, naam van de site en de app, de eenvoudige weergave, de namen van de statussen, het infovlak, de uitleg en de tekst bij delen via WhatsApp (de teksten per taal).
+**Config** – taal (meertalig en standaardtaal), logo, naam van de site en de app, de eenvoudige weergave, de knop *Mijn locatie* voor bezoekers (aan of uit; standaard aan), de namen van de statussen, het infovlak, de uitleg en de tekst bij delen via WhatsApp (de teksten per taal).
 
 **Beveiliging** – passkeys toevoegen/verwijderen en een optioneel wachtwoord (bevestigen met passkey).
 

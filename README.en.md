@@ -31,6 +31,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 **For residents**
 - Residents change the status of **their own house** (one house per device); the admin approves it. See [Residents: My house](#residents-my-house).
 - Quickly go to your house with a double-click or long-press.
+- Optional: the **My location** button (below the zoom buttons) shows your own position as a blue dot, so you only need one phone.
 - Optional: choose a house **only with the QR code** from the letter (one device per house), with a location check (geofence) and/or an access code for devices without GPS. See [Access via QR code](#access-via-qr-code-optional).
 
 **For the admin**
@@ -78,6 +79,8 @@ Example with random houses (map data © OpenStreetMap contributors).
 </table>
 
 **Quickly to your house** – with a mouse you double-click a house, on a touchscreen you long-press it (a little over half a second). *Edit* is then switched on (in the browser), the map jumps to the house and change mode starts; if you have not chosen a house yet, the app asks whether it is your house. A double-click outside the houses simply zooms in. In the admin area the same gesture selects the house in select mode.
+
+**My location** – below the zoom buttons is the *My location* button (the crosshair). It does nothing until you tap it: only then does the browser ask for permission to use your location, and without permission the map stays as it was. After a tap your position appears as a blue dot with a light circle for the accuracy, and the map follows you as you walk. If you move the map yourself, following stops (the dot stays) and a tap on the button takes you back; one more tap on the next state turns the dot off again. Your position stays on your phone: it is never stored or sent anywhere, and when you close or reload the page the button is off again. Showing your location only works over **https**. The administrator can hide the button (see *Config*).
 
 **In the admin area** this works too: double-click (or long-press) a house and select mode switches on with that house selected, even if you were just drawing (as long as no area is in progress).
 
@@ -172,7 +175,7 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 - *Devices*: registered devices, **alphabetical** by street and house number (handy for searching with many houses), with removing the link or **blocking** (optionally with IP address), and the *Blocked* list.
 - *Notifications on this device*: push notifications for new changes.
 
-**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the names of the statuses, the info box, the explanation and the text when sharing via WhatsApp (the texts per language).
+**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the *My location* button for visitors (on or off; on by default), the names of the statuses, the info box, the explanation and the text when sharing via WhatsApp (the texts per language).
 
 **Security** – add/remove passkeys and an optional password (confirm with passkey).
 
