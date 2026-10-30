@@ -85,7 +85,7 @@ app.get('/api/map', (req, res) => {
   res.set('Cache-Control', 'no-cache');
   res.json({
     title: settings?.siteTitle || config.siteTitle, siteTitle: settings?.siteTitle || '', view, pdfView: pdfView || null, houses,
-    intro: settings?.intro || '', logo: settings?.logo || null,
+    intro: settings?.intro || '', logo: settings?.logo || null, logoSmall: settings?.logoSmall || null,
     multilingual: lang.multilingual(), defaultLang: lang.defaultLang(),
     translations: publicTranslations(),
     appName: settings?.appName || '', appShortName: settings?.appShortName || '',
@@ -442,29 +442,32 @@ const removeLogoFile = (logo) => {
   if (logo?.file) fs.rm(path.join(store.uploadDir, path.basename(logo.file)), () => {});
 };
 
-admin.post('/logo',
-  express.raw({ type: 'application/octet-stream', limit: '5mb' }),
-  (req, res) => {
-    const buf = req.body;
-    const type = Buffer.isBuffer(buf) && IMAGE_TYPES.find((t) => t.test(buf));
-    if (!type) return res.status(400).json({ error: 'Alleen PNG, JPEG of WebP is toegestaan (max 5 MB)' });
-    const db = store.db();
-    const old = db.settings.logo;
-    const file = `logo-${Date.now()}.${type.ext}`;
-    fs.writeFileSync(path.join(store.uploadDir, file), buf);
-    db.settings.logo = { file, url: `/uploads/${file}` };
-    store.save();
-    removeLogoFile(old);
-    res.json({ logo: db.settings.logo });
-  });
+// Het logo (PDF, QR-kaartjes) en het kleine logo (kopbalk) worden op dezelfde manier bewaard; het kleine logo is optioneel.
+for (const [route, key, prefix] of [['/logo', 'logo', 'logo'], ['/logo-small', 'logoSmall', 'logo-small']]) {
+  admin.post(route,
+    express.raw({ type: 'application/octet-stream', limit: '5mb' }),
+    (req, res) => {
+      const buf = req.body;
+      const type = Buffer.isBuffer(buf) && IMAGE_TYPES.find((t) => t.test(buf));
+      if (!type) return res.status(400).json({ error: 'Alleen PNG, JPEG of WebP is toegestaan (max 5 MB)' });
+      const db = store.db();
+      const old = db.settings[key];
+      const file = `${prefix}-${Date.now()}.${type.ext}`;
+      fs.writeFileSync(path.join(store.uploadDir, file), buf);
+      db.settings[key] = { file, url: `/uploads/${file}` };
+      store.save();
+      removeLogoFile(old);
+      res.json({ [key]: db.settings[key] });
+    });
 
-admin.delete('/logo', (req, res) => {
-  const db = store.db();
-  removeLogoFile(db.settings.logo);
-  db.settings.logo = null;
-  store.save();
-  res.json({ ok: true });
-});
+  admin.delete(route, (req, res) => {
+    const db = store.db();
+    removeLogoFile(db.settings[key]);
+    db.settings[key] = null;
+    store.save();
+    res.json({ ok: true });
+  });
+}
 
 // Instellingen zoals bewaard (voor het beheerscherm); /api/map geeft de actuele, effectieve waarden.
 admin.get('/settings', (req, res) => {

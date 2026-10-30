@@ -66,6 +66,21 @@ test('logo upload controleert inhoud en kan verwijderd worden', async () => {
   assert.equal((await (await j('/api/map')).json()).logo, null);
 });
 
+test('klein logo voor de kopbalk is los van het gewone logo en kan verwijderd worden', async () => {
+  const bad = await j('/api/admin/logo-small', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: Buffer.from('<svg onload=alert(1)>') });
+  assert.equal(bad.status, 400);
+  const ok = await j('/api/admin/logo-small', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: PNG });
+  assert.equal(ok.status, 200);
+  const { logoSmall } = await ok.json();
+  assert.match(logoSmall.url, /^\/uploads\/logo-small-\d+\.png$/);
+  assert.equal((await j(logoSmall.url)).status, 200);
+  const map = await (await j('/api/map')).json();
+  assert.equal(map.logoSmall.url, logoSmall.url);
+  assert.equal(map.logo, null);
+  assert.equal((await j('/api/admin/logo-small', { method: 'DELETE', headers: { cookie } })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).logoSmall, null);
+});
+
 test('manifest en service worker zijn beschikbaar', async () => {
   const m = await (await j('/manifest.webmanifest')).json();
   assert.equal(m.display, 'standalone');

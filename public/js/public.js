@@ -13,8 +13,9 @@
     const iosTitle = data.appShortName || data.appName || data.title;
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', iosTitle);
 
-    if (data.logo) {
-      $('logo').src = data.logo.url;
+    const headerLogo = data.logoSmall || data.logo; // het kleine logo is bedoeld voor de kopbalk; zonder valt het terug op het gewone logo
+    if (headerLogo) {
+      $('logo').src = headerLogo.url;
       $('logo').alt = `Logo ${data.title}`;
       $('logo').hidden = false;
     } else {
@@ -272,7 +273,7 @@
   }
 
   // ---------- automatisch verversen (o.a. nadat de beheerder een wijziging goedkeurt) ----------
-  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.statsPublic, d.statsShow]);
+  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.logoSmall, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.statsPublic, d.statsShow]);
   let lastSig = signature(data);
   let busy = false;
   let lastSync = new Date();
