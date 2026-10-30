@@ -1,9 +1,9 @@
 // "Mijn locatie": knop op de publieke kaart die de GPS-positie van het apparaat als stip toont.
-// Staat standaard aan: bij het openen van de kaart vraagt de browser om toestemming (zodra er geen venster meer open staat)
-// en verschijnt de stip, zonder de kaart te verplaatsen. Zet de bezoeker de locatie zelf uit, dan onthoudt dit apparaat
-// dat (alleen die keuze, in localStorage) en start hij niet meer vanzelf. Er wordt niets verstuurd; de positie blijft op het
-// apparaat. Na een tik op "Naar mijn locatie" volgt de kaart de positie en blijft het scherm aan (Screen Wake Lock), zodat je
-// de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen. De beheerder kan de knop verbergen.
+// Staat standaard aan: bij het openen van de kaart vraagt de browser om toestemming (zodra er geen venster meer open staat).
+// Na toestemming staat de knop aan, verschijnt de stip, volgt de kaart de positie en blijft het scherm aan (Screen Wake Lock),
+// precies als na een tik op de knop; zonder toestemming blijft alles zoals het was en volgt er geen melding. Zet de bezoeker
+// de locatie zelf uit, dan onthoudt dit apparaat dat (alleen die keuze, in localStorage) en start hij niet meer vanzelf.
+// Er wordt niets verstuurd; de positie blijft op het apparaat. De beheerder kan de knop verbergen.
 //
 // Community (alleen als de beheerder die aanzet): een tweede, eveneens opt-in knop deelt je positie met anderen die ook
 // delen. De bezoeker moet dat eerst bevestigen; de server bewaart de positie kort in het geheugen en verwijdert haar
@@ -23,7 +23,7 @@
     let control = null, button = null;
     let watchId = null, following = false, announced = false, fresh = false;
     let dot = null, ring = null;
-    let wake = null, asking = false; // Screen Wake Lock: houdt het scherm aan zolang de kaart de locatie volgt
+    let wake = null, asking = false; // Screen Wake Lock: houdt het scherm aan zolang de locatie aan staat
     let silent = false, autoTried = false; // silent: vanzelf gestart, dus geen meldingen als de bezoeker niets deed
     // community
     let communityOn = false, commControl = null, commButton = null, commBadge = null, layer = null;
@@ -117,16 +117,15 @@
     }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') holdScreen(); });
 
-    // auto: vanzelf gestart bij het openen: alleen de stip tonen, de kaart niet verplaatsen, het scherm niet aan houden
-    // en niets melden als het niet lukt
+    // auto: vanzelf gestart bij het openen; werkt als een tik op de knop, maar meldt niets als het niet lukt
     function start(auto) {
       if (!window.isSecureContext) { if (!auto) toast('Je locatie tonen kan alleen via een beveiligde (https) verbinding.'); return; }
       silent = !!auto;
       announced = silent;
-      following = !auto;
-      fresh = !auto; // de eerste positie zoomt de kaart erheen
+      following = true;
+      fresh = true; // de eerste positie zoomt de kaart erheen
       watchId = navigator.geolocation.watchPosition(onFix, onError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
-      if (!auto) holdScreen();
+      holdScreen();
       paint();
     }
 
@@ -213,10 +212,9 @@
 
     function press() {
       if (watchId === null) { setOff(false); return start(); }
-      if (!following) { // kaart is weggeschoven (of de stip staat er vanzelf): naar de positie en volgen
-        following = true; silent = false;
+      if (!following) { // kaart is weggeschoven: terug naar de positie en weer volgen
+        following = true;
         if (dot) center(dot.getLatLng(), true);
-        holdScreen();
         return paint();
       }
       setOff(true); // de bezoeker zet de locatie uit: onthouden, zodat hij niet meer vanzelf start
