@@ -108,6 +108,18 @@ app.get('/api/map', (req, res) => {
 
 app.use('/uploads', express.static(store.uploadDir, { immutable: true, maxAge: '365d', index: false }));
 
+// Icoontjes van de geïnstalleerde app: het ingestelde favicon als dat vierkant is en minstens 192 px meet, anders de standaardlantaarn.
+// (Een upload wordt niet geschaald; daarom staat in het beheer dat 512 x 512 px het best is.)
+function manifestIcons() {
+  const f = store.db().settings?.favicon;
+  if (f?.width && f.width === f.height && f.width >= 192) return [{ src: f.url, sizes: `${f.width}x${f.height}`, type: f.type, purpose: 'any' }];
+  return [
+    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ];
+}
+
 // PWA-manifest met de naam van de site
 app.get('/manifest.webmanifest', (req, res) => {
   const name = lang.text('appName') || siteTitle();
@@ -124,11 +136,7 @@ app.get('/manifest.webmanifest', (req, res) => {
     display: 'standalone',
     background_color: '#f4f6f4',
     theme_color: '#1f6f4a',
-    icons: [
-      { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    ],
+    icons: manifestIcons(),
   });
 });
 
@@ -435,6 +443,27 @@ admin.delete('/passkeys/:id', auth.requirePasskeySession, (req, res) => {
   res.json({ ok: true });
 });
 
+// Afmetingen uit de kop van de afbeelding (PNG, JPEG, WebP); null als ze niet te lezen zijn.
+function imageSize(b, ext) {
+  try {
+    if (ext === 'png') return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
+    if (ext === 'jpg') {
+      for (let i = 2; i + 9 < b.length && b[i] === 0xff;) {
+        const m = b[i + 1];
+        if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) return { width: b.readUInt16BE(i + 7), height: b.readUInt16BE(i + 5) };
+        i += 2 + b.readUInt16BE(i + 2);
+      }
+      return null;
+    }
+    const kind = b.subarray(12, 16).toString();
+    if (kind === 'VP8X') return { width: 1 + b.readUIntLE(24, 3), height: 1 + b.readUIntLE(27, 3) };
+    if (kind === 'VP8L') return { width: 1 + (((b[22] & 0x3f) << 8) | b[21]), height: 1 + (((b[24] & 0x0f) << 10) | (b[23] << 2) | ((b[22] & 0xc0) >> 6)) };
+    if (kind === 'VP8 ') return { width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
+  } catch { /* afgekapt bestand: geen afmetingen */ }
+  return null;
+}
+const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
+
 const IMAGE_TYPES = [
   { ext: 'png', test: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
   { ext: 'jpg', test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
@@ -457,7 +486,7 @@ for (const [route, key, prefix] of [['/logo', 'logo', 'logo'], ['/logo-small', '
       const old = db.settings[key];
       const file = `${prefix}-${Date.now()}.${type.ext}`;
       fs.writeFileSync(path.join(store.uploadDir, file), buf);
-      db.settings[key] = { file, url: `/uploads/${file}` };
+      db.settings[key] = { file, url: `/uploads/${file}`, ...(key === 'favicon' ? { type: IMAGE_MIME[type.ext], ...imageSize(buf, type.ext) } : {}) };
       store.save();
       removeLogoFile(old);
       res.json({ [key]: db.settings[key] });

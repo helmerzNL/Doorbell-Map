@@ -98,6 +98,21 @@ test('favicon is los van het logo, optioneel en kan verwijderd worden', async ()
   assert.equal((await (await j('/api/map')).json()).favicon, null);
 });
 
+test('favicon wordt ook het icoon in het manifest, als het vierkant en groot genoeg is', async () => {
+  const png = (w, h) => { const b = Buffer.alloc(40); Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(b); b.writeUInt32BE(w, 16); b.writeUInt32BE(h, 20); return b; };
+  const up = (body) => j('/api/admin/favicon', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body });
+  const icons = async () => (await (await j('/manifest.webmanifest')).json()).icons;
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png')); // standaard: de lantaarn
+  const { favicon } = await (await up(png(512, 512))).json();
+  assert.deepEqual(await icons(), [{ src: favicon.url, sizes: '512x512', type: 'image/png', purpose: 'any' }]);
+  await up(png(512, 256)); // niet vierkant: terug naar de lantaarn
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png'));
+  await up(png(64, 64)); // te klein
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png'));
+  await j('/api/admin/favicon', { method: 'DELETE', headers: { cookie } });
+  assert.ok((await icons()).some((i) => i.src === '/icons/icon-512.png'));
+});
+
 test('manifest en service worker zijn beschikbaar', async () => {
   const m = await (await j('/manifest.webmanifest')).json();
   assert.equal(m.display, 'standalone');
