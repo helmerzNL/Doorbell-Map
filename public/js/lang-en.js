@@ -620,6 +620,8 @@
     "Titel van het communityvenster": "Title of the community window",
     "Tekst van het communityvenster": "Text of the community window",
     "Het venster waarin een bezoeker bevestigt dat hij of zij de positie deelt. Een lege regel begint een nieuwe alinea; de eerste is de uitleg, de rest de toelichting (kleiner gedrukt). Let op: pas de toelichting over wat er met de positie gebeurt alleen aan als dat klopt. Leeg = standaardtekst.": "The window where a visitor confirms they are sharing their position. A blank line starts a new paragraph; the first is the explanation, the rest the notes (smaller print). Note: only change the notes about what happens to the position if that stays true. Empty = default text.",
+    "Totaal aantal huizen tonen": "Show total number of houses",
+    "Totaal aantal huizen verbergen": "Hide total number of houses",
     "Naar Config": "Go to Config",
     "Taal om te bewerken": "Language to edit",
     "Nederlands: {tekst}": "Dutch: {tekst}",
