@@ -7,8 +7,10 @@
 //
 // Community (alleen als de beheerder die aanzet): een tweede, eveneens opt-in knop deelt je positie met anderen die ook
 // delen. De bezoeker moet dat eerst bevestigen; de server bewaart de positie kort in het geheugen en verwijdert haar
-// zodra je stopt of de pagina sluit. Wie niet deelt, ziet de anderen niet.
+// zodra je stopt of de pagina sluit. Wie niet deelt, ziet de anderen niet. Titel en tekst van de bevestiging stelt de beheerder
+// in; is dat aan, dan kiest de bezoeker ook een kleur en symbool waarmee anderen hem zien (alleen die keuze wordt onthouden).
 (function () {
+  const LOOK_KEY = 'sm-community-look'; // laatst gekozen kleur en symbool, als voorstel bij de volgende keer
   const OFF_KEY = 'sm-locate-off'; // de bezoeker heeft "Mijn locatie" zelf uitgezet: niet meer vanzelf starten
   const FOLLOW_ZOOM = 18; // zoom bij het volgen: huisnummers zijn dan goed leesbaar
   const MAX_ACC_CIRCLE = 500; // m; een nauwkeurigheidscirkel groter dan dit zegt niets bruikbaars
@@ -35,6 +37,19 @@
     // community
     let communityOn = false, commControl = null, commButton = null, commBadge = null, layer = null;
     let sharing = false, cid = '', lastFix = null, pingTimer = null, limitToasted = false;
+    let commOpts = { title: '', text: '', looks: true }; // instellingen van de beheerder voor het bevestigingsvenster
+    let look = loadLook(); // { c: hex-kleur, i: symbool-sleutel }
+
+    function loadLook() {
+      const first = window.Wijk.COMMUNITY_COLORS[0].c;
+      try {
+        const v = JSON.parse(localStorage.getItem(LOOK_KEY) || '{}');
+        const c = window.Wijk.COMMUNITY_COLORS.some((x) => x.c === v.c) ? v.c : first;
+        const i = window.Wijk.COMMUNITY_ICONS.some((x) => x.i === v.i) ? v.i : '';
+        return { c, i };
+      } catch { return { c: first, i: '' }; }
+    }
+    const saveLook = () => { try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch {} };
 
     const supported = () => 'geolocation' in navigator;
     const isOff = () => { try { return localStorage.getItem(OFF_KEY) === '1'; } catch { return false; } };
@@ -166,7 +181,7 @@
     async function sendPing() {
       if (!sharing || !lastFix) return;
       try {
-        const r = await fetch('/api/community/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: cid, ...lastFix }) });
+        const r = await fetch('/api/community/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: cid, ...lastFix, ...(commOpts.looks ? { color: look.c, icon: look.i } : {}) }) });
         if (!sharing) return; // intussen gestopt
         if (r.status === 403) { stopSharing(); toast('De community is uitgezet.'); return; }
         if (r.status === 429) { if (!limitToasted) { limitToasted = true; toast('Delen lukt nu niet (te druk). We proberen het straks opnieuw.'); } return; }
@@ -193,14 +208,61 @@
       paintCommunity();
     }
 
-    // De bezoeker bevestigt eerst wat er gedeeld wordt; er is geen standaardkeuze en niets wordt onthouden.
+    // Titel en tekst van het bevestigingsvenster (instelling van de beheerder): alinea's staan gescheiden door een lege regel,
+    // de eerste is de uitleg en de rest de toelichting.
+    function fillDialog() {
+      const o = commOpts;
+      if (o.title) document.getElementById('community-title').textContent = o.title;
+      if (o.text) {
+        const box = document.getElementById('community-text');
+        box.replaceChildren(...o.text.split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean).map((t, n) => {
+          const p = document.createElement('p');
+          if (n) p.className = 'muted';
+          p.textContent = t;
+          return p;
+        }));
+      }
+      const fs = document.getElementById('community-looks');
+      fs.hidden = !o.looks;
+      if (o.looks) buildLooks();
+    }
+
+    // Kleuren en symbolen als keuzerondjes; de keuze staat in `look` en het voorbeeld toont meteen hoe de stip eruitziet.
+    function buildLooks() {
+      const W = window.Wijk, tr = (x) => (window.I18n ? window.I18n.tr(x) : x);
+      const preview = document.getElementById('community-preview');
+      const paint = () => {
+        const v = W.communityLook(look.c, look.i);
+        preview.style.setProperty('--pin', v.c);
+        preview.textContent = v.e;
+        preview.classList.toggle('has-icon', !!v.e);
+        for (const b of document.querySelectorAll('#community-looks .look-btn')) b.setAttribute('aria-checked', String(b.dataset.c ? b.dataset.c === look.c : b.dataset.i === look.i));
+      };
+      const make = (host, items, label, pick) => {
+        host.setAttribute('aria-label', tr(label));
+        host.replaceChildren(...items.map((x) => {
+          const b = document.createElement('button');
+          b.type = 'button'; b.className = 'look-btn'; b.setAttribute('role', 'radio');
+          b.title = tr(x.name); b.setAttribute('aria-label', tr(x.name));
+          pick(b, x);
+          b.onclick = () => { b.dataset.c ? (look.c = b.dataset.c) : (look.i = b.dataset.i); paint(); };
+          return b;
+        }));
+      };
+      make(document.getElementById('community-colors'), W.COMMUNITY_COLORS, 'Kleur', (b, x) => { b.classList.add('swatch'); b.dataset.c = x.c; b.style.setProperty('--sw', x.c); });
+      make(document.getElementById('community-icons'), W.COMMUNITY_ICONS, 'Symbool', (b, x) => { b.dataset.i = x.i; b.textContent = x.e || '∅'; if (!x.i) b.classList.add('none'); });
+      paint();
+    }
+
+    // De bezoeker bevestigt eerst wat er gedeeld wordt; er is geen standaardkeuze en de toestemming wordt niet onthouden.
     function consent() {
       const dlg = document.getElementById('community-dialog');
       if (!dlg?.showModal) return Promise.resolve(false);
+      fillDialog();
       return new Promise((resolve) => {
         let yes = false;
         dlg.onclose = () => resolve(yes);
-        document.getElementById('community-yes').onclick = () => { yes = true; dlg.close(); };
+        document.getElementById('community-yes').onclick = () => { yes = true; if (commOpts.looks) saveLook(); dlg.close(); };
         document.getElementById('community-no').onclick = () => dlg.close();
         document.getElementById('community-x').onclick = () => dlg.close();
         dlg.showModal();
@@ -287,8 +349,10 @@
         if (!on && control) { stop(); unmountCommunity(); control.remove(); control = button = null; }
       },
       // aan: de beheerder heeft de community aangezet; de knop komt er alleen als ook "Mijn locatie" beschikbaar is
-      setCommunity(on) {
+      // opts: { title, text, looks } uit de instellingen van de beheerder (leeg = het standaardvenster)
+      setCommunity(on, opts) {
         communityOn = on;
+        commOpts = { title: opts?.title || '', text: opts?.text || '', looks: opts?.looks !== false };
         if (on) mountCommunity(); else unmountCommunity();
       },
       stop,
