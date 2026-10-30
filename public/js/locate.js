@@ -1,13 +1,18 @@
-// "Mijn locatie": optionele knop op de publieke kaart die de GPS-positie van het apparaat als stip toont.
-// Staat standaard uit: de browser vraagt pas om toestemming nadat de bezoeker op de knop tikt, en er wordt
-// niets onthouden of verstuurd; de positie blijft op het apparaat. Zolang de locatie aan staat blijft het scherm
-// aan (Screen Wake Lock), zodat je de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen. De beheerder kan de knop verbergen.
+// "Mijn locatie": knop op de publieke kaart die de GPS-positie van het apparaat als stip toont. Staat de knop aan
+// (de beheerder kan hem verbergen), dan start de locatie standaard bij het openen van de kaart en vraagt de browser
+// om toestemming. Die automatische start toont alleen de stip: de kaart blijft op de ingestelde weergave staan en
+// het scherm blijft niet extra aan. Pas als de bezoeker zelf op de knop tikt, volgt de kaart hem en blijft het scherm
+// aan (Screen Wake Lock), zodat je de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen. Wie de locatie zelf
+// uitzet, krijgt hem bij een volgend bezoek niet vanzelf terug. Er wordt niets verstuurd; de positie blijft op het apparaat.
 //
 // Community (alleen als de beheerder die aanzet): een tweede, eveneens opt-in knop deelt je positie met anderen die ook
 // delen. De bezoeker moet dat eerst bevestigen; de server bewaart de positie kort in het geheugen en verwijdert haar
 // zodra je stopt of de pagina sluit. Wie niet deelt, ziet de anderen niet.
 (function () {
   const FOLLOW_ZOOM = 18; // zoom bij het volgen: huisnummers zijn dan goed leesbaar
+  const PREF = 'sm-locate-off'; // de bezoeker heeft de locatie zelf uitgezet: niet opnieuw vanzelf starten
+  const prefOff = () => { try { return localStorage.getItem(PREF) === '1'; } catch { return false; } };
+  const setPrefOff = (off) => { try { if (off) localStorage.setItem(PREF, '1'); else localStorage.removeItem(PREF); } catch { /* geen opslag */ } };
   const MAX_ACC_CIRCLE = 500; // m; een nauwkeurigheidscirkel groter dan dit zegt niets bruikbaars
   const PING_MS = 8000; // hoe vaak de eigen positie wordt doorgegeven (en de anderen worden ververst); de server laat 45 s toe
   const newId = () => {
@@ -19,6 +24,7 @@
   function createLocate(map, toast) {
     let control = null, button = null;
     let watchId = null, following = false, announced = false, fresh = false;
+    let quiet = false; // automatisch gestart en nog niet aangeraakt: geen meldingen, geen wake lock
     let dot = null, ring = null;
     let wake = null, asking = false; // Screen Wake Lock: houdt het scherm aan zolang de locatie aan staat
     // community
@@ -82,10 +88,10 @@
     }
 
     function onError(err) {
-      if (err.code === 1) { // toestemming geweigerd: terug naar uit
-        toast('Je hebt geen toegang tot je locatie gegeven. Sta locatie toe voor deze site in de instellingen van je browser of telefoon en probeer het opnieuw.');
+      if (err.code === 1) { // toestemming geweigerd: terug naar uit (bij de automatische start zonder melding)
+        if (!quiet) toast('Je hebt geen toegang tot je locatie gegeven. Sta locatie toe voor deze site in de instellingen van je browser of telefoon en probeer het opnieuw.');
         stop();
-      } else if (!announced) { // tijdelijk geen signaal: de browser blijft proberen, we melden het één keer
+      } else if (!announced && !quiet) { // tijdelijk geen signaal: de browser blijft proberen, we melden het één keer
         announced = true;
         toast('Je locatie kon nog niet worden bepaald. Ga naar buiten of zet GPS aan; we blijven het proberen.');
       }
@@ -94,7 +100,7 @@
     // Een wake lock vervalt vanzelf als de pagina naar de achtergrond gaat; bij terugkomen vragen we hem opnieuw.
     // Geen ondersteuning of een weigering (bijv. batterijbesparing) is geen fout: het scherm dimt dan gewoon.
     async function holdScreen() {
-      if (!('wakeLock' in navigator) || watchId === null || wake || asking || document.visibilityState !== 'visible') return;
+      if (!('wakeLock' in navigator) || watchId === null || quiet || wake || asking || document.visibilityState !== 'visible') return;
       asking = true;
       try {
         const lock = await navigator.wakeLock.request('screen');
@@ -111,19 +117,31 @@
     }
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') holdScreen(); });
 
-    function start() {
-      if (!window.isSecureContext) { toast('Je locatie tonen kan alleen via een beveiligde (https) verbinding.'); return; }
+    function start(auto = false) {
+      if (!window.isSecureContext) { if (!auto) toast('Je locatie tonen kan alleen via een beveiligde (https) verbinding.'); return; }
+      quiet = auto;
       announced = false;
-      following = true;
-      fresh = true; // de eerste positie zoomt de kaart erheen
+      following = !auto; // automatisch: alleen de stip tonen, de ingestelde kaartweergave blijft staan
+      fresh = !auto; // na een tik zoomt de eerste positie de kaart erheen
       watchId = navigator.geolocation.watchPosition(onFix, onError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
       holdScreen();
       paint();
     }
 
+    // Standaard aan: de locatie start bij het openen van de kaart (de browser vraagt dan om toestemming),
+    // tenzij de bezoeker hem zelf heeft uitgezet of de toestemming al is geweigerd.
+    async function autoStart() {
+      if (watchId !== null || prefOff() || !window.isSecureContext) return;
+      try {
+        const st = await navigator.permissions?.query({ name: 'geolocation' });
+        if (st?.state === 'denied') return;
+      } catch { /* geen Permissions API: gewoon proberen */ }
+      if (watchId === null && control) start(true);
+    }
+
     function stop() {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      watchId = null; following = false; lastFix = null;
+      watchId = null; following = false; lastFix = null; quiet = false;
       stopSharing();
       releaseScreen();
       dot?.remove(); ring?.remove(); dot = ring = null;
@@ -181,6 +199,7 @@
       if (watchId === null) start(); // delen heeft de positie nodig; ook zonder eerst op "Mijn locatie" te tikken
       if (watchId === null) return;
       cid = newId(); sharing = true; limitToasted = false;
+      quiet = false; holdScreen(); // delen is bewust gebruik: meldingen en scherm aan
       layer = layer || Wijk.createCommunityLayer(map);
       pingTimer = setInterval(sendPing, PING_MS);
       if (lastFix) sendPing();
@@ -189,12 +208,15 @@
     window.addEventListener('pagehide', () => { if (sharing) leave(); });
 
     function press() {
-      if (watchId === null) return start();
-      if (!following) { // kaart is weggeschoven: terug naar de positie en weer volgen
+      quiet = false; // de bezoeker bedient de knop zelf: vanaf nu meldingen en scherm aan
+      if (watchId === null) { setPrefOff(false); return start(); }
+      if (!following) { // kaart is weggeschoven (of alleen de stip getoond): naar de positie en volgen
         following = true;
         if (dot) center(dot.getLatLng(), true);
+        holdScreen();
         return paint();
       }
+      setPrefOff(true);
       stop();
     }
 
@@ -217,6 +239,7 @@
       });
       control = new Ctl().addTo(map);
       if (communityOn) mountCommunity();
+      autoStart();
     }
 
     function mountCommunity() {
