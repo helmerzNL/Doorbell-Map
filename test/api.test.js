@@ -81,6 +81,23 @@ test('klein logo voor de kopbalk is los van het gewone logo en kan verwijderd wo
   assert.equal((await (await j('/api/map')).json()).logoSmall, null);
 });
 
+test('favicon is los van het logo, optioneel en kan verwijderd worden', async () => {
+  const bad = await j('/api/admin/favicon', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: Buffer.from('<svg onload=alert(1)>') });
+  assert.equal(bad.status, 400);
+  assert.equal((await (await j('/api/map')).json()).favicon, null);
+  const ok = await j('/api/admin/favicon', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: PNG });
+  assert.equal(ok.status, 200);
+  const { favicon } = await ok.json();
+  assert.match(favicon.url, /^\/uploads\/favicon-\d+\.png$/);
+  assert.equal((await j(favicon.url)).status, 200);
+  const map = await (await j('/api/map')).json();
+  assert.equal(map.favicon.url, favicon.url);
+  assert.equal(map.logo, null);
+  assert.equal(map.logoSmall, null);
+  assert.equal((await j('/api/admin/favicon', { method: 'DELETE', headers: { cookie } })).status, 200);
+  assert.equal((await (await j('/api/map')).json()).favicon, null);
+});
+
 test('manifest en service worker zijn beschikbaar', async () => {
   const m = await (await j('/manifest.webmanifest')).json();
   assert.equal(m.display, 'standalone');

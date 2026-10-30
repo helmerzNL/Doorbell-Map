@@ -39,7 +39,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - **Approve or reject** changes by residents, with **push notifications**; **block** devices (also by IP); **schedule** changes until a date and time.
 - **QR codes** per house: show, copy the link, renew, and a **printable PDF** with a card per house to deliver to the residents.
 - Settings in five clear tabs; the admin area can also be installed as its own **app**.
-- Your own **logo (with an optional small logo for the header and favicon), explanation, info box, site and app name** and your own names for the statuses.
+- Your own **logo (with an optional small logo for the header), an optional **favicon** (the lantern by default), explanation, info box, site and app name** and your own names for the statuses.
 - Automatic **backups** after every save attempt, with short titles and manual backups.
 - Version number and commit visible in the settings menu.
 
