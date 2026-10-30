@@ -14,6 +14,15 @@
     document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute('content', iosTitle);
 
     const headerLogo = data.logoSmall || data.logo; // het kleine logo is bedoeld voor de kopbalk; zonder valt het terug op het gewone logo
+    // Favicon en iOS-beginschermicoon: het ingestelde favicon; zonder valt het terug op de standaardlantaarn.
+    for (const rel of ['icon', 'apple-touch-icon']) {
+      const link = document.querySelector(`link[rel="${rel}"]`);
+      if (!link) continue;
+      link.dataset.default ??= JSON.stringify({ href: link.getAttribute('href'), sizes: link.getAttribute('sizes') });
+      const def = JSON.parse(link.dataset.default);
+      link.setAttribute('href', data.favicon ? data.favicon.url : def.href);
+      if (data.favicon || !def.sizes) link.removeAttribute('sizes'); else link.setAttribute('sizes', def.sizes); // het formaat van het favicon is niet bekend
+    }
     if (headerLogo) {
       $('logo').src = headerLogo.url;
       $('logo').alt = `Logo ${data.title}`;
@@ -273,7 +282,7 @@
   }
 
   // ---------- automatisch verversen (o.a. nadat de beheerder een wijziging goedkeurt) ----------
-  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.logoSmall, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.statsPublic, d.statsShow]);
+  const signature = (d) => JSON.stringify([d.houses, d.labels, d.title, d.intro, d.translations, d.multilingual, d.defaultLang, d.logo, d.logoSmall, d.favicon, d.appName, d.appShortName, d.residentsEnabled, d.residentsMode, d.geofence, d.deviceCode, d.qrOnly, d.residentsAppOnly, d.residentInfo, d.simpleUi, d.statsPublic, d.statsShow]);
   let lastSig = signature(data);
   let busy = false;
   let lastSync = new Date();

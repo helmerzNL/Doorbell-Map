@@ -85,7 +85,7 @@ app.get('/api/map', (req, res) => {
   res.set('Cache-Control', 'no-cache');
   res.json({
     title: settings?.siteTitle || config.siteTitle, siteTitle: settings?.siteTitle || '', view, pdfView: pdfView || null, houses,
-    intro: settings?.intro || '', logo: settings?.logo || null, logoSmall: settings?.logoSmall || null,
+    intro: settings?.intro || '', logo: settings?.logo || null, logoSmall: settings?.logoSmall || null, favicon: settings?.favicon || null,
     multilingual: lang.multilingual(), defaultLang: lang.defaultLang(),
     translations: publicTranslations(),
     appName: settings?.appName || '', appShortName: settings?.appShortName || '',
@@ -442,8 +442,8 @@ const removeLogoFile = (logo) => {
   if (logo?.file) fs.rm(path.join(store.uploadDir, path.basename(logo.file)), () => {});
 };
 
-// Het logo (PDF, QR-kaartjes) en het kleine logo (kopbalk) worden op dezelfde manier bewaard; het kleine logo is optioneel.
-for (const [route, key, prefix] of [['/logo', 'logo', 'logo'], ['/logo-small', 'logoSmall', 'logo-small']]) {
+// Het logo (PDF, QR-kaartjes), het kleine logo (kopbalk) en het favicon worden op dezelfde manier bewaard; de laatste twee zijn optioneel.
+for (const [route, key, prefix] of [['/logo', 'logo', 'logo'], ['/logo-small', 'logoSmall', 'logo-small'], ['/favicon', 'favicon', 'favicon']]) {
   admin.post(route,
     express.raw({ type: 'application/octet-stream', limit: '5mb' }),
     (req, res) => {
