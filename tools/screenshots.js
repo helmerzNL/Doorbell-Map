@@ -484,7 +484,6 @@ async function main() {
   for (const [name, userAgent] of Object.entries(PLATFORMS)) {
     if (!wanted(`installatiemelding-${name}`)) continue;
     const ctx = await browser.newContext(ctxOpts({ ...MOBILE, userAgent }));
-    if (name === 'ios') await ctx.addInitScript(() => { navigator.share = () => Promise.resolve(); }); // Chromium heeft geen deelvenster; Safari op iOS wel
     const p = await ctx.newPage();
     await openPublic(p);
     await p.waitForSelector('#install-btn:not([hidden])', { timeout: 5000 });
