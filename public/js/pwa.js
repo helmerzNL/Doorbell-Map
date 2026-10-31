@@ -17,7 +17,7 @@
   const STEPS = {
     ios: [
       'Open deze pagina in Safari.',
-      'Tik op het deel-icoon (vierkantje met pijl omhoog) onderaan of bovenaan het scherm.',
+      'Tik op het paginamenu bij de adresbalk en kies "Deel". Zie je al een deelknop (vierkantje met pijl omhoog) in de werkbalk, tik dan daarop.',
       'Scrol omlaag en kies "Zet in beginscherm".',
       'Tik op "Voeg toe". De app staat nu op je beginscherm.',
     ],
