@@ -15,13 +15,6 @@
   const FOLLOW_ZOOM = 18; // zoom bij het volgen: huisnummers zijn dan goed leesbaar
   const MAX_ACC_CIRCLE = 500; // m; een nauwkeurigheidscirkel groter dan dit zegt niets bruikbaars
   const PING_MS = 8000; // hoe vaak de eigen positie wordt doorgegeven (en de anderen worden ververst); de server laat 45 s toe
-  // Meldt dat de locatiekeuze van de bezoeker bekend is (toegestaan, geweigerd of niet van toepassing). De installatiemelding
-  // (pwa.js) wacht daarop, zodat de uitleg, de locatievraag en de installatiemelding na elkaar komen en niet door elkaar.
-  function settle() {
-    if (window.Wijk.locateSettled) return;
-    window.Wijk.locateSettled = true;
-    window.dispatchEvent(new Event('sm-locate-settled'));
-  }
   const newId = () => {
     if (crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '');
     return [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -101,7 +94,6 @@
     }
 
     function onFix(pos) {
-      settle();
       const latlng = draw(pos);
       const first = !lastFix;
       lastFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy || 0 };
@@ -111,7 +103,6 @@
     }
 
     function onError(err) {
-      settle();
       if (err.code === 1) { // toestemming geweigerd: terug naar uit
         if (!silent) toast('Je hebt geen toegang tot je locatie gegeven. Sta locatie toe voor deze site in de instellingen van je browser of telefoon en probeer het opnieuw.');
         stop();
@@ -154,14 +145,14 @@
     }
 
     // Standaard aan: één keer per paginalading proberen, behalve als de bezoeker de locatie zelf uitzette of de browser
-    // de toestemming al geweigerd heeft. Een open venster (uitleg, installatiemelding) gaat voor.
+    // de toestemming al geweigerd heeft. Een open venster (de uitleg) gaat voor.
     async function autoStart() {
       if (autoTried) return;
-      if (!supported() || !window.isSecureContext || watchId !== null || isOff()) return settle();
+      if (!supported() || !window.isSecureContext || watchId !== null || isOff()) return;
       autoTried = true;
-      try { if ((await navigator.permissions?.query({ name: 'geolocation' }))?.state === 'denied') return settle(); } catch { /* geen Permissions API: gewoon proberen */ }
+      try { if ((await navigator.permissions?.query({ name: 'geolocation' }))?.state === 'denied') return; } catch { /* geen Permissions API: gewoon proberen */ }
       const go = () => {
-        if (!control || watchId !== null || isOff()) return settle();
+        if (!control || watchId !== null || isOff()) return;
         if (document.querySelector('dialog[open]')) return setTimeout(go, 1500);
         start(true);
       };
@@ -345,7 +336,6 @@
       setEnabled(on) {
         if (on && supported() && !control) mount();
         if (on && control) autoStart();
-        if (!on || !supported()) settle(); // geen locatie bij deze kaart: er valt niets af te wachten
         if (!on && control) { stop(); unmountCommunity(); control.remove(); control = button = null; }
       },
       // aan: de beheerder heeft de community aangezet; de knop komt er alleen als ook "Mijn locatie" beschikbaar is

@@ -144,7 +144,7 @@ body.public .mine-badge .mdi { filter: drop-shadow(0 0 3px var(--panel)); }
   body.public .prefs { margin-left: 0; }
   body.public .logo { height: 32px; max-width: 24vw; }
   body.public .actions { gap: 0; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -1px 0 var(--line), 0 -6px 18px rgba(16,32,24,.07); }
-  body.public .actions button { min-height: 52px; gap: 3px; border-radius: 14px; border: 0; background: none; box-shadow: none; color: var(--muted); font-size: .74rem; font-weight: 600; max-width: 160px; }
+  body.public .actions button { min-height: 52px; padding-inline: 3px; gap: 3px; border-radius: 14px; border: 0; background: none; box-shadow: none; color: var(--muted); font-size: .74rem; font-weight: 600; max-width: 160px; }
   body.public .actions button:hover { background: none; }
   body.public .actions button.primary { background: var(--accent-soft); color: var(--accent); }
   body.public .actions button:active { background: var(--accent-soft); transform: none; }

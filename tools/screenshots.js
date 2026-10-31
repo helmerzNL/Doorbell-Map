@@ -377,18 +377,18 @@ async function main() {
     await ctx.close();
   }
 
-  // ---------- Mijn locatie, community, installatiemelding en de instellingen daarvoor ----------
+  // ---------- Mijn locatie, community, installeren en de instellingen daarvoor ----------
   console.log('locatie en community');
   const HERE = { latitude: 52.02605, longitude: 5.16535, accuracy: 18 };
   const geo = { geolocation: HERE, permissions: ['geolocation'] };
-  const seen = () => { try { localStorage.setItem('sm-intro-seen', 'x'); localStorage.setItem('sm-install-asked', '1'); } catch { /* geen opslag */ } };
+  const seen = () => { try { localStorage.setItem('sm-intro-seen', 'x'); } catch { /* geen opslag */ } };
   // Andere deelnemers van de community (alleen coördinaten, kleur en symbool); ze verlopen na 45 s, dus vlak voor elke foto opnieuw.
   const PEERS = [
     ['screenshot-peer-000000001', 52.02634, 5.16572, '#e67e22', 'dog'], ['screenshot-peer-000000002', 52.02588, 5.16611, '#2980b9', 'bike'],
     ['screenshot-peer-000000003', 52.02641, 5.16506, '#e84393', 'cat'], ['screenshot-peer-000000004', 52.02572, 5.16548, '#00a8a8', ''],
   ];
   const pingPeers = async () => { for (const [id, lat, lng, color, icon] of PEERS) await ap.request.post(`${BASE}/api/community/ping`, { data: { id, lat, lng, acc: 15, color, icon } }); };
-  // Opent de publieke kaart en sluit de uitleg (die staat anders open en houdt de locatie en de installatiemelding tegen).
+  // Opent de publieke kaart en sluit de uitleg (die staat anders open en houdt de locatie tegen).
   const openPublic = async (p) => { await p.goto(`${BASE}/`); await p.waitForSelector('#intro-dialog[open]', { timeout: 5000 }).catch(() => {}); await closeIntro(p); };
   const MIJN_LOCATIE = { viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
   {
@@ -476,7 +476,7 @@ async function main() {
     await ctx.close();
   }
   await put('/api/admin/settings', { statsPublic: false });
-  // eerste bezoek: de installatiemelding met de stappen per platform
+  // de knop Installeer in de menubalk (er opent niets vanzelf) en het venster met de stappen per platform
   const PLATFORMS = {
     ios: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
     android: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
@@ -486,7 +486,9 @@ async function main() {
     const ctx = await browser.newContext(ctxOpts({ ...MOBILE, userAgent }));
     const p = await ctx.newPage();
     await openPublic(p);
-    await p.waitForSelector('#install-dialog[open]', { timeout: 20000 });
+    await p.waitForSelector('#install-btn:not([hidden])', { timeout: 5000 });
+    await p.click('#install-btn');
+    await p.waitForSelector('#install-dialog[open]', { timeout: 5000 });
     await p.waitForTimeout(600);
     await shot(p, `installatiemelding-${name}`);
     await ctx.close();
