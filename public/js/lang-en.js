@@ -40,7 +40,6 @@
     "Info": "Info",
     "Woon je in de wijk? Dan kun je in deze app zelf de status van jouw huis aanpassen. Tik op \"Mijn huis\", kies jouw huis en geef aan of het wel of niet is bezocht. Een wijziging wordt pas zichtbaar nadat de beheerder die heeft goedgekeurd.": "Do you live in the neighbourhood? In this app you can change the status of your own house yourself. Tap \"My house\", choose your house and indicate whether it has been visited or not. A change only becomes visible after the admin has approved it.",
     "Installeer de app": "Install the app",
-    "Installeer nu": "Install now",
     "Installeer app": "Install app",
     "Installeer": "Install",
     "Zet de kaart op je beginscherm: dan werkt hij als een app, met een eigen icoon en ook zonder internet.": "Put the map on your home screen: it then works like an app, with its own icon and even without internet.",

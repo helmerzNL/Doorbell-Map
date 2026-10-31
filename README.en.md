@@ -275,7 +275,7 @@ The admin area (`/beheer`) can also be installed as its own app, with its own da
 
 - **The *Install* button in the menu bar**: as long as the app is not installed, the menu bar has an **Install** button (a phone with an arrow). Nothing opens by itself. Once the app is installed and you open it as an app, the button disappears. It is there on iPhone/iPad, Android and Windows (Chrome/Edge), and in any other browser that offers installing itself (for example Chrome on macOS or Linux):
   - **Android (Chrome), Windows and other desktop browsers**: the button starts the browser's installation right away. If that is not possible (for example because you just dismissed the browser's question), a window with the steps opens: menu ⋮ → *Install app*; on Windows the install icon in the address bar or the menu → *Install app* (Edge: *Apps* → *Install this site as an app*).
-  - **iPhone/iPad (Safari)**: the button opens a window with the steps. *Install now* in that window opens the share sheet; choose *Add to Home Screen* → *Add*.
+  - **iPhone/iPad (Safari)**: the button opens a window with the steps. A web page cannot open Safari's own share menu and iOS has no install prompt, so you tap Safari's share button yourself and choose *Add to Home Screen* → *Add*.
   - Safari on macOS and Firefox cannot install from the page; the button is not shown there.
   - If you open the website in the browser while the app is already installed, the button is still shown (the browser does not tell the page); open the app itself instead.
 - **Offline**: the app stores itself, the last known map data, the logo and the map tiles of the neighbourhood (and the PDF section).

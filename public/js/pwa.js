@@ -49,7 +49,9 @@
   }
 
   // Een klik op de knop: met de installatieprompt van de browser (Android, Windows, desktop) start het installeren meteen.
-  // Anders (iOS, of de prompt is al weggeklikt) opent een venster met de stappen voor het platform.
+  // Anders (iOS, of de prompt is al weggeklikt) opent een venster met de stappen voor het platform. Op iOS bestaat geen
+  // installatieprompt, en een pagina kan de deelknop van Safari zelf niet openen: navigator.share() toont een ander
+  // deelvenster, zonder "Zet in beginscherm". Daar kan alleen uitleg helpen.
   function install() {
     if (deferred) {
       const d = deferred;
@@ -61,17 +63,12 @@
     if (!dlg || dlg.open) return;
     $('install-text').textContent = INTRO[guide];
     $('install-steps').replaceChildren(...STEPS[guide].map((t) => Object.assign(document.createElement('li'), { textContent: t })));
-    $('install-go').hidden = !(platform === 'ios' && navigator.share); // alleen iOS: het deelvenster bevat "Zet in beginscherm"
     dlg.showModal();
   }
 
   function wire() {
     const dlg = $('install-dialog');
-    if (dlg) {
-      $('install-x').onclick = $('install-later').onclick = () => dlg.close();
-      // De stappen blijven zichtbaar, ook als het deelvenster niet opent.
-      $('install-go').onclick = () => navigator.share({ title: document.title, url: location.origin + '/' }).catch(() => {});
-    }
+    if (dlg) $('install-close').onclick = $('install-x').onclick = () => dlg.close();
     if ($('install-btn')) $('install-btn').onclick = install;
     sync();
   }
