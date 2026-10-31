@@ -43,6 +43,7 @@
     "Installeer nu": "Install now",
     "Installeer app": "Install app",
     "Installeer": "Install",
+    "Het deelvenster kon niet worden geopend ({naam}). Volg de stappen hierboven.": "The share sheet could not be opened ({naam}). Follow the steps above.",
     "Zet de kaart op je beginscherm: dan werkt hij als een app, met een eigen icoon en ook zonder internet.": "Put the map on your home screen: it then works like an app, with its own icon and even without internet.",
     "Open deze pagina in Safari.": "Open this page in Safari.",
     "Tik op het deel-icoon (vierkantje met pijl omhoog) onderaan of bovenaan het scherm.": "Tap the share icon (square with an arrow pointing up) at the bottom or top of the screen.",

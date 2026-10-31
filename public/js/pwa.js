@@ -48,8 +48,25 @@
     if (btn) btn.hidden = installed || standalone() || !(platform || offered);
   }
 
+  // iOS kent geen installatieprompt: installeren gaat via het deelvenster ("Zet in beginscherm"). Dat mag alleen worden geopend
+  // vanuit een tik van de bezoeker, dus rechtstreeks in de klik-handler (niet na een await of een timeout).
+  const canShare = () => platform === 'ios' && typeof navigator.share === 'function';
+  // Lukt het deelvenster niet, dan staat de reden (naam van de fout) in het venster, boven de stappen die er dan altijd zijn.
+  async function share() {
+    const note = $('install-note');
+    if (note) note.hidden = true;
+    try {
+      await navigator.share({ title: document.title, url: location.origin + '/' });
+    } catch (e) {
+      if (e?.name === 'AbortError' || !note) return; // de bezoeker sloot het deelvenster zelf
+      note.textContent = I18n.t('Het deelvenster kon niet worden geopend ({naam}). Volg de stappen hierboven.', { naam: e?.name || 'onbekende fout' });
+      note.hidden = false;
+    }
+  }
+
   // Een klik op de knop: met de installatieprompt van de browser (Android, Windows, desktop) start het installeren meteen.
-  // Anders (iOS, of de prompt is al weggeklikt) opent een venster met de stappen voor het platform.
+  // Op iOS opent het deelvenster meteen, met daarachter een venster met de stappen. Anders (of als de prompt al is
+  // weggeklikt) opent alleen het venster met de stappen voor het platform.
   function install() {
     if (deferred) {
       const d = deferred;
@@ -57,11 +74,12 @@
       Promise.resolve(d.prompt()).catch(() => {});
       return;
     }
+    if (canShare()) share();
     const dlg = $('install-dialog');
     if (!dlg || dlg.open) return;
     $('install-text').textContent = INTRO[guide];
     $('install-steps').replaceChildren(...STEPS[guide].map((t) => Object.assign(document.createElement('li'), { textContent: t })));
-    $('install-go').hidden = !(platform === 'ios' && navigator.share); // alleen iOS: het deelvenster bevat "Zet in beginscherm"
+    $('install-go').hidden = !canShare(); // "Installeer nu" opent het deelvenster opnieuw, als je het hebt weggeklikt
     dlg.showModal();
   }
 
@@ -69,8 +87,7 @@
     const dlg = $('install-dialog');
     if (dlg) {
       $('install-x').onclick = $('install-later').onclick = () => dlg.close();
-      // De stappen blijven zichtbaar, ook als het deelvenster niet opent.
-      $('install-go').onclick = () => navigator.share({ title: document.title, url: location.origin + '/' }).catch(() => {});
+      $('install-go').onclick = share; // de stappen blijven zichtbaar, ook als het deelvenster niet opent
     }
     if ($('install-btn')) $('install-btn').onclick = install;
     sync();

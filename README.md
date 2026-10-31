@@ -273,7 +273,7 @@ Ook het beheer (`/beheer`) is te installeren als eigen app, met een eigen donker
 
 - **Knop *Installeer* in de menubalk**: zolang de app niet geïnstalleerd is, staat er in de menubalk een knop **Installeer** (een telefoon met een pijl). Er opent niets vanzelf. Is de app geïnstalleerd en open je hem als app, dan verdwijnt de knop. Hij staat op iPhone/iPad, Android en Windows (Chrome/Edge), en in elke andere browser die zelf installeren aanbiedt (bijvoorbeeld Chrome op macOS of Linux):
   - **Android (Chrome), Windows en andere desktopbrowsers**: de knop start meteen de installatie van de browser. Kan dat niet (bijvoorbeeld omdat je de vraag van de browser net hebt weggeklikt), dan opent een venster met de stappen: menu ⋮ → *App installeren*; op Windows het installeer-icoon in de adresbalk of menu → *App installeren* (Edge: *Apps* → *Deze site als app installeren*).
-  - **iPhone/iPad (Safari)**: de knop opent een venster met de stappen. *Installeer nu* daarin opent het deelvenster; kies *Zet in beginscherm* → *Voeg toe*.
+  - **iPhone/iPad (Safari)**: de knop opent meteen het deelvenster van iOS (kies daarin *Zet in beginscherm* → *Voeg toe*), met daarachter een venster met de stappen. *Installeer nu* opent het deelvenster opnieuw. Weigert iOS het deelvenster, dan staat de naam van de foutmelding in het venster en volg je de stappen.
   - Safari op macOS en Firefox kunnen niet via de pagina installeren; daar staat de knop niet.
   - Open je de website in de browser terwijl de app al geïnstalleerd is, dan staat de knop er toch (de browser meldt dat niet aan de pagina); open dan de app zelf.
 - **Offline**: de app bewaart zichzelf, de laatst bekende kaartgegevens, het logo en de kaarttegels van het wijkgebied (en de PDF-uitsnede).
