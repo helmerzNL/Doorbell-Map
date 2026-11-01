@@ -198,7 +198,7 @@
   nums.setVisible($('num-switch').checked);
 
   // bewoners: Mijn huis. In de geïnstalleerde app staat de knop er altijd; in de browser
-  // verschijnt hij na de schakelaar "Bewerken" (dan gaan PDF opslaan en Installeer app naar "Meer").
+  // verschijnt hij na de schakelaar "Bewerken" (dan gaan PDF opslaan en bekijken naar "Meer").
   const residentsOn = data.residentsEnabled !== false;
   const residentReady = Wijk.initResident?.({ map, houses: data.houses, enabled: residentsOn, mode: data.residentsMode, geofence: data.geofence, deviceCode: data.deviceCode, qrOnly: data.qrOnly });
   // QR-code uit de brief: ?q=... meteen uit de adresbalk halen en verwerken
@@ -223,9 +223,9 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !pop.hidden) { closeMore(); moreBtn.focus(); } });
 
   // PDF opslaan/bekijken staan altijd onder "Meer".
-  // In de eenvoudige weergave staan ze juist in de menubalk (naast Uitleg en Mijn huis) en vervalt "Meer".
+  // In de eenvoudige weergave staan ze juist in de menubalk (naast Uitleg en Mijn huis, vóór Installeer app) en vervalt "Meer".
   function layoutMenu() {
-    if (data.simpleUi) { closeMore(); moved.forEach((b) => bar.insertBefore(b, moreBtn)); moreBtn.hidden = true; }
+    if (data.simpleUi) { closeMore(); moved.forEach((b) => bar.insertBefore(b, $('install-btn'))); moreBtn.hidden = true; }
     else { moved.forEach((b) => pop.append(b)); moreBtn.hidden = false; }
   }
   layoutMenu();

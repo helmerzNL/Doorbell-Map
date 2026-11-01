@@ -1,24 +1,23 @@
-// PWA: service worker registreren en de eenmalige melding "Installeer de app" met stappen per platform.
+// PWA: service worker registreren en de knop "Installeer app" in de menubalk.
 (function () {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   }
 
-  // Eenmalig (per apparaat) een melding om de app te installeren: Android, iOS en Windows.
-  // Volgorde bij het eerste bezoek: uitleg, dan de locatievraag, dan deze melding.
-  // De melding heeft een knop "Installeer nu" die het installeren start, plus de stappen voor het platform.
-  const KEY = 'sm-install-asked';
+  // Er opent niets vanzelf: wie de app nog niet geïnstalleerd heeft, ziet de knop #install-btn in de menubalk. In de
+  // geïnstalleerde app zelf (en na het installeren) verdwijnt hij. De knop komt op Android, iOS en Windows (Chrome/Edge)
+  // en in elke andere browser die zelf een installatieprompt aanbiedt (bijv. Chrome op macOS of Linux).
   const ua = navigator.userAgent;
-  const standalone = () => window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+  const modes = ['standalone', 'fullscreen'].map((m) => window.matchMedia(`(display-mode: ${m})`));
+  const standalone = () => modes.some((m) => m.matches) || navigator.standalone === true;
   const isIos = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
   const platform = isIos ? 'ios' : /android/i.test(ua) ? 'android' : /windows/i.test(ua) && /chrome|edg/i.test(ua) ? 'windows' : null; // Windows: alleen Chrome/Edge kunnen installeren
-  const asked = () => { try { return localStorage.getItem(KEY) === '1'; } catch { return false; } };
-  const markAsked = () => { try { localStorage.setItem(KEY, '1'); } catch {} };
+  const guide = platform || 'windows'; // uitleg voor andere desktopbrowsers met installatieprompt: dezelfde als voor Chrome/Edge op Windows
 
   const STEPS = {
     ios: [
       'Open deze pagina in Safari.',
-      'Tik op het deel-icoon (vierkantje met pijl omhoog) onderaan of bovenaan het scherm.',
+      'Tik op het paginamenu bij de adresbalk en kies "Deel". Zie je al een deelknop (vierkantje met pijl omhoog) in de werkbalk, tik dan daarop.',
       'Scrol omlaag en kies "Zet in beginscherm".',
       'Tik op "Voeg toe". De app staat nu op je beginscherm.',
     ],
@@ -39,64 +38,62 @@
     windows: 'Installeer de kaart als app: sneller openen, een eigen icoon en gebruik zonder internet.',
   };
 
-  let deferred = null, shown = false;
-  const t0 = Date.now();
+  let deferred = null; // installatieprompt van de browser; kan maar één keer gebruikt worden
+  let offered = false; // de browser heeft installeren aangeboden (blijft waar als de prompt is weggeklikt)
+  let installed = false; // zojuist geïnstalleerd, terwijl deze pagina nog open staat
   const $ = (id) => document.getElementById(id);
 
-  // "Installeer nu" start het installatieproces: met de installatieprompt van de browser (Android, Windows) direct,
-  // op iOS via het deelvenster (daar staat "Zet in beginscherm" in). De stappen blijven zichtbaar zolang de
-  // browser zelf niet kan installeren, ook als terugval wanneer het deelvenster of de prompt niet opent.
-  async function install() {
+  function sync() {
+    const btn = $('install-btn');
+    if (btn) btn.hidden = installed || standalone() || !(platform || offered);
+  }
+
+  // Een klik op de knop: met de installatieprompt van de browser (Android, Windows, desktop) start het installeren meteen.
+  // Anders (iOS, of de prompt is al weggeklikt) opent een venster met de stappen voor het platform. Op iOS bestaat geen
+  // installatieprompt, en een pagina kan de deelknop van Safari zelf niet openen: navigator.share() toont een ander
+  // deelvenster, zonder "Zet in beginscherm". Daar kan alleen uitleg helpen.
+  function install() {
     if (deferred) {
       const d = deferred;
       deferred = null;
-      $('install-dialog').close();
-      d.prompt();
-      await d.userChoice.catch(() => {});
-    } else if (platform === 'ios' && navigator.share) {
-      await navigator.share({ title: document.title, url: location.origin + '/' }).catch(() => {});
-    } else {
-      $('install-steps').hidden = false;
-      $('install-steps').scrollIntoView?.({ block: 'nearest' });
+      Promise.resolve(d.prompt()).catch(() => {});
+      return;
     }
-  }
-
-  function open() {
     const dlg = $('install-dialog');
-    $('install-text').textContent = INTRO[platform];
-    const steps = $('install-steps');
-    steps.replaceChildren(...(deferred ? [] : STEPS[platform]).map((t) => Object.assign(document.createElement('li'), { textContent: t })));
-    steps.hidden = !steps.children.length;
-    $('install-x').onclick = $('install-later').onclick = () => dlg.close();
-    $('install-go').onclick = install;
+    if (!dlg || dlg.open) return;
+    $('install-text').textContent = INTRO[guide];
+    $('install-steps').replaceChildren(...STEPS[guide].map((t) => Object.assign(document.createElement('li'), { textContent: t })));
     dlg.showModal();
   }
 
-  function show() {
-    if (shown || !$('install-dialog') || !platform || standalone() || asked()) return;
-    // wacht tot er geen ander venster (bijv. de uitleg) open staat
-    if (document.querySelector('dialog[open]')) return setTimeout(show, 1500);
-    // daarna de locatievraag van de browser (zie locate.js); één ding tegelijk, met een noodrem van 90 s
-    if (!window.Wijk?.locateSettled && Date.now() - t0 < 90000) return setTimeout(show, 1500);
-    shown = true;
-    markAsked();
-    open();
+  function wire() {
+    const dlg = $('install-dialog');
+    if (dlg) $('install-close').onclick = $('install-x').onclick = () => dlg.close();
+    if ($('install-btn')) $('install-btn').onclick = install;
+    sync();
   }
 
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
+    e.preventDefault(); // geen mini-infobalk van de browser: de knop in de menubalk is de plek om te installeren
     deferred = e;
-    if ($('install-dialog')?.open) $('install-steps').hidden = true; // melding stond al open: de knop volstaat nu
+    offered = true;
+    sync();
   });
-  window.addEventListener('appinstalled', () => { deferred = null; markAsked(); if ($('install-dialog')?.open) $('install-dialog').close(); });
-  document.addEventListener('DOMContentLoaded', () => { if (platform) setTimeout(show, 3000); });
+  window.addEventListener('appinstalled', () => {
+    deferred = null;
+    installed = true;
+    if ($('install-dialog')?.open) $('install-dialog').close();
+    sync();
+  });
+  modes.forEach((m) => m.addEventListener?.('change', sync));
+  document.addEventListener('DOMContentLoaded', wire);
 
   // offline-indicator
-  function sync() {
+  function syncOffline() {
     const el = document.getElementById('offline');
     if (el) el.hidden = navigator.onLine;
   }
-  window.addEventListener('online', sync);
-  window.addEventListener('offline', sync);
-  document.addEventListener('DOMContentLoaded', sync);
+  window.addEventListener('online', syncOffline);
+  window.addEventListener('offline', syncOffline);
+  document.addEventListener('DOMContentLoaded', syncOffline);
 })();

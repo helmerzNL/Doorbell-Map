@@ -50,6 +50,8 @@
     <button id="streets-btn" aria-label="Straten tonen of verbergen" aria-haspopup="dialog" hidden><span class="ico" data-mdi="road-variant"></span><span class="lbl">Straten</span></button>
     <button id="pdf-view" aria-label="PDF bekijken"><span class="ico" data-mdi="file-eye-outline"></span><span class="lbl">PDF bekijken</span></button>
     <button id="pdf-dl" class="primary" aria-label="PDF opslaan"><span class="ico" data-mdi="download"></span><span class="lbl">PDF opslaan</span></button>
+    <!-- Alleen zolang de app niet geïnstalleerd is (zie pwa.js) -->
+    <button id="install-btn" hidden aria-label="Installeer app" title="Installeer de app"><span class="ico" data-mdi="cellphone-arrow-down"></span><span class="lbl">Installeer</span></button>
     <button id="more-btn" hidden aria-haspopup="menu" aria-expanded="false" aria-controls="more-pop" aria-label="Meer"><span class="ico" data-mdi="dots-horizontal"></span><span class="lbl">Meer</span></button>
   </nav>
   <div id="more-pop" class="more-pop" role="menu" aria-label="Meer" hidden></div>
@@ -83,8 +85,8 @@
     <button id="install-x" class="icon-btn" type="button" aria-label="Sluiten"><i data-mdi="close"></i></button>
   </div>
   <p id="install-text"></p>
-  <ol id="install-steps" class="install-steps" hidden></ol>
-  <p><button id="install-go" class="primary">Installeer nu</button> <button id="install-later" type="button">Niet nu</button></p>
+  <ol id="install-steps" class="install-steps"></ol>
+  <p><button id="install-close" class="primary" type="button">Sluiten</button></p>
 </dialog>
 
 <dialog id="code-dialog">
