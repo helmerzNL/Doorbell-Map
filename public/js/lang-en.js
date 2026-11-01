@@ -44,7 +44,7 @@
     "Installeer": "Install",
     "Zet de kaart op je beginscherm: dan werkt hij als een app, met een eigen icoon en ook zonder internet.": "Put the map on your home screen: it then works like an app, with its own icon and even without internet.",
     "Open deze pagina in Safari.": "Open this page in Safari.",
-    "Tik op het deel-icoon (vierkantje met pijl omhoog) onderaan of bovenaan het scherm.": "Tap the share icon (square with an arrow pointing up) at the bottom or top of the screen.",
+    "Tik op het paginamenu bij de adresbalk en kies \"Deel\". Zie je al een deelknop (vierkantje met pijl omhoog) in de werkbalk, tik dan daarop.": "Tap the page menu next to the address bar and choose \"Share\". If you already see a share button (square with an arrow pointing up) in the toolbar, tap that instead.",
     "Scrol omlaag en kies \"Zet in beginscherm\".": "Scroll down and choose \"Add to Home Screen\".",
     "Tik op \"Voeg toe\". De app staat nu op je beginscherm.": "Tap \"Add\". The app is now on your home screen.",
     "Tik op de drie puntjes (⋮) rechtsboven in Chrome.": "Tap the three dots (⋮) at the top right in Chrome.",
