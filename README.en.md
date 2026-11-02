@@ -14,6 +14,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - [Languages and dark mode](#languages-and-dark-mode)
 - [The admin area](#the-admin-area-beheer)
 - [Settings](#settings)
+- [Editions: comparing earlier occasions](#editions-comparing-earlier-occasions)
 - [Installing as an app and offline use](#installing-as-an-app-and-offline-use)
 - [Deploy it yourself with Docker](#deploy-it-yourself-with-docker)
 - [Releases and release notes](#releases-and-release-notes)
@@ -41,7 +42,8 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - Log in with a **passkey** (optionally also with a password, confirmed with a passkey).
 - **Approve or reject** changes by residents, with **push notifications**; **block** devices (also by IP); **schedule** changes until a date and time.
 - **QR codes** per house: show, copy the link, renew, and a **printable PDF** with a card per house to deliver to the residents.
-- Settings in five clear tabs; the admin area can also be installed as its own **app**.
+- **Editions**: save the map of every occasion with a name and year, switch in the admin area between *Live* and earlier editions and compare which houses took part then and now, with the numbers. See [Editions](#editions-comparing-earlier-occasions).
+- Settings in six clear tabs; the admin area can also be installed as its own **app**.
 - Your own **logo** (with an optional small logo for the header), an optional **favicon** (also the icon of the installed app; the lantern by default), explanation, info box, **site and app name** and your own names for the statuses.
 - Automatic **backups** after every save attempt, with short titles and manual backups.
 - Version number and commit visible in the settings menu.
@@ -175,7 +177,7 @@ If you want residents to only be able to link **their own house**, switch on *Ch
 **Editing a house** (in the edit screen) – select a house (click, double-click or long-press) to change the colour, street, house number and note, or drag the corner points. Shortcuts: **G** green, **R** red, **Delete** delete, **Ctrl+S** save. The list on the left has a filter per street; the rest is dimmed on the map.
 
 ## Settings
-The cog (⚙) in the bar slides the settings menu into view. It is divided into five tabs (*Approve*, *Residents*, *Config*, *Security* and *Backups*, with icons from [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); each tab consists of cards with clear switches and a short explanation (also on a phone).
+The cog (⚙) in the bar slides the settings menu into view. It is divided into six tabs (*Approve*, *Residents*, *Config*, *Security*, *Editions* and *Backups*, with icons from [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); each tab consists of cards with clear switches and a short explanation (also on a phone).
 
 <table>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-goedkeuren.png"><img src="docs/screenshots/instellingen-goedkeuren.png" width="270" alt="Approve"></a><br><sub>Approve</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners.png"><img src="docs/screenshots/instellingen-bewoners.png" width="270" alt="Residents"></a><br><sub>Residents</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners-apparaten.png"><img src="docs/screenshots/instellingen-bewoners-apparaten.png" width="270" alt="Residents: devices and notifications"></a><br><sub>Residents: devices and notifications</sub></td></tr>
@@ -200,6 +202,8 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 </table>
 
 **Security** – add/remove passkeys and an optional password (confirm with passkey).
+
+**Editions** – save the map of an occasion with a name and year (from the live map or from a backup), the numbers per edition, change the name or year, and delete. See [Editions](#editions-comparing-earlier-occasions).
 
 **Backups** – after every save attempt a backup of the layout and texts is made automatically. Give a backup a **short title** (✎, max. 40 characters, for example "Everything" or "Layout only") or make one yourself with *Make backup*. Restoring or downloading is always possible; deleting (one or several at once) must be confirmed with your passkey.
 
@@ -259,6 +263,21 @@ After **every save attempt** (houses/layout, texts, map view) the server makes a
 Identical states are not stored twice and the newest 200 are kept (`MAX_BACKUPS` to change that). The logo is not part of the backups.
 A downloaded backup (.json, download button in the list) can be added again with **Upload backup**; it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); deleting asks for confirmation with your passkey.
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
+
+## Editions: comparing earlier occasions
+An **edition** is a saved state of the map of one occasion (for example *Sint Maarten 2025*), with its own **name and year**. The **live map** is what the front page shows and what you edit; an edition never changes it.
+
+- **Saving** – in *Settings → Editions* enter a name and year and choose *Save from*: the live map as it is now, or a **backup** from an earlier moment (useful when the event is already over and the map has changed since; upload a downloaded backup under *Backups* first). An empty map cannot be saved as an edition.
+- **Switching** – as soon as there is an edition, the overview card at the top right of the map has a *Map* list: **Live** or an earlier edition. An edition is view only; tap a house to see its status in that edition and on the live map. *Edit* always switches the map back to live.
+- **Comparing** – *Compare with* puts two maps side by side (an edition and live, or two editions). The houses are then coloured by taking part (green): **green in both**, **only in the older one** (orange) or **only in the newer one** (blue); the rest is shown dashed grey. The overview card shows the numbers of both maps with the difference (total, green, red, not marked) and how many houses fall into each group. Houses are matched on the house itself, and otherwise on street and house number.
+- **Overview** – the list in *Settings → Editions* shows the number of houses per edition and how many are green (with percentage), red and not marked, with the live map at the top. ✎ changes the name or year; deleting is confirmed with your passkey.
+- *Hide counts* folds the overview card down to just the lists (handy on a phone).
+
+Editions are stored as separate files in `data/editions/` (at most 100) and are not part of the backups; include that folder when you back up the data folder.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-vergelijken.png"><img src="docs/screenshots/beheer-edities-vergelijken.png" width="420" alt="Comparing an edition with the live map"></a><br><sub>Comparing an edition with the live map</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-edities.png"><img src="docs/screenshots/instellingen-edities.png" width="420" alt="Settings: Editions"></a><br><sub>Settings: Editions</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-mobiel.png"><img src="docs/screenshots/beheer-edities-mobiel.png" width="170" alt="Comparing on a phone"></a><br><sub>Comparing on a phone</sub></td></tr>
+</table>
 
 ## Name of the app
 Under *Settings* (⚙) → *Config* you also set the **name of the site** (next to the logo and in the PDF; default `SITE_TITLE`) and the **name of the app** and a short name (max. 12 characters, under the icon). Those are used when the site is installed on a phone or computer.

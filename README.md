@@ -12,6 +12,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - [Talen en donkere weergave](#talen-en-donkere-weergave)
 - [Het beheer](#het-beheer-beheer)
 - [Instellingen](#instellingen)
+- [Edities: eerdere keren vergelijken](#edities-eerdere-keren-vergelijken)
 - [Installeren als app en offline gebruik](#installeren-als-app-en-offline-gebruik)
 - [Zelf deployen met Docker](#zelf-deployen-met-docker)
 - [Releases en release notes](#releases-en-release-notes)
@@ -39,7 +40,8 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - Inloggen met **passkey** (optioneel ook met wachtwoord, bevestigd met een passkey).
 - Wijzigingen van bewoners **goedkeuren of afwijzen**, met **pushmeldingen**; apparaten **blokkeren** (ook op IP); wijzigen **plannen** tot een datum en tijd.
 - **QR-codes** per huis: tonen, link kopiëren, vernieuwen en een **afdrukbare PDF** met een kaartje per huis om bij de bewoners te bezorgen.
-- Instellingen in vijf overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
+- **Edities**: bewaar de kaart van elke keer met naam en jaartal, wissel in het beheer tussen *Live* en eerdere edities en vergelijk welke huizen toen en nu meedoen, met de aantallen. Zie [Edities](#edities-eerdere-keren-vergelijken).
+- Instellingen in zes overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
 - Eigen **logo** (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (ook het icoon van de geïnstalleerde app; standaard de lantaarn), uitleg, infovlak, **site- en appnaam** en eigen namen voor de statussen.
 - Automatische **backups** na elke opslagpoging, met korte titels en handmatige backups.
 - Versienummer en commit zichtbaar in het instellingenmenu.
@@ -173,7 +175,7 @@ Wil je dat bewoners alleen hun **eigen huis** kunnen koppelen, dan zet je onder 
 **Huis bewerken** (in het bewerkscherm) – selecteer een huis (klik, dubbelklik of lang indrukken) om de kleur, straat, huisnummer en notitie aan te passen, of sleep de hoekpunten. Sneltoetsen: **G** groen, **R** rood, **Delete** verwijderen, **Ctrl+S** opslaan. De lijst links heeft een filter per straat; de rest wordt op de kaart gedimd.
 
 ## Instellingen
-Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ingedeeld in vijf tabs (*Goedkeuren*, *Bewoners*, *Config*, *Beveiliging* en *Backups*, met iconen uit [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); elke tab bestaat uit kaarten met duidelijke schakelaars en een korte uitleg (ook op een telefoon).
+Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ingedeeld in zes tabs (*Goedkeuren*, *Bewoners*, *Config*, *Beveiliging*, *Edities* en *Backups*, met iconen uit [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); elke tab bestaat uit kaarten met duidelijke schakelaars en een korte uitleg (ook op een telefoon).
 
 <table>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-goedkeuren.png"><img src="docs/screenshots/instellingen-goedkeuren.png" width="270" alt="Goedkeuren"></a><br><sub>Goedkeuren</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners.png"><img src="docs/screenshots/instellingen-bewoners.png" width="270" alt="Bewoners"></a><br><sub>Bewoners</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners-apparaten.png"><img src="docs/screenshots/instellingen-bewoners-apparaten.png" width="270" alt="Bewoners: apparaten en meldingen"></a><br><sub>Bewoners: apparaten en meldingen</sub></td></tr>
@@ -198,6 +200,8 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 </table>
 
 **Beveiliging** – passkeys toevoegen/verwijderen en een optioneel wachtwoord (bevestigen met passkey).
+
+**Edities** – de kaart van een keer bewaren met naam en jaartal (van de live kaart of uit een backup), de aantallen per editie, naam of jaartal wijzigen en verwijderen. Zie [Edities](#edities-eerdere-keren-vergelijken).
 
 **Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout en teksten. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey.
 
@@ -257,6 +261,21 @@ Na **elke opslagpoging** (huizen/layout, teksten, kaartweergave) maakt de server
 Identieke staten worden niet dubbel bewaard en de nieuwste 200 blijven staan (`MAX_BACKUPS` om dat aan te passen). Het logo valt buiten de backups.
 Een gedownloade backup (.json, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen; hij komt als nieuwe backup in de lijst. Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); verwijderen vraagt een bevestiging met je passkey.
 Elke backup kan een **korte titel** krijgen (max. 40 tekens, knop ✎), bijvoorbeeld "Alles" of "Alleen layout". Met *Backup maken* maak je handmatig een backup met een eigen titel, ook als er niets is veranderd.
+
+## Edities: eerdere keren vergelijken
+Een **editie** is een bewaarde stand van de kaart van één keer (bijvoorbeeld *Sint Maarten 2025*), met een eigen **naam en jaartal**. De **live kaart** is wat de voorpagina toont en wat je bewerkt; een editie verandert die nooit.
+
+- **Bewaren** – in *Instellingen → Edities* geef je een naam en jaartal en kies je *Bewaren van*: de live kaart zoals die nu is, of een **backup** van een eerder moment (handig als het evenement al voorbij is en de kaart daarna is gewijzigd; een gedownloade backup upload je eerst bij *Backups*). Een lege kaart kun je niet als editie bewaren.
+- **Wisselen** – zodra er een editie is, staat in de overzichtskaart rechtsboven op de kaart een keuzelijst *Kaart*: **Live** of een eerdere editie. Een editie bekijk je alleen; tik op een huis voor de status in die editie en op de live kaart. *Bewerken* zet de kaart altijd terug op live.
+- **Vergelijken** – met *Vergelijk met* zet je twee kaarten naast elkaar (een editie met live, of twee edities). De huizen kleuren dan naar meedoen (groen): **groen in beide**, **alleen in de oudere** (oranje) of **alleen in de nieuwere** (blauw); de rest staat grijs gestippeld. De overzichtskaart toont de aantallen van beide kaarten met het verschil (totaal, groen, rood, niet gemarkeerd) en hoeveel huizen in elke groep vallen. Huizen worden gekoppeld op het huis zelf, en anders op straat en huisnummer.
+- **Overzicht** – de lijst in *Instellingen → Edities* toont per editie het aantal huizen en hoeveel groen (met percentage), rood en niet gemarkeerd, met de live kaart bovenaan. Met ✎ wijzig je naam of jaartal; verwijderen bevestig je met je passkey.
+- *Aantallen verbergen* klapt de overzichtskaart in tot alleen de keuzelijsten (handig op een telefoon).
+
+Edities staan als losse bestanden in `data/editions/` (maximaal 100) en vallen buiten de backups; neem die map mee als je de datamap veiligstelt.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-vergelijken.png"><img src="docs/screenshots/beheer-edities-vergelijken.png" width="420" alt="Een editie vergelijken met de live kaart"></a><br><sub>Een editie vergelijken met de live kaart</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-edities.png"><img src="docs/screenshots/instellingen-edities.png" width="420" alt="Instellingen: Edities"></a><br><sub>Instellingen: Edities</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-mobiel.png"><img src="docs/screenshots/beheer-edities-mobiel.png" width="170" alt="Vergelijken op een telefoon"></a><br><sub>Vergelijken op een telefoon</sub></td></tr>
+</table>
 
 ## Naam van de app
 Bij *Instellingen* (⚙) → *Config* stel je ook de **naam van de site** in (naast het logo en in de PDF; standaard `SITE_TITLE`) en de **naam van de app** en een korte naam (max. 12 tekens, onder het icoon) in. Die worden gebruikt als de site op een telefoon of computer wordt geïnstalleerd.

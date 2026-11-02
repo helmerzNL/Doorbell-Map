@@ -13,6 +13,7 @@ const store = require('./store');
 const auth = require('./auth');
 const { hashPassword, verifyPassword } = require('./password');
 const backups = require('./backups');
+const editions = require('./editions');
 const residents = require('./residents');
 const community = require('./community');
 const appVersion = require('./version');
@@ -432,6 +433,52 @@ admin.post('/backups/delete', asyncRoute(async (req, res) => {
   }
   try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
   res.json({ deleted: backups.remove(idsToDelete) });
+}));
+
+// ---------- edities: eerdere keren, met naam en jaartal, om met de live kaart te vergelijken ----------
+admin.get('/editions', (req, res) => res.json(editions.list()));
+
+admin.get('/editions/:id', (req, res) => {
+  const e = editions.read(req.params.id);
+  if (!e) return res.status(404).json({ error: 'Editie niet gevonden' });
+  res.json(e);
+});
+
+// Nieuwe editie: van de live kaart, of (met from) van een backup, bijvoorbeeld de stand na afloop van vorig jaar.
+admin.post('/editions', (req, res) => {
+  const body = req.body || {};
+  let houses = store.db().houses, source = 'live', sourceDate = null;
+  if (body.from !== undefined && body.from !== null && body.from !== '') {
+    const b = typeof body.from === 'string' ? backups.read(body.from) : null;
+    if (!b) return res.status(404).json({ error: 'Backup niet gevonden' });
+    houses = b.houses; source = 'backup'; sourceDate = b.createdAt || null;
+  }
+  try {
+    const e = editions.create(body, houses, { source, sourceDate });
+    res.json({ id: e.id, name: e.name, year: e.year, counts: e.counts });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+admin.put('/editions/:id', (req, res) => {
+  try {
+    const e = editions.update(req.params.id, req.body || {});
+    if (!e) return res.status(404).json({ error: 'Editie niet gevonden' });
+    res.json({ id: e.id, name: e.name, year: e.year });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Verwijderen vereist bevestiging met een passkey (net als bij backups).
+admin.post('/editions/delete', asyncRoute(async (req, res) => {
+  const idsToDelete = req.body.ids;
+  if (!Array.isArray(idsToDelete) || !idsToDelete.length || idsToDelete.length > editions.MAX_EDITIONS || !idsToDelete.every((i) => typeof i === 'string' && editions.ID.test(i))) {
+    return res.status(400).json({ error: 'Geen geldige edities geselecteerd' });
+  }
+  try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
+  res.json({ deleted: editions.remove(idsToDelete) });
 }));
 
 admin.get('/passkeys', (req, res) => {

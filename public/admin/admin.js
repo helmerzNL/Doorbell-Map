@@ -318,7 +318,7 @@
       try {
         const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ statsShow: { [k]: box.checked } }), expectAuth: true });
         statsShow = res.statsShow; if (cfg.st) cfg.st.statsShow = statsShow;
-        if (typeof renderStats === 'function') renderStats();
+        if (map) renderStats();
       } catch (e) { $('org-err').textContent = e.message; box.checked = !box.checked; }
     };
   }
@@ -412,6 +412,7 @@
     document.querySelectorAll('#settings [data-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== name));
     if (name === 'security') { $('pk-err').textContent = ''; renderPasskeys().catch((e) => ($('pk-err').textContent = e.message)); }
     if (name === 'backups') renderBackups();
+    if (name === 'editions') renderEditions();
     if (name === 'changes') renderChanges();
     if (name === 'residents') { renderChanges(); renderPush(); fillQrStreets(); }
     if (name === 'org') fillOrg();
@@ -577,7 +578,7 @@
   // Een goedgekeurde wijziging ook in de lokale lijst verwerken, zodat een volgende "Opslaan" hem niet overschrijft.
   function applyChange(c) {
     const h = c && houses.find((x) => x.id === c.houseId);
-    if (h) { h.status = c.status; render(); }
+    if (h) { h.status = c.status; touchHouses(); render(); }
   }
 
   let shareTexts = {}; // tekst bij delen via WhatsApp per taal (instelling in Config → Teksten)
@@ -849,6 +850,7 @@
     $('nav-edit').setAttribute('aria-pressed', String(on));
     $('nav-edit').querySelector('.lbl').textContent = on ? 'Weergave' : 'Bewerken';
     $('nav-edit').querySelector('.ico').replaceChildren(MDI.svg(on ? 'eye-outline' : 'pencil'));
+    if (on) { showId = LIVE; cmpId = ''; if (map) { map.closePopup(); fillEditionSelects(); render(); } } // bewerken gaat altijd over de live kaart
     if (!on && typeof setMode === 'function') { setMode('select'); selectedId = null; render(); }
     setTimeout(() => map && map.invalidateSize(), 0);
   }
@@ -1001,7 +1003,8 @@
   let filterStreet = ''; // '' = alle straten, '\u0000none' = huizen zonder straat
   const NO_STREET = '\u0000none';
   const inFilter = (h) => !filterStreet || (filterStreet === NO_STREET ? !h.street : h.street === filterStreet);
-  let nums = null, numsRev = 0, numsBuilt = -1;
+  let nums = null, numsRev = 0, numsBuilt = '';
+  let liveGroup = null; // de huizen van de live kaart (verborgen zolang een editie of vergelijking op de kaart staat)
   const touchHouses = () => { numsRev++; };
 
   function hint() {
@@ -1013,11 +1016,11 @@
   }
 
   function syncPolygons() {
-    for (const [id, l] of layers) if (!houses.find((h) => h.id === id)) { l.remove(); layers.delete(id); }
+    for (const [id, l] of layers) if (!houses.find((h) => h.id === id)) { liveGroup.removeLayer(l); layers.delete(id); }
     for (const h of houses) {
       let l = layers.get(h.id);
       if (!l) {
-        l = L.polygon(h.points, {}).addTo(map);
+        l = L.polygon(h.points, {}).addTo(liveGroup);
         l.on('click', (e) => {
           if (!editing || mode !== 'select') return;
           L.DomEvent.stopPropagation(e);
@@ -1070,11 +1073,9 @@
     });
   }
 
-  const renderStats = () => Wijk.renderStats(houses, statsShow);
-
   function render() {
-    syncPolygons(); syncHandles(); syncDraft(); renderPanel(); renderStats();
-    if (nums && numsBuilt !== numsRev) { nums.rebuild(houses); numsBuilt = numsRev; }
+    const st = overlayState();
+    syncPolygons(); syncHandles(); syncDraft(); renderPanel(); renderStats(st); syncOverlay(st);
   }
 
   function renderPanel() {
@@ -1159,7 +1160,7 @@
     const cancel = () => { clearTimeout(timer); timer = null; };
     el.addEventListener('pointerdown', (e) => {
       cancel();
-      if (e.pointerType !== 'touch' || !e.isPrimary || (mode === 'draw' && draft.length)) return;
+      if (e.pointerType !== 'touch' || !e.isPrimary || (mode === 'draw' && draft.length) || overlayState()) return;
       start = { x: e.clientX, y: e.clientY };
       timer = setTimeout(() => {
         timer = null;
@@ -1345,6 +1346,350 @@
     } catch { /* offline of uitgelogd: volgende poging */ }
   }
 
+  // ---------- edities: eerdere keren bekijken en vergelijken met de live kaart ----------
+  // De live kaart is wat de voorpagina toont en wat je bewerkt. Een editie is een bewaarde stand met naam en jaartal;
+  // in de weergave kies je in de overzichtskaart welke kaart je ziet en waarmee je vergelijkt (alleen bekijken).
+  const LIVE = 'live';
+  let editionList = []; // [{ id, name, year, createdAt, source, sourceDate, counts }], nieuwste jaar eerst
+  const editionHouses = new Map(); // id -> huizen (pas opgehaald als je de editie bekijkt)
+  let showId = LIVE, cmpId = ''; // wat de kaart toont, en waarmee vergeleken wordt ('' = niet vergelijken)
+  let overlay = null, overlayKey = '', overlayDrawn = [];
+  const edById = (id) => editionList.find((e) => e.id === id);
+  // "Sint Maarten" + 2025 -> "Sint Maarten 2025" (staat het jaartal al in de naam, dan niet dubbel)
+  const edLabel = (e) => (e.name.includes(String(e.year)) ? e.name : `${e.name} ${e.year}`);
+  // Sjabloon vertalen met een eigen naam erin; de naam zelf blijft zoals de beheerder hem schreef (geen vertaling of vervanging).
+  const tName = (tpl, vars, name) => I18n.t(tpl, { ...vars, naam: '\u0001' }).replace('\u0001', name);
+  const keyLabel = (id) => (id === LIVE ? I18n.tr('Live') : edLabel(edById(id) || { name: '?', year: '' }));
+  const housesSync = (id) => (id === LIVE ? houses : editionHouses.get(id) || []);
+  async function housesOf(id) {
+    if (id !== LIVE && !editionHouses.has(id)) editionHouses.set(id, (await api(`/api/admin/editions/${id}`, { expectAuth: true })).houses);
+    return housesSync(id);
+  }
+  // Volgorde in de tijd: eerst het jaartal, dan wanneer de editie bewaard is; de live kaart is altijd de nieuwste.
+  const timeKey = (id) => (id === LIVE ? [Infinity, ''] : [edById(id)?.year ?? 0, edById(id)?.createdAt ?? '']);
+  const olderThan = (x, y) => { const a = timeKey(x), b = timeKey(y); return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]); };
+
+  // Wat de kaart nu toont: null = gewoon de live kaart; anders één editie, of een vergelijking van twee kaarten.
+  function overlayState() {
+    if (editing || (showId === LIVE && !cmpId)) return null;
+    if (!cmpId) return { mode: 'single', pairs: SMCompare.match(housesSync(showId), houses).filter((p) => p.a) };
+    const [oldId, newId] = olderThan(showId, cmpId) ? [showId, cmpId] : [cmpId, showId];
+    return { mode: 'compare', oldId, newId, shownIsOld: oldId === showId, ...SMCompare.compare(housesSync(oldId), housesSync(newId)) };
+  }
+
+  // Kleuren in de vergelijking: groen in beide, alleen in de oudere (gestopt) of alleen in de nieuwere (nieuw).
+  const CMP_STYLE = {
+    both: { color: '#0f6b36', fillColor: '#1f9d55', fillOpacity: 0.6, weight: 2 },
+    onlyA: { color: '#9c4a00', fillColor: '#f08c00', fillOpacity: 0.65, weight: 2 },
+    onlyB: { color: '#14508f', fillColor: '#1c7ed6', fillOpacity: 0.6, weight: 2 },
+    neither: { color: '#666666', fillColor: '#888888', fillOpacity: 0.12, weight: 1.5, dashArray: '5 4' },
+  };
+  const statusName = (h) => (h ? Wijk.STATUS[h.status]?.name || Wijk.STATUS.none.name : I18n.tr('niet op de kaart'));
+
+  // Popup bij een huis van een editie of vergelijking: adres en de status in elk van de twee kaarten.
+  function overlayPopup(h, lines) {
+    const box = document.createElement('div');
+    box.className = 'ed-pop';
+    box.setAttribute('data-i18n-skip', '');
+    const t = document.createElement('strong');
+    t.textContent = Wijk.houseTitle(h);
+    box.append(t);
+    for (const [label, other] of lines) {
+      const row = document.createElement('div');
+      const dot = document.createElement('i');
+      dot.className = `dot ${other ? other.status : ''}`;
+      if (!other) dot.classList.add('gone');
+      const name = document.createElement('span');
+      name.textContent = `${label}: `;
+      const val = document.createElement('b');
+      val.textContent = statusName(other);
+      row.append(dot, name, val);
+      box.append(row);
+    }
+    return box;
+  }
+
+  function syncOverlay(st) {
+    const key = st ? `${showId}|${cmpId}|${numsRev}` : '';
+    if (key !== overlayKey) {
+      overlayKey = key;
+      overlay.clearLayers();
+      overlayDrawn = [];
+      map.closePopup();
+      if (st && map.hasLayer(liveGroup)) map.removeLayer(liveGroup);
+      if (!st && !map.hasLayer(liveGroup)) liveGroup.addTo(map);
+      // een popup mag niet achter de overzichtskaart rechtsboven vallen (op een smalle telefoon kan dat niet anders)
+      const cardW = $('house-stats').offsetWidth;
+      const popupOpts = { maxWidth: 280, autoPanPaddingBottomRight: L.point(cardW && cardW < map.getSize().x / 2 ? cardW + 24 : 5, 5) };
+      for (const p of st ? st.pairs : []) {
+        let h, style, lines;
+        if (st.mode === 'single') {
+          h = p.a; style = Wijk.houseStyle(h.status, false);
+          lines = [[keyLabel(showId), p.a], [keyLabel(LIVE), p.b]];
+        } else {
+          h = (st.shownIsOld ? p.a : p.b) || p.a || p.b; style = CMP_STYLE[p.cat];
+          lines = [[keyLabel(st.oldId), p.a], [keyLabel(st.newId), p.b]];
+        }
+        const poly = L.polygon(h.points, style).addTo(overlay);
+        poly.bindPopup(() => overlayPopup(h, lines), popupOpts);
+        poly.on('click', (e) => L.DomEvent.stopPropagation(e));
+        overlayDrawn.push(h);
+      }
+    }
+    const want = st ? `ov|${overlayKey}` : `live|${numsRev}`;
+    if (nums && numsBuilt !== want) { nums.rebuild(st ? overlayDrawn : houses); numsBuilt = want; }
+  }
+
+  // De hint onderaan de kaart hoort bij wat er getoond wordt (live: popup met QR; editie: alleen bekijken).
+  let hintFor = null;
+  function syncViewHint(overlayOn) {
+    if (hintFor === overlayOn) return;
+    hintFor = overlayOn;
+    $('view-hint').textContent = overlayOn
+      ? 'Klik of tik op een huis voor de status in elke kaart'
+      : 'Dubbelklik (of druk lang) op een huis voor de status en de QR-code';
+  }
+  let statsFolded = false;
+  try { statsFolded = localStorage.getItem('sm-admin-stats-folded') === '1'; } catch {}
+  function syncFold() {
+    $('hs-fold').setAttribute('aria-expanded', String(!statsFolded));
+    $('hs-fold').replaceChildren(MDI.svg(statsFolded ? 'chevron-down' : 'chevron-up'), Object.assign(document.createElement('span'), { textContent: statsFolded ? 'Aantallen tonen' : 'Aantallen verbergen' }));
+  }
+  $('hs-fold').onclick = () => {
+    statsFolded = !statsFolded;
+    try { localStorage.setItem('sm-admin-stats-folded', statsFolded ? '1' : '0'); } catch {}
+    syncFold();
+    if (map) renderStats();
+  };
+  syncFold();
+
+  // Overzichtskaart rechtsboven: keuze van de kaart, de aantallen, en bij vergelijken het verschil.
+  function renderStats(st = map ? overlayState() : null) {
+    syncViewHint(!!st);
+    const list = st && st.mode === 'single' ? st.pairs.map((p) => p.a) : houses;
+    Wijk.renderStats(list, statsShow);
+    const withEditions = editionList.length > 0 && !editing;
+    const comparing = !!st && st.mode === 'compare';
+    $('hs-editions').hidden = !withEditions;
+    $('hs-ed-note').hidden = !st;
+    $('hs-plain').hidden = comparing || !list.length;
+    $('hs-empty').hidden = comparing || list.length > 0 || !withEditions;
+    $('hs-compare').hidden = !comparing;
+    $('house-stats').classList.toggle('comparing', comparing);
+    $('house-stats').classList.toggle('folded', statsFolded && withEditions); // zonder edities valt er niets in te klappen
+    if (withEditions) $('house-stats').hidden = false;
+    if (comparing) renderCompare(st);
+  }
+
+  function renderCompare(st) {
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+    const sign = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '±0');
+    const head = el('div', 'hs-cmp-head');
+    head.append(el('span', '', keyLabel(st.oldId)), el('span', 'hs-arrow', '→'), el('span', '', keyLabel(st.newId)));
+    const grid = el('div', 'hs-cmp-grid');
+    const row = (dotCls, name, a, b) => {
+      const n = el('span', 'hs-name');
+      if (dotCls !== null) n.append(el('i', `dot ${dotCls}`));
+      n.append(name);
+      const d = el('span', `hs-delta${b > a ? ' up' : b < a ? ' down' : ''}`, sign(b - a));
+      grid.append(n, el('b', '', String(a)), el('span', 'hs-arrow', '→'), el('b', '', String(b)), d);
+    };
+    row(null, I18n.tr('Totaal'), st.a.total, st.b.total);
+    for (const k of ['green', 'red', 'none']) if (statsShow[k] && (k !== 'none' || st.a.none || st.b.none)) row(k, Wijk.STATUS[k].name, st.a[k], st.b[k]);
+    const legend = el('div', 'hs-cmp-legend');
+    const green = Wijk.STATUS.green.name;
+    for (const [cat, text] of [
+      ['both', I18n.t('{status} in beide', { status: green })],
+      ['onlyA', tName('{status} alleen in {naam}', { status: green }, keyLabel(st.oldId))],
+      ['onlyB', tName('{status} alleen in {naam}', { status: green }, keyLabel(st.newId))],
+      ['neither', I18n.tr('Overige huizen')],
+    ]) {
+      const r = el('div', `hs-row${cat === 'neither' ? ' hs-none' : ''}`);
+      r.append(el('i', `swatch ${cat}`), el('span', 'hs-name', text), el('b', '', String(st.cats[cat])));
+      legend.append(r);
+    }
+    $('hs-compare').replaceChildren(head, grid, legend);
+  }
+
+  function fillEditionSelects() {
+    const opt = (value, text, isName) => {
+      const o = Object.assign(document.createElement('option'), { value, textContent: text });
+      if (isName) o.setAttribute('data-i18n-skip', ''); // eigen namen niet vertalen
+      return o;
+    };
+    const all = [[LIVE, I18n.tr('Live (voorpagina)'), false], ...editionList.map((e) => [e.id, edLabel(e), true])];
+    $('hs-show').replaceChildren(...all.map(([v, t, n]) => opt(v, t, n)));
+    $('hs-show').value = showId;
+    $('hs-cmp').replaceChildren(opt('', I18n.tr('Niet vergelijken'), false), ...all.filter(([v]) => v !== showId).map(([v, t, n]) => opt(v, t, n)));
+    $('hs-cmp').value = cmpId;
+  }
+
+  async function setShown(show, cmp) {
+    try {
+      await housesOf(show);
+      if (cmp) await housesOf(cmp);
+    } catch (e) { toast(e.message); show = LIVE; cmp = ''; }
+    showId = show; cmpId = cmp === show ? '' : cmp;
+    fillEditionSelects();
+    render();
+  }
+  $('hs-show').onchange = () => setShown($('hs-show').value, cmpId);
+  $('hs-cmp').onchange = () => setShown(showId, $('hs-cmp').value);
+
+  async function loadEditions() {
+    try { editionList = await api('/api/admin/editions', { expectAuth: true }); } catch { return; }
+    if (showId !== LIVE && !edById(showId)) showId = LIVE;
+    if (cmpId && cmpId !== LIVE && !edById(cmpId)) cmpId = '';
+    for (const id of editionHouses.keys()) if (!edById(id)) editionHouses.delete(id);
+    fillEditionSelects();
+    if (map) { overlayKey = '-'; render(); } // namen kunnen veranderd zijn: popups en overzicht opnieuw opbouwen
+  }
+
+  // Vanuit de lijst in de instellingen een editie (of live) op de kaart zetten.
+  async function viewEdition(id) {
+    if (editing) {
+      await $('edit-toggle').onclick(); // vraagt zelf om bevestiging bij niet-opgeslagen wijzigingen
+      if (editing) return;
+    }
+    closeSettings();
+    await setShown(id, id === LIVE ? '' : cmpId);
+  }
+
+  // ---- tab Edities ----
+  const fmtDay = (iso) => new Date(iso).toLocaleDateString(I18n.locale, { dateStyle: 'medium' });
+  let edYearTouched = false, edBackups = [];
+  $('ed-year').oninput = () => { edYearTouched = true; };
+  $('ed-from').onchange = () => {
+    const b = edBackups.find((x) => x.id === $('ed-from').value);
+    if (!edYearTouched) $('ed-year').value = new Date(b ? b.createdAt : Date.now()).getFullYear();
+  };
+  const noFill = (el) => { el.setAttribute('autocomplete', 'off'); el.setAttribute('data-lpignore', 'true'); el.setAttribute('data-1p-ignore', ''); el.setAttribute('data-bwignore', 'true'); return el; };
+  const selectedEditions = () => [...document.querySelectorAll('#ed-list input[type=checkbox]:checked')].map((c) => c.value);
+  const syncEditionButtons = () => { $('ed-delete').disabled = selectedEditions().length === 0; };
+
+  // Aantallen als kleine bolletjes: totaal, groen, rood en (als die er zijn) niet gemarkeerd.
+  function countChips(c) {
+    const wrap = document.createElement('span');
+    wrap.className = 'ed-counts';
+    wrap.append(Object.assign(document.createElement('span'), { textContent: I18n.t('{n} huizen', { n: c.total }) }));
+    for (const k of ['green', 'red', 'none']) {
+      if (k === 'none' && !c.none) continue;
+      const chip = document.createElement('span');
+      chip.className = 'ed-chip';
+      chip.title = Wijk.STATUS[k].name;
+      const dot = document.createElement('i');
+      dot.className = `dot ${k}`;
+      const pct = c.total && k === 'green' ? ` (${Math.round((c[k] / c.total) * 100)}%)` : '';
+      chip.append(dot, `${c[k]}${pct}`);
+      wrap.append(chip);
+    }
+    return wrap;
+  }
+
+  function editionRow(e) {
+    const row = document.createElement('div');
+    row.className = 'bk-row ed-row';
+    const live = e.id === LIVE;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = e.id; cb.onchange = syncEditionButtons;
+    cb.setAttribute('aria-label', live ? '' : tName('Selecteer editie {naam}', {}, edLabel(e)));
+    cb.setAttribute('data-i18n-skip', '');
+    if (live) cb.style.visibility = 'hidden';
+    const info = document.createElement('div');
+    info.className = 'bk-info';
+    const title = document.createElement('strong');
+    title.textContent = live ? I18n.tr('Live (voorpagina)') : edLabel(e);
+    if (!live) title.setAttribute('data-i18n-skip', '');
+    const sub = document.createElement('span');
+    sub.className = 'ed-sub';
+    sub.textContent = live
+      ? I18n.tr(dirty ? 'Zoals nu op de kaart (nog niet opgeslagen)' : 'Zoals nu op de voorpagina')
+      : e.source === 'backup' && e.sourceDate
+        ? I18n.t('Bewaard {datum}, uit de backup van {bron}', { datum: fmtDay(e.createdAt), bron: fmtDate(e.sourceDate) })
+        : I18n.t('Bewaard {datum}', { datum: fmtDay(e.createdAt) });
+    sub.setAttribute('data-i18n-skip', '');
+    info.append(title, countChips(live ? SMCompare.counts(houses) : e.counts), sub);
+    const view = document.createElement('button');
+    view.append(MDI.svg('eye-outline'), Object.assign(document.createElement('span'), { textContent: I18n.tr('Bekijken') }));
+    view.onclick = () => viewEdition(e.id);
+    row.append(cb, info, view);
+    if (!live) {
+      const ed = document.createElement('button');
+      ed.append(MDI.svg('pencil')); ed.title = I18n.tr('Naam of jaartal wijzigen'); ed.setAttribute('aria-label', I18n.tr('Naam of jaartal wijzigen'));
+      ed.onclick = () => editEditionRow(row, e, cb);
+      row.append(ed);
+    }
+    return row;
+  }
+
+  // Naam en jaartal in de regel zelf wijzigen.
+  function editEditionRow(row, e, cb) {
+    const form = document.createElement('div');
+    form.className = 'bk-info ed-edit';
+    const name = noFill(Object.assign(document.createElement('input'), { type: 'text', value: e.name, maxLength: 60 }));
+    name.setAttribute('aria-label', I18n.tr('Naam'));
+    const year = noFill(Object.assign(document.createElement('input'), { type: 'number', value: e.year, min: 1900, max: 2100, step: 1 }));
+    year.setAttribute('aria-label', I18n.tr('Jaartal'));
+    form.append(name, year);
+    const ok = Object.assign(document.createElement('button'), { className: 'primary', textContent: I18n.tr('Opslaan') });
+    const cancel = Object.assign(document.createElement('button'), { textContent: I18n.tr('Annuleren') });
+    const saveEdit = async () => {
+      $('ed-list-err').textContent = '';
+      try {
+        await api(`/api/admin/editions/${e.id}`, { method: 'PUT', body: JSON.stringify({ name: name.value, year: year.value }), expectAuth: true });
+        toast(I18n.tr('Editie bijgewerkt ✔'));
+        renderEditions();
+      } catch (err) { $('ed-list-err').textContent = err.message; }
+    };
+    ok.onclick = saveEdit;
+    cancel.onclick = () => renderEditions();
+    for (const inp of [name, year]) inp.onkeydown = (ev) => { if (ev.key === 'Enter') saveEdit(); if (ev.key === 'Escape') { ev.stopPropagation(); renderEditions(); } };
+    row.replaceChildren(cb, form, ok, cancel);
+    name.focus();
+  }
+
+  async function renderEditions() {
+    $('ed-err').textContent = ''; $('ed-list-err').textContent = '';
+    if (!$('ed-year').value) $('ed-year').value = new Date().getFullYear();
+    try { edBackups = (await api('/api/admin/backups', { expectAuth: true })).filter((b) => b.houses > 0); } catch { edBackups = []; } // een lege kaart valt niet te bewaren
+    const from = $('ed-from').value;
+    const sel = $('ed-from');
+    sel.replaceChildren(sel.options[0], ...edBackups.map((b) => Object.assign(document.createElement('option'), {
+      value: b.id, textContent: `${I18n.tr('Backup')}: ${b.title ? `${b.title} · ` : ''}${fmtDate(b.createdAt)} · ${I18n.t('{n} huizen', { n: b.houses })}`,
+    })));
+    sel.value = edBackups.some((b) => b.id === from) ? from : '';
+    for (const o of [...sel.options].slice(1)) o.setAttribute('data-i18n-skip', '');
+    await loadEditions();
+    $('ed-list').replaceChildren(editionRow({ id: LIVE }), ...editionList.map(editionRow));
+    syncEditionButtons();
+  }
+
+  $('ed-save').onclick = async () => {
+    $('ed-err').textContent = '';
+    const from = $('ed-from').value;
+    if (!from && dirty && !confirmT('Er zijn niet-opgeslagen wijzigingen op de kaart. De editie bevat de laatst opgeslagen stand. Toch bewaren?')) return;
+    try {
+      const e = await post('/api/admin/editions', { name: $('ed-name').value, year: $('ed-year').value, ...(from ? { from } : {}) }, { expectAuth: true });
+      $('ed-name').value = ''; $('ed-from').value = ''; edYearTouched = false;
+      toast(tName('Editie {naam} bewaard ✔', {}, edLabel(e)));
+      renderEditions();
+    } catch (e) { $('ed-err').textContent = e.message; }
+  };
+
+  $('ed-delete').onclick = async () => {
+    const ids = selectedEditions();
+    if (!ids.length) return;
+    if (!confirmT(`${ids.length} editie(s) definitief verwijderen? Je moet dit bevestigen met je passkey.`)) return;
+    $('ed-list-err').textContent = '';
+    try {
+      const { challengeId, options } = await post('/api/admin/confirm/options');
+      const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
+      const res = await post('/api/admin/editions/delete', { ids, challengeId, response });
+      toast(`${res.deleted} editie(s) verwijderd`);
+      renderEditions();
+    } catch (e) { $('ed-list-err').textContent = friendly(e); }
+  };
+
   function initEditor(data) {
     if (map) { map.remove(); layers.clear(); handles = []; draftLayer = null; }
     $('vp').replaceChildren();
@@ -1352,6 +1697,9 @@
     // in het beheer altijd het volledige zoombereik, ook als bezoekers beperkt zijn
     map = Wijk.createMap($('vp'), data.view && { ...data.view, minZoom: 1, maxZoom: 19 }, data.houses);
     Wijk.map = map;
+    liveGroup = L.featureGroup().addTo(map);
+    overlay = L.featureGroup().addTo(map);
+    overlayKey = ''; numsBuilt = '';
     communityLayer = Wijk.createCommunityLayer(map);
     map.on('click', onMapClick);
     initLongPress();
@@ -1448,6 +1796,7 @@
     setTimeout(() => map.invalidateSize(), 0);
     pollChanges(true);
     pollCommunity();
+    loadEditions();
     if (!window.__communityTimer) window.__communityTimer = setInterval(pollCommunity, 10000);
     if (!window.__pollTimer) window.__pollTimer = setInterval(() => pollChanges(), 30000);
     if (location.hash === '#changes') openSettings('changes');
