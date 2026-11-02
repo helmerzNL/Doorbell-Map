@@ -44,3 +44,10 @@ test('woordenboek: dubbele spaties, onjuiste hoofdletters in knoppen en Nederlan
     assert.ok(!/\b(Sint Maarten)\b/.test(v), `Sint Maarten hoort Halloween te heten: ${v}`);
   }
 });
+
+test('edities: eigen namen blijven staan, sjablonen voor de vergelijking zijn vertaald', () => {
+  assert.equal(T.t('{status} alleen in {naam}', { status: 'Green', naam: 'X' }), 'Green only in X');
+  assert.equal(T.tr('De naam mag maximaal 60 tekens zijn'), 'The name can be at most 60 characters');
+  assert.equal(T.tr('Het jaartal moet tussen 1900 en 2100 liggen'), 'The year must be between 1900 and 2100');
+  assert.equal(T.tr('3 editie(s) verwijderd'), '3 edition(s) deleted');
+});
