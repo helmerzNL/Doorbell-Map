@@ -337,6 +337,8 @@ You do not have to build the code: the image is built and published automaticall
 
 **Updating:** `docker compose pull && docker compose up -d`. **Back-up:** copy the data folder (`DATA_PATH`) (or use the backups in the admin area).
 
+**Suddenly asked for the setup code again?** Then the server finds no `db.json` in `/data`: a different, empty folder is mounted. This happens for example when you move the stack folder while `DATA_PATH` is empty, because `./data` then points to a new empty folder; your data is still in the old one. Do not complete the setup. At startup the server writes to the container log which data folder it uses and whether it found data there (`Gegevens: …`); `docker inspect <container>` shows which host folder is mounted on `/data`. Set `DATA_PATH` in `.env` to the absolute path of the folder with `db.json` (or copy the contents of the old folder into the new one with `cp -a`, with the container stopped) and start again.
+
 > Is the GHCR package private? Make it public (GitHub → Packages → Package settings), or log in with
 > `docker login ghcr.io` (username + Personal Access Token with `read:packages`).
 

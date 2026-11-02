@@ -672,6 +672,7 @@
     "Op deze kaart staan geen huizen; er valt niets te bewaren": "There are no houses on this map; there is nothing to save",
     "Editie niet gevonden": "Edition not found",
     "Geen geldige edities geselecteerd": "No valid editions selected",
+    "Had je al een kaart en zie je dit na een update of na het verplaatsen van de stackmap? Dan vindt de server geen gegevens in zijn datamap. Rond dit dan niet af, maar controleer eerst <code>DATA_PATH</code> in je <code>.env</code>; de containerlog noemt welke map hij gebruikt.": "Did you already have a map and do you see this after an update or after moving the stack folder? Then the server finds no data in its data folder. Do not complete this, but first check <code>DATA_PATH</code> in your <code>.env</code>; the container log shows which folder it uses.",
     "@words": [["Sint Maarten", "Halloween"], ["Sint-Maarten", "Halloween"], ["Sintmaarten", "Halloween"]],
   };
   return { en };

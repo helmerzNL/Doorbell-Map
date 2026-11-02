@@ -22,6 +22,7 @@ body.admin #v-setup h2, body.admin #v-login h2 { margin: 0 0 6px; font-size: 1.4
 body.admin #v-setup > .muted, body.admin #v-login > .muted { font-size: .92rem; line-height: 1.55; margin: 0 0 18px; }
 body.admin #v-setup button.primary, body.admin #v-login button.primary { width: 100%; min-height: 46px; font-size: 1rem; margin-top: 6px; }
 body.admin #v-login #l-pw-go { width: 100%; min-height: 44px; }
+body.admin #v-setup > .setup-moved { font-size: .84rem; padding: 10px 12px; border-radius: var(--r-md); background: var(--warn-soft); color: var(--warn-ink); }
 body.admin #v-setup label, body.admin #v-login label { color: var(--text); margin: 14px 0 6px; }
 body.admin #v-login .back-link { margin-top: 10px; font-size: .9rem; text-decoration: none; }
 body.admin #v-login .back-link:hover { text-decoration: underline; }

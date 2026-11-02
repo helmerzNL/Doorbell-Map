@@ -26,6 +26,7 @@
   <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
   <h2>Eerste keer instellen</h2>
   <p class="muted">Maak een passkey aan om het beheer te beveiligen. Voer de installatiecode in (<code>SETUP_TOKEN</code> uit je <code>.env</code>, of uit de containerlog als je die leeg liet).</p>
+  <p class="muted setup-moved">Had je al een kaart en zie je dit na een update of na het verplaatsen van de stackmap? Dan vindt de server geen gegevens in zijn datamap. Rond dit dan niet af, maar controleer eerst <code>DATA_PATH</code> in je <code>.env</code>; de containerlog noemt welke map hij gebruikt.</p>
   <label for="s-token">Installatiecode</label>
   <input type="text" id="s-token" class="secret" autocomplete="off" spellcheck="false">
   <label for="s-name">Naam van dit apparaat</label>

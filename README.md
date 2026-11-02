@@ -335,6 +335,8 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 
 **Bijwerken:** `docker compose pull && docker compose up -d`. **Back-up:** kopieer die map (of gebruik de backups in het beheer).
 
+**Ineens weer de installatiecode?** Dan vindt de server in `/data` geen `db.json`: er is een andere, lege map gekoppeld. Dat gebeurt bijvoorbeeld als je de stackmap verplaatst terwijl `DATA_PATH` leeg is, want `./data` verhuist dan mee naar een nieuwe lege map; je gegevens staan nog in de oude. Rond de installatie dan niet af. Bij het starten zet de server in de containerlog welke datamap hij gebruikt en of daar gegevens stonden (`Gegevens: …`); `docker inspect <container>` toont welke hostmap op `/data` zit. Zet `DATA_PATH` in `.env` op het absolute pad van de map met `db.json` (of kopieer de inhoud van de oude map met `cp -a` naar de nieuwe, met de container gestopt) en start opnieuw.
+
 > Is het GHCR-package privé? Maak het publiek (GitHub → Packages → Package settings), of log in met
 > `docker login ghcr.io` (gebruikersnaam + Personal Access Token met `read:packages`).
 
