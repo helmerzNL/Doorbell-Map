@@ -239,3 +239,20 @@ body.admin #settings .ed-edit input[type=number] { flex: 0 0 6.2rem; width: 6.2r
   body.admin .ed-row .bk-info { flex-basis: calc(100% - 40px); }
   body.admin .ed-edit { flex-wrap: wrap; }
 }
+
+/* wat er bewerkt wordt (bovenaan de zijbalk): de live kaart of een editie */
+body.admin .side > .edit-target { padding: 10px 12px; font-size: .86rem; line-height: 1.4; }
+body.admin .side > .edit-target b { font-weight: 700; }
+body.admin .side > .edit-target small { display: block; margin-top: 3px; font-size: .78rem; }
+body.admin .side > .edit-target.is-edition { background: var(--warn-soft); color: var(--warn-ink); border-color: color-mix(in srgb, var(--warn-ink) 35%, transparent); }
+/* knoppen per editie, statusknoppen in de popup, edities bij een backup */
+body.admin .ed-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+body.admin .ed-pop .ed-pop-status { margin-top: 8px; min-width: 250px; white-space: normal; }
+body.admin .ed-pop .ed-pop-status button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: .8rem; min-height: 34px; white-space: normal; line-height: 1.15; }
+body.admin .ed-pop .ed-pop-status button:last-child { flex: 1.5 1 0; }
+body.admin #save .lbl-short { display: none; }
+@media (max-width: 560px) { body.admin #save .lbl-long { display: none; } body.admin #save .lbl-short { display: inline; } body.admin #settings .set-actions button { white-space: normal; } }
+body.admin .ed-pop .ed-pop-status .dot { margin: 0; }
+body.admin .ed-pop .ed-pop-status button:disabled { opacity: .55; }
+body.admin .bk-info .bk-editions { font-weight: 400; font-size: .8rem; }
+@media (max-width: 460px) { body.admin .ed-actions { flex-basis: 100%; } }
