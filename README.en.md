@@ -14,6 +14,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - [Languages and dark mode](#languages-and-dark-mode)
 - [The admin area](#the-admin-area-beheer)
 - [Settings](#settings)
+- [Editions: comparing earlier occasions](#editions-comparing-earlier-occasions)
 - [Installing as an app and offline use](#installing-as-an-app-and-offline-use)
 - [Deploy it yourself with Docker](#deploy-it-yourself-with-docker)
 - [Releases and release notes](#releases-and-release-notes)
@@ -41,7 +42,8 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - Log in with a **passkey** (optionally also with a password, confirmed with a passkey).
 - **Approve or reject** changes by residents, with **push notifications**; **block** devices (also by IP); **schedule** changes until a date and time.
 - **QR codes** per house: show, copy the link, renew, and a **printable PDF** with a card per house to deliver to the residents.
-- Settings in five clear tabs; the admin area can also be installed as its own **app**.
+- **Editions**: the map of every occasion with a name and year, created as a copy of the live map or of another edition and edited separately; switch in the admin area between *Live* and editions and compare which houses took part then and now, with the numbers. The front page never changes because of them. See [Editions](#editions-comparing-earlier-occasions).
+- Settings in six clear tabs; the admin area can also be installed as its own **app**.
 - Your own **logo** (with an optional small logo for the header), an optional **favicon** (also the icon of the installed app; the lantern by default), explanation, info box, **site and app name** and your own names for the statuses.
 - Automatic **backups** after every save attempt, with short titles and manual backups.
 - Version number and commit visible in the settings menu.
@@ -175,7 +177,7 @@ If you want residents to only be able to link **their own house**, switch on *Ch
 **Editing a house** (in the edit screen) – select a house (click, double-click or long-press) to change the colour, street, house number and note, or drag the corner points. Shortcuts: **G** green, **R** red, **Delete** delete, **Ctrl+S** save. The list on the left has a filter per street; the rest is dimmed on the map.
 
 ## Settings
-The cog (⚙) in the bar slides the settings menu into view. It is divided into five tabs (*Approve*, *Residents*, *Config*, *Security* and *Backups*, with icons from [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); each tab consists of cards with clear switches and a short explanation (also on a phone).
+The cog (⚙) in the bar slides the settings menu into view. It is divided into six tabs (*Approve*, *Residents*, *Config*, *Security*, *Editions* and *Backups*, with icons from [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); each tab consists of cards with clear switches and a short explanation (also on a phone).
 
 <table>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-goedkeuren.png"><img src="docs/screenshots/instellingen-goedkeuren.png" width="270" alt="Approve"></a><br><sub>Approve</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners.png"><img src="docs/screenshots/instellingen-bewoners.png" width="270" alt="Residents"></a><br><sub>Residents</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners-apparaten.png"><img src="docs/screenshots/instellingen-bewoners-apparaten.png" width="270" alt="Residents: devices and notifications"></a><br><sub>Residents: devices and notifications</sub></td></tr>
@@ -201,7 +203,9 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 
 **Security** – add/remove passkeys and an optional password (confirm with passkey).
 
-**Backups** – after every save attempt a backup of the layout and texts is made automatically. Give a backup a **short title** (✎, max. 40 characters, for example "Everything" or "Layout only") or make one yourself with *Make backup*. Restoring or downloading is always possible; deleting (one or several at once) must be confirmed with your passkey.
+**Editions** – create an edition with a name and year (a copy of the live map or of another edition), the numbers per edition, view or edit an edition, change the name or year, and delete. See [Editions](#editions-comparing-earlier-occasions).
+
+**Backups** – after every save attempt a backup of the layout, the texts and all editions is made automatically; each backup shows which editions it contains, and restoring also restores the editions. Give a backup a **short title** (✎, max. 40 characters, for example "Everything" or "Layout only") or make one yourself with *Make backup*. Restoring or downloading is always possible; deleting (one or several at once) must be confirmed with your passkey.
 
 **Version** – at the bottom of the menu is the version and commit of the running build (see [Version number](#version-number)).
 
@@ -255,10 +259,27 @@ also published under that tag (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). The `1.
 Locally (without a build) the app shows `dev` with the commit from git. The workflow needs write access to the repo to set the tag (it is in `docker.yml`).
 
 ## Backups
-After **every save attempt** (houses/layout, texts, map view) the server makes a JSON backup in `data/backups/` of the layout (houses + map view) and the texts (explanation, app name).
-Identical states are not stored twice and the newest 200 are kept (`MAX_BACKUPS` to change that). The logo is not part of the backups.
-A downloaded backup (.json, download button in the list) can be added again with **Upload backup**; it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); deleting asks for confirmation with your passkey.
+After **every save attempt** (houses/layout, texts, map view, editions) the server makes a JSON backup in `data/backups/` of the layout (houses + map view), the texts (explanation, app name) and **all editions**.
+Identical states are not stored twice and the newest 200 are kept (`MAX_BACKUPS` to change that). The logo is not part of the backups. The files are stored compactly; with many editions a backup gets bigger, count on roughly the size of the live map per edition.
+A downloaded backup (.json, download button in the list) can be added again with **Upload backup** (25 MB at most); it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); afterwards exactly the editions from that backup are there. A backup from before editions existed leaves the editions alone. The list shows for each backup how many and which editions it contains. Deleting asks for confirmation with your passkey.
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
+
+## Editions: comparing earlier occasions
+An **edition** is the map of one occasion (for example *Sint Maarten 2025*), with its own **name and year** and its own statuses. The **live map** is what the front page shows. Creating or editing an edition **never** changes the live map: the server writes editions only to their own files, through their own API addresses.
+
+- **Creating** – in *Settings → Editions* enter a name and year and choose *Copy of*: the **live map** or **another edition**. The new edition starts with the same houses and statuses and is independent of its source afterwards. A backup cannot be a source, and a map without houses is not copied.
+- **Switching** – as soon as there is an edition, the overview card at the top right of the map has a *Map* list: **Live** or an edition. For an edition, tap a house to see its status in that edition and on the live map, with buttons to change the status **in that edition** right away.
+- **Editing** – *Edit* opens the map chosen under *Map*. For an edition the top of the side panel says *You are editing the edition …* and the button reads *Save edition*: everything (status, street, house number, shape, adding or removing houses) is saved in that edition only. You can also view or edit an edition from the list in *Settings → Editions*. QR codes and changes by residents always belong to the live map.
+- **Comparing** – *Compare with* puts two maps side by side (an edition and live, or two editions). The houses are then coloured by taking part (green): **green in both**, **only in the older one** (orange) or **only in the newer one** (blue); the rest is shown dashed grey. The overview card shows the numbers of both maps with the difference (total, green, red, not marked) and how many houses fall into each group. Houses are matched on the house itself, and otherwise on street and house number.
+- **Overview** – the list in *Settings → Editions* shows the number of houses per edition and how many are green (with percentage), red and not marked, what it is a copy of and when it was edited, with the live map at the top. The text field icon changes the name or year; deleting is confirmed with your passkey.
+- *Hide counts* folds the overview card down to just the lists (handy on a phone).
+
+Editions are stored as separate files in `data/editions/` (at most 100) and are part of **every backup**; restoring brings them back too (see [Backups](#backups)).
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-vergelijken.png"><img src="docs/screenshots/beheer-edities-vergelijken.png" width="420" alt="Comparing an edition with the live map"></a><br><sub>Comparing an edition with the live map</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-bewerken.png"><img src="docs/screenshots/beheer-edities-bewerken.png" width="420" alt="Editing an edition"></a><br><sub>Editing an edition</sub></td></tr>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-edities.png"><img src="docs/screenshots/instellingen-edities.png" width="420" alt="Settings: Editions"></a><br><sub>Settings: Editions</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-mobiel.png"><img src="docs/screenshots/beheer-edities-mobiel.png" width="170" alt="Comparing on a phone"></a><br><sub>Comparing on a phone</sub></td></tr>
+</table>
 
 ## Name of the app
 Under *Settings* (⚙) → *Config* you also set the **name of the site** (next to the logo and in the PDF; default `SITE_TITLE`) and the **name of the app** and a short name (max. 12 characters, under the icon). Those are used when the site is installed on a phone or computer.
@@ -317,6 +338,8 @@ You do not have to build the code: the image is built and published automaticall
 5. Open `ORIGIN/beheer` and create your first passkey with the `SETUP_TOKEN` (see [Onboarding](#the-admin-area-beheer)).
 
 **Updating:** `docker compose pull && docker compose up -d`. **Back-up:** copy the data folder (`DATA_PATH`) (or use the backups in the admin area).
+
+**Suddenly asked for the setup code again?** Then the server finds no `db.json` in `/data`: a different, empty folder is mounted. This happens for example when you move the stack folder while `DATA_PATH` is empty, because `./data` then points to a new empty folder; your data is still in the old one. Do not complete the setup. At startup the server writes to the container log which data folder it uses and whether it found data there (`Gegevens: …`); `docker inspect <container>` shows which host folder is mounted on `/data`. Set `DATA_PATH` in `.env` to the absolute path of the folder with `db.json` (or copy the contents of the old folder into the new one with `cp -a`, with the container stopped) and start again.
 
 > Is the GHCR package private? Make it public (GitHub → Packages → Package settings), or log in with
 > `docker login ghcr.io` (username + Personal Access Token with `read:packages`).

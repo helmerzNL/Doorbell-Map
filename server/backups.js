@@ -1,11 +1,13 @@
 'use strict';
-// Backups van layout (huizen + kaartweergave) en teksten (uitleg, appnaam). Eén JSON-bestand per backup.
+// Backups van layout (huizen + kaartweergave), teksten (uitleg, appnaam) en alle edities. Eén JSON-bestand per backup.
+// De bestanden zijn compact (zonder inspringen): met edities erin scheelt dat ongeveer twee derde aan schijfruimte.
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const config = require('./config');
 const store = require('./store');
 const { normalizeHouse } = require('./houses');
+const editions = require('./editions');
 
 const dir = path.join(config.dataDir, 'backups');
 fs.mkdirSync(dir, { recursive: true });
@@ -25,6 +27,7 @@ function snapshotData() {
     view: view ? { ...view } : null,
     pdfView: pdfView ? { ...pdfView, center: [...pdfView.center] } : null,
     texts: { labels: { ...(settings?.labels || {}) }, siteTitle: settings?.siteTitle || '', intro: settings?.intro || '', appName: settings?.appName || '', appShortName: settings?.appShortName || '', translations: JSON.parse(JSON.stringify(settings?.translations || {})) },
+    editions: editions.all(), // alle edities, volledig (met huizen)
   };
 }
 
@@ -49,7 +52,7 @@ function create(reason, ok = true, { title = '', force = false } = {}) {
   if (!force && last && last.hash === hash) return null;
   const id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
   const tmp = `${file(id)}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify({ id, createdAt: new Date().toISOString(), reason, title: cleanTitle(title), ok, hash, ...data }, null, 2));
+  fs.writeFileSync(tmp, JSON.stringify({ id, createdAt: new Date().toISOString(), reason, title: cleanTitle(title), ok, hash, ...data }));
   fs.renameSync(tmp, file(id));
   for (const old of all.slice(0, Math.max(0, all.length + 1 - MAX_BACKUPS))) fs.rmSync(file(old), { force: true });
   return id;
@@ -61,17 +64,29 @@ function importData(data, title = '') {
   const id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
   const all = ids();
   const tmp = `${file(id)}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify({ id, createdAt: new Date().toISOString(), reason: 'Geüpload', title: cleanTitle(title) || 'Geüpload', ok: true, hash: digest(data), ...data }, null, 2));
+  fs.writeFileSync(tmp, JSON.stringify({ id, createdAt: new Date().toISOString(), reason: 'Geüpload', title: cleanTitle(title) || 'Geüpload', ok: true, hash: digest(data), ...data }));
   fs.renameSync(tmp, file(id));
   for (const old of all.slice(0, Math.max(0, all.length + 1 - MAX_BACKUPS))) fs.rmSync(file(old), { force: true });
   return id;
 }
 
-function list() {
-  return ids().reverse().map((id) => {
+// Samenvatting per backup voor de lijst. Een backup verandert na het schrijven alleen nog van titel, dus de samenvatting
+// wordt bewaard tot setTitle of verwijderen; zo hoeft de lijst niet steeds alle (met edities grote) bestanden te lezen.
+const summaries = new Map();
+function summary(id) {
+  if (!summaries.has(id)) {
     const b = read(id);
-    return { id, createdAt: b.createdAt, reason: b.reason, title: b.title || '', ok: b.ok !== false, houses: b.houses.length, hasView: !!b.view, textLength: b.texts.intro.length };
-  });
+    // edities: null bij backups van vóór de edities (die laten bij terugzetten de edities met rust)
+    const eds = Array.isArray(b.editions) ? b.editions.map((e) => ({ name: e.name, year: e.year, label: editions.label(e), houses: (e.houses || []).length })) : null;
+    summaries.set(id, { id, createdAt: b.createdAt, reason: b.reason, title: b.title || '', ok: b.ok !== false, houses: b.houses.length, hasView: !!b.view, textLength: b.texts.intro.length, editions: eds });
+  }
+  return summaries.get(id);
+}
+
+function list() {
+  const all = ids();
+  for (const id of summaries.keys()) if (!all.includes(id)) summaries.delete(id);
+  return all.reverse().map(summary);
 }
 
 // Korte titel van een backup instellen of wissen (de inhoud blijft ongewijzigd).
@@ -79,8 +94,9 @@ function setTitle(id, title) {
   const b = read(id);
   if (!b) return null;
   b.title = cleanTitle(title);
+  summaries.delete(id);
   const tmp = `${file(id)}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(b, null, 2));
+  fs.writeFileSync(tmp, JSON.stringify(b));
   fs.renameSync(tmp, file(id));
   return b.title;
 }
@@ -107,6 +123,7 @@ function restore(id) {
   db.settings.appShortName = b.texts.appShortName;
   if (b.texts.translations) db.settings.translations = JSON.parse(JSON.stringify(b.texts.translations)); // oudere backups kennen dit veld nog niet
   store.save();
+  if (Array.isArray(b.editions)) editions.replaceAll(b.editions); // oudere backups hebben geen edities: dan blijven die staan
   create('Teruggezet');
   return true;
 }

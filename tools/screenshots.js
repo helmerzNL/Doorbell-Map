@@ -534,6 +534,48 @@ async function main() {
     await ctx.close();
   }
 
+  // ---------- edities: twee eerdere keren aanmaken, vergelijken met de live kaart en bewerken ----------
+  // Als laatste, zodat de keuzelijst in de overzichtskaart niet op de andere screenshots staat.
+  console.log('edities');
+  {
+    const live = (await (await fetch(`${BASE}/api/map`)).json()).houses;
+    const shifted = (by, n) => live.slice(0, n).map((h, i) => ({ ...h, status: cycle[(i + by) % cycle.length] }));
+    await put('/api/admin/houses', { houses: shifted(3, 48) });
+    await post('/api/admin/editions', { name: 'Sint Maarten', year: 2024 });
+    await put('/api/admin/houses', { houses: shifted(1, 52) });
+    const e2025 = await post('/api/admin/editions', { name: 'Sint Maarten', year: 2025 });
+    await put('/api/admin/houses', { houses: live }); // de live kaart weer zoals hij was
+    const compare = async (p) => {
+      await p.selectOption('#hs-show', e2025.id);
+      await p.waitForTimeout(400);
+      await p.selectOption('#hs-cmp', 'live');
+      await p.waitForTimeout(800);
+    };
+    const ctx = await browser.newContext(ctxOpts(DESKTOP, { storageState: state }));
+    const p = await ctx.newPage();
+    await openAdmin(p);
+    await compare(p);
+    await shot(p, 'beheer-edities-vergelijken');
+    await openTab(p, 'editions');
+    await p.evaluate(() => document.getElementById('ed-list').closest('.set-card').scrollIntoView({ block: 'end' }));
+    await p.waitForTimeout(300);
+    await shot(p, 'instellingen-edities');
+    // een editie bewerken: de melding bovenaan de zijbalk zegt dat alleen die editie wordt opgeslagen
+    await p.click('#settings-close');
+    await p.click('#edit-toggle');
+    await p.waitForTimeout(800);
+    await clickHouse(p, 'Loerikseweg 14');
+    await p.waitForTimeout(400);
+    await shot(p, 'beheer-edities-bewerken');
+    await ctx.close();
+    const mctx = await browser.newContext(ctxOpts(MOBILE, { storageState: state }));
+    const m = await mctx.newPage();
+    await openAdmin(m);
+    await compare(m);
+    await shot(m, 'beheer-edities-mobiel');
+    await mctx.close();
+  }
+
   await browser.close();
 }
 

@@ -13,6 +13,7 @@ const store = require('./store');
 const auth = require('./auth');
 const { hashPassword, verifyPassword } = require('./password');
 const backups = require('./backups');
+const editions = require('./editions');
 const residents = require('./residents');
 const community = require('./community');
 const appVersion = require('./version');
@@ -31,7 +32,10 @@ app.use((req, res, next) => {
   });
   next();
 });
-app.use(express.json({ limit: '2mb' }));
+// JSON tot 2 MB; een geüploade backup (met alle edities) mag groter zijn en wordt pas ná de inlogcontrole gelezen.
+const BACKUP_UPLOAD_LIMIT = '25mb';
+const jsonBody = express.json({ limit: '2mb' });
+app.use((req, res, next) => (req.path === '/api/admin/backups/import' ? next() : jsonBody(req, res, next)));
 app.use(auth.sameOrigin);
 
 // ---------- challenges (in-memory, kort geldig) ----------
@@ -393,11 +397,23 @@ function sanitizeBackup(b) {
     if (!o || typeof o !== 'object' || l === 'nl') continue;
     texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), communityTitle: txt(o, 'communityTitle'), communityText: txt(o, 'communityText'), labels: labelsOf(o.labels) };
   }
-  return { houses, view, pdfView, texts };
+  // edities (backups van vóór de edities hebben dit veld niet; terugzetten laat de edities dan met rust)
+  let eds;
+  if (b.editions !== undefined) {
+    if (!Array.isArray(b.editions) || b.editions.length > editions.MAX_EDITIONS) throw new Error('De edities in de backup zijn ongeldig');
+    const seen = new Set();
+    eds = b.editions.map((e) => {
+      const clean = editions.sanitize(e, validateHouses);
+      if (seen.has(clean.id)) clean.id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+      seen.add(clean.id);
+      return clean;
+    });
+  }
+  return { houses, view, pdfView, texts, ...(eds ? { editions: eds } : {}) };
 }
 
 // Een gedownloade backup (.json) weer uploaden: komt als nieuwe backup in de lijst; terugzetten blijft een aparte stap.
-admin.post('/backups/import', (req, res) => {
+admin.post('/backups/import', express.json({ limit: BACKUP_UPLOAD_LIMIT }), (req, res) => {
   try {
     const data = sanitizeBackup(req.body);
     res.json({ id: backups.importData(data, req.body.title) });
@@ -432,6 +448,67 @@ admin.post('/backups/delete', asyncRoute(async (req, res) => {
   }
   try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
   res.json({ deleted: backups.remove(idsToDelete) });
+}));
+
+// ---------- edities: eerdere keren, met naam en jaartal, om met de live kaart te vergelijken ----------
+admin.get('/editions', (req, res) => res.json(editions.list()));
+
+admin.get('/editions/:id', (req, res) => {
+  const e = editions.read(req.params.id);
+  if (!e) return res.status(404).json({ error: 'Editie niet gevonden' });
+  res.json(e);
+});
+
+// Nieuwe editie als kopie van de live kaart (from: 'live') of van een andere editie (from: id). De live kaart
+// wordt alleen gelezen; een backup kan geen bron zijn.
+admin.post('/editions', backups.afterSave('Editie aangemaakt'), (req, res) => {
+  const body = req.body || {};
+  const from = body.from === undefined || body.from === null || body.from === '' ? editions.LIVE : body.from;
+  let houses, label;
+  if (from === editions.LIVE) {
+    houses = store.db().houses; label = 'Live';
+  } else {
+    const src = typeof from === 'string' ? editions.read(from) : null;
+    if (!src) return res.status(404).json({ error: 'De editie om te kopiëren bestaat niet (meer)' });
+    houses = src.houses; label = editions.label(src);
+  }
+  try {
+    const e = editions.create(body, houses, { id: from, label });
+    res.json({ id: e.id, name: e.name, year: e.year, counts: e.counts });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// De huizen van één editie opslaan (vanuit het bewerkscherm of de popup). Schrijft alleen in die editie, nooit in de live kaart.
+admin.put('/editions/:id/houses', backups.afterSave('Editie opgeslagen'), (req, res) => {
+  try {
+    const e = editions.setHouses(req.params.id, validateHouses(req.body?.houses));
+    if (!e) return res.status(404).json({ error: 'Editie niet gevonden' });
+    res.json({ id: e.id, counts: e.counts, houses: e.houses });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+admin.put('/editions/:id', backups.afterSave('Editie hernoemd'), (req, res) => {
+  try {
+    const e = editions.update(req.params.id, req.body || {});
+    if (!e) return res.status(404).json({ error: 'Editie niet gevonden' });
+    res.json({ id: e.id, name: e.name, year: e.year });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Verwijderen vereist bevestiging met een passkey (net als bij backups).
+admin.post('/editions/delete', backups.afterSave('Edities verwijderd'), asyncRoute(async (req, res) => {
+  const idsToDelete = req.body.ids;
+  if (!Array.isArray(idsToDelete) || !idsToDelete.length || idsToDelete.length > editions.MAX_EDITIONS || !idsToDelete.every((i) => typeof i === 'string' && editions.ID.test(i))) {
+    return res.status(400).json({ error: 'Geen geldige edities geselecteerd' });
+  }
+  try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
+  res.json({ deleted: editions.remove(idsToDelete) });
 }));
 
 admin.get('/passkeys', (req, res) => {
@@ -776,6 +853,7 @@ if (require.main === module) {
   app.listen(config.port, () => {
     console.log(`Doorbell Map draait op poort ${config.port} (${config.origin}, rpID ${config.rpID})`);
     console.log(`Versie ${appVersion.label}`);
+    console.log(store.startupReport());
     if (config.setupTokenGenerated && !store.db().passkeys.length) {
       console.log(`\nINSTALLATIE: er is geen SETUP_TOKEN ingesteld. Tijdelijke code voor de eerste passkey:\n  ${config.setupToken}\n`);
     }
