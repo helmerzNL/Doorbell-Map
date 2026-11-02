@@ -454,6 +454,19 @@
   const selectedBackups = () => [...document.querySelectorAll('#bk-list input[type=checkbox]:checked')].map((c) => c.value);
   const syncBackupButtons = () => { $('bk-delete').disabled = selectedBackups().length === 0; };
 
+  // Welke edities in een backup zitten: aantal en namen (de namen worden niet vertaald).
+  function backupEditions(list) {
+    const span = document.createElement('span');
+    span.className = 'bk-editions';
+    span.setAttribute('data-i18n-skip', '');
+    const names = list.map((e) => e.label);
+    const shown = names.length > 4 ? `${names.slice(0, 4).join(', ')} +${names.length - 4}` : names.join(', ');
+    span.textContent = !list.length ? I18n.tr('Geen edities')
+      : list.length === 1 ? tName('Editie: {naam}', {}, shown) : tName('{n} edities: {naam}', { n: list.length }, shown);
+    if (names.length > 4) span.title = names.join(', ');
+    return span;
+  }
+
   async function renderBackups() {
     $('bk-err').textContent = '';
     let list;
@@ -478,6 +491,7 @@
       const d = document.createElement('span');
       d.textContent = `${b.title ? `${fmtDate(b.createdAt)} · ` : ''}${b.reason}${b.ok ? '' : ' (mislukt)'} · ${b.houses} huizen${b.textLength ? ` · uitleg ${b.textLength} tekens` : ''}`;
       info.append(t, d);
+      if (Array.isArray(b.editions)) info.append(backupEditions(b.editions)); // backups van vóór de edities: niets tonen
       const restore = document.createElement('button');
       restore.textContent = 'Terugzetten';
       restore.onclick = () => restoreBackup(b);
@@ -510,7 +524,7 @@
     if (!f) return;
     $('bk-err').textContent = '';
     try {
-      if (f.size > 2 * 1024 * 1024) throw new Error('Het bestand is te groot (maximaal 2 MB)');
+      if (f.size > 25 * 1024 * 1024) throw new Error('Het bestand is te groot (maximaal 25 MB)');
       let data;
       try { data = JSON.parse(await f.text()); } catch { throw new Error('Dit is geen geldig backupbestand (JSON)'); }
       await post('/api/admin/backups/import', data, { expectAuth: true });
@@ -520,10 +534,14 @@
   };
 
   async function restoreBackup(b) {
-    if (!confirmT(`Backup van ${fmtDate(b.createdAt)} terugzetten?\nDe huidige staat wordt eerst zelf als backup bewaard.${dirty ? '\n\nLet op: niet-opgeslagen wijzigingen gaan verloren.' : ''}`)) return;
+    const eds = Array.isArray(b.editions) ? '\nDe edities worden ook teruggezet naar de stand van deze backup.' : '';
+    if (!confirmT(`Backup van ${fmtDate(b.createdAt)} terugzetten?\nDe huidige staat wordt eerst zelf als backup bewaard.${eds}${dirty ? '\n\nLet op: niet-opgeslagen wijzigingen gaan verloren.' : ''}`)) return;
     try {
+      if (editing) leaveEditing(); // ook een editie in bewerking kan door het terugzetten veranderen
       await post(`/api/admin/backups/${b.id}/restore`, {}, { expectAuth: true });
+      editionHouses.clear();
       await reloadFromServer();
+      await loadEditions();
       toast('Backup teruggezet ✔');
       renderBackups();
     } catch (e) { $('bk-err').textContent = e.message; }
@@ -577,7 +595,7 @@
 
   // Een goedgekeurde wijziging ook in de lokale lijst verwerken, zodat een volgende "Opslaan" hem niet overschrijft.
   function applyChange(c) {
-    const h = c && houses.find((x) => x.id === c.houseId);
+    const h = c && liveList().find((x) => x.id === c.houseId); // altijd de live kaart, ook als je een editie bewerkt
     if (h) { h.status = c.status; touchHouses(); render(); }
   }
 
@@ -795,7 +813,7 @@
     await drawQrCard();
   }
   const syncQrStatus = () => {
-    const h = qrItem && houses.find((x) => x.id === qrItem.houseId);
+    const h = qrItem && liveList().find((x) => x.id === qrItem.houseId);
     document.querySelectorAll('#qr-status button').forEach((b) => b.classList.toggle('active', !!h && b.dataset.st === h.status));
   };
   async function openHouseDialog(id, opts) {
@@ -808,6 +826,7 @@
   $('p-qr').onclick = () => { const h = selected(); if (h) openHouseDialog(h.id, { withStatus: false }); };
   $('qr-x').onclick = () => $('qr-dialog').close();
   document.querySelectorAll('#qr-status button').forEach((b) => (b.onclick = async () => {
+    if (editTarget !== LIVE) return; // de popup met QR hoort bij de live kaart
     const h = qrItem && houses.find((x) => x.id === qrItem.houseId);
     if (!h || h.status === b.dataset.st) return;
     h.status = b.dataset.st;
@@ -850,16 +869,18 @@
     $('nav-edit').setAttribute('aria-pressed', String(on));
     $('nav-edit').querySelector('.lbl').textContent = on ? 'Weergave' : 'Bewerken';
     $('nav-edit').querySelector('.ico').replaceChildren(MDI.svg(on ? 'eye-outline' : 'pencil'));
-    if (on) { showId = LIVE; cmpId = ''; if (map) { map.closePopup(); fillEditionSelects(); render(); } } // bewerken gaat altijd over de live kaart
+    if (on && map) { map.closePopup(); fillEditionSelects(); render(); }
     if (!on && typeof setMode === 'function') { setMode('select'); selectedId = null; render(); }
     setTimeout(() => map && map.invalidateSize(), 0);
   }
   $('nav-edit').onclick = () => $('edit-toggle').click();
   $('nav-cog').onclick = () => $('settings-open').click();
+  // Bewerken werkt op de kaart die rechtsboven gekozen is: de live kaart of een editie (zie startEditing).
   $('edit-toggle').onclick = async () => {
-    if (editing && dirty && !confirmT('Er zijn niet-opgeslagen wijzigingen. Toch naar de weergave? Die wijzigingen gaan verloren.')) return;
-    if (editing && dirty) await reloadFromServer();
-    setEditing(!editing);
+    if (!editing) return startEditing();
+    if (dirty && !confirmT('Er zijn niet-opgeslagen wijzigingen. Toch naar de weergave? Die wijzigingen gaan verloren.')) return;
+    if (dirty && editTarget === LIVE) await reloadFromServer(); // bij een editie vervalt alleen de kopie
+    leaveEditing();
   };
 
   $('res-swap').onchange = async () => {
@@ -1208,13 +1229,24 @@
     }
   }
 
+  // Opslaan gaat naar de kaart die bewerkt wordt: de live kaart, of (met een eigen API-adres) alleen de editie.
   async function save() {
+    const target = editTarget;
     try {
-      const res = await api('/api/admin/houses', { method: 'PUT', body: JSON.stringify({ houses }), expectAuth: true });
-      houses = res.houses;
+      if (target === LIVE) {
+        const res = await api('/api/admin/houses', { method: 'PUT', body: JSON.stringify({ houses }), expectAuth: true });
+        houses = res.houses;
+        toast('Opgeslagen ✔');
+      } else {
+        const res = await api(`/api/admin/editions/${target}/houses`, { method: 'PUT', body: JSON.stringify({ houses }), expectAuth: true });
+        if (editTarget !== target) return; // intussen gestopt met bewerken
+        houses = res.houses;
+        editionHouses.set(target, JSON.parse(JSON.stringify(res.houses)));
+        setEditionCounts(target, res.counts);
+        toast(tName('Opgeslagen in {naam} ✔', {}, keyLabel(target)));
+      }
       setDirty(false);
       render();
-      toast('Opgeslagen ✔');
     } catch (e) { toast(e.message); }
   }
 
@@ -1346,33 +1378,39 @@
     } catch { /* offline of uitgelogd: volgende poging */ }
   }
 
-  // ---------- edities: eerdere keren bekijken en vergelijken met de live kaart ----------
-  // De live kaart is wat de voorpagina toont en wat je bewerkt. Een editie is een bewaarde stand met naam en jaartal;
-  // in de weergave kies je in de overzichtskaart welke kaart je ziet en waarmee je vergelijkt (alleen bekijken).
+  // ---------- edities: de kaart van elke keer bekijken, vergelijken en bewerken ----------
+  // De live kaart is wat de voorpagina toont. Een editie is de kaart van één keer, met naam, jaartal en eigen statussen.
+  // In de weergave kies je in de overzichtskaart welke kaart je ziet en waarmee je vergelijkt. "Bewerken" werkt op de
+  // gekozen kaart: bij een editie bewerk je een kopie van die editie, en Opslaan schrijft alleen naar die editie
+  // (een eigen API-adres), zodat de live kaart nooit geraakt wordt.
   const LIVE = 'live';
-  let editionList = []; // [{ id, name, year, createdAt, source, sourceDate, counts }], nieuwste jaar eerst
+  let editionList = []; // [{ id, name, year, createdAt, updatedAt, copiedFrom, counts }], nieuwste jaar eerst
   const editionHouses = new Map(); // id -> huizen (pas opgehaald als je de editie bekijkt)
   let showId = LIVE, cmpId = ''; // wat de kaart toont, en waarmee vergeleken wordt ('' = niet vergelijken)
+  let editTarget = LIVE, liveStash = null; // wat het bewerkscherm bewerkt; de live huizen staan zolang in liveStash
   let overlay = null, overlayKey = '', overlayDrawn = [];
+  const liveList = () => (editTarget === LIVE ? houses : liveStash); // altijd de huizen van de live kaart
   const edById = (id) => editionList.find((e) => e.id === id);
   // "Sint Maarten" + 2025 -> "Sint Maarten 2025" (staat het jaartal al in de naam, dan niet dubbel)
   const edLabel = (e) => (e.name.includes(String(e.year)) ? e.name : `${e.name} ${e.year}`);
   // Sjabloon vertalen met een eigen naam erin; de naam zelf blijft zoals de beheerder hem schreef (geen vertaling of vervanging).
   const tName = (tpl, vars, name) => I18n.t(tpl, { ...vars, naam: '\u0001' }).replace('\u0001', name);
   const keyLabel = (id) => (id === LIVE ? I18n.tr('Live') : edLabel(edById(id) || { name: '?', year: '' }));
-  const housesSync = (id) => (id === LIVE ? houses : editionHouses.get(id) || []);
+  const housesSync = (id) => (id === LIVE ? liveList() : editionHouses.get(id) || []);
   async function housesOf(id) {
     if (id !== LIVE && !editionHouses.has(id)) editionHouses.set(id, (await api(`/api/admin/editions/${id}`, { expectAuth: true })).houses);
     return housesSync(id);
   }
-  // Volgorde in de tijd: eerst het jaartal, dan wanneer de editie bewaard is; de live kaart is altijd de nieuwste.
+  const setEditionCounts = (id, counts) => { const e = edById(id); if (e && counts) e.counts = counts; };
+  // Volgorde in de tijd: eerst het jaartal, dan wanneer de editie aangemaakt is; de live kaart is altijd de nieuwste.
   const timeKey = (id) => (id === LIVE ? [Infinity, ''] : [edById(id)?.year ?? 0, edById(id)?.createdAt ?? '']);
   const olderThan = (x, y) => { const a = timeKey(x), b = timeKey(y); return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]); };
 
-  // Wat de kaart nu toont: null = gewoon de live kaart; anders één editie, of een vergelijking van twee kaarten.
+  // Wat de kaart nu toont: null = de huizen van het bewerkscherm (live, of de editie die je bewerkt); anders één
+  // editie in de weergave, of een vergelijking van twee kaarten.
   function overlayState() {
     if (editing || (showId === LIVE && !cmpId)) return null;
-    if (!cmpId) return { mode: 'single', pairs: SMCompare.match(housesSync(showId), houses).filter((p) => p.a) };
+    if (!cmpId) return { mode: 'single', pairs: SMCompare.match(housesSync(showId), liveList()).filter((p) => p.a) };
     const [oldId, newId] = olderThan(showId, cmpId) ? [showId, cmpId] : [cmpId, showId];
     return { mode: 'compare', oldId, newId, shownIsOld: oldId === showId, ...SMCompare.compare(housesSync(oldId), housesSync(newId)) };
   }
@@ -1386,8 +1424,9 @@
   };
   const statusName = (h) => (h ? Wijk.STATUS[h.status]?.name || Wijk.STATUS.none.name : I18n.tr('niet op de kaart'));
 
-  // Popup bij een huis van een editie of vergelijking: adres en de status in elk van de twee kaarten.
-  function overlayPopup(h, lines) {
+  // Popup bij een huis van een editie of vergelijking: adres en de status in elk van de twee kaarten. Bij één editie
+  // (niet bij vergelijken) staan er ook knoppen om de status in die editie meteen te wijzigen.
+  function overlayPopup(h, lines, quick) {
     const box = document.createElement('div');
     box.className = 'ed-pop';
     box.setAttribute('data-i18n-skip', '');
@@ -1406,7 +1445,42 @@
       row.append(dot, name, val);
       box.append(row);
     }
+    if (quick) {
+      const seg = document.createElement('div');
+      seg.className = 'row seg ed-pop-status';
+      seg.setAttribute('role', 'group');
+      seg.setAttribute('aria-label', tName('Status in {naam}', {}, keyLabel(quick.id)));
+      for (const st of ['green', 'red', 'none']) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = h.status === st ? 'active' : '';
+        b.append(Object.assign(document.createElement('i'), { className: `dot ${st}` }), Wijk.STATUS[st].name);
+        b.onclick = () => quick.set(st, seg);
+        seg.append(b);
+      }
+      box.append(seg);
+    }
     return box;
+  }
+
+  // Snelle statuswijziging vanuit de popup: alleen in de editie die op de kaart staat (eigen API-adres).
+  async function quickStatus(id, h, st, poly, seg) {
+    if (h.status === st) return;
+    const next = (editionHouses.get(id) || []).map((x) => (x.id === h.id ? { ...x, status: st } : x));
+    seg.querySelectorAll('button').forEach((b) => (b.disabled = true));
+    try {
+      const res = await api(`/api/admin/editions/${id}/houses`, { method: 'PUT', body: JSON.stringify({ houses: next }), expectAuth: true });
+      h.status = st; // hetzelfde object als in de cache: popup, kaart en aantallen lopen zo gelijk
+      setEditionCounts(id, res.counts);
+      poly.setStyle(Wijk.houseStyle(st, false));
+      poly.getPopup()?.update();
+      numsBuilt = '';
+      render();
+      toast(tName('Opgeslagen in {naam} ✔', {}, keyLabel(id)));
+    } catch (e) {
+      toast(e.message);
+      seg.querySelectorAll('button').forEach((b) => (b.disabled = false));
+    }
   }
 
   function syncOverlay(st) {
@@ -1420,34 +1494,38 @@
       if (!st && !map.hasLayer(liveGroup)) liveGroup.addTo(map);
       // een popup mag niet achter de overzichtskaart rechtsboven vallen (op een smalle telefoon kan dat niet anders)
       const cardW = $('house-stats').offsetWidth;
-      const popupOpts = { maxWidth: 280, autoPanPaddingBottomRight: L.point(cardW && cardW < map.getSize().x / 2 ? cardW + 24 : 5, 5) };
+      const popupOpts = { maxWidth: 300, autoPanPaddingBottomRight: L.point(cardW && cardW < map.getSize().x / 2 ? cardW + 24 : 5, 5) };
+      const shown = showId;
       for (const p of st ? st.pairs : []) {
-        let h, style, lines;
+        let h, style, lines, quick = null, poly;
         if (st.mode === 'single') {
           h = p.a; style = Wijk.houseStyle(h.status, false);
-          lines = [[keyLabel(showId), p.a], [keyLabel(LIVE), p.b]];
+          lines = [[keyLabel(shown), p.a], [keyLabel(LIVE), p.b]];
+          quick = { id: shown, set: (s, seg) => quickStatus(shown, h, s, poly, seg) };
         } else {
           h = (st.shownIsOld ? p.a : p.b) || p.a || p.b; style = CMP_STYLE[p.cat];
           lines = [[keyLabel(st.oldId), p.a], [keyLabel(st.newId), p.b]];
         }
-        const poly = L.polygon(h.points, style).addTo(overlay);
-        poly.bindPopup(() => overlayPopup(h, lines), popupOpts);
+        poly = L.polygon(h.points, style).addTo(overlay);
+        poly.bindPopup(() => overlayPopup(h, lines, quick), popupOpts);
         poly.on('click', (e) => L.DomEvent.stopPropagation(e));
         overlayDrawn.push(h);
       }
     }
-    const want = st ? `ov|${overlayKey}` : `live|${numsRev}`;
+    const want = st ? `ov|${overlayKey}` : `${editTarget}|${numsRev}`;
     if (nums && numsBuilt !== want) { nums.rebuild(st ? overlayDrawn : houses); numsBuilt = want; }
   }
 
-  // De hint onderaan de kaart hoort bij wat er getoond wordt (live: popup met QR; editie: alleen bekijken).
+  // De hint onderaan de kaart hoort bij wat er getoond wordt (live: popup met QR; editie: status wijzigen of vergelijken).
   let hintFor = null;
-  function syncViewHint(overlayOn) {
-    if (hintFor === overlayOn) return;
-    hintFor = overlayOn;
-    $('view-hint').textContent = overlayOn
-      ? 'Klik of tik op een huis voor de status in elke kaart'
-      : 'Dubbelklik (of druk lang) op een huis voor de status en de QR-code';
+  function syncViewHint(mode) {
+    if (hintFor === mode) return;
+    hintFor = mode;
+    $('view-hint').textContent = mode === 'single'
+      ? 'Klik of tik op een huis om de status in deze editie te wijzigen'
+      : mode === 'compare'
+        ? 'Klik of tik op een huis voor de status in elke kaart'
+        : 'Dubbelklik (of druk lang) op een huis voor de status en de QR-code';
   }
   let statsFolded = false;
   try { statsFolded = localStorage.getItem('sm-admin-stats-folded') === '1'; } catch {}
@@ -1465,7 +1543,7 @@
 
   // Overzichtskaart rechtsboven: keuze van de kaart, de aantallen, en bij vergelijken het verschil.
   function renderStats(st = map ? overlayState() : null) {
-    syncViewHint(!!st);
+    syncViewHint(st ? st.mode : null);
     const list = st && st.mode === 'single' ? st.pairs.map((p) => p.a) : houses;
     Wijk.renderStats(list, statsShow);
     const withEditions = editionList.length > 0 && !editing;
@@ -1511,16 +1589,20 @@
     $('hs-compare').replaceChildren(head, grid, legend);
   }
 
-  function fillEditionSelects() {
+  // Opties: de live kaart en alle edities (eigen namen worden niet vertaald).
+  function editionOptions(skip) {
     const opt = (value, text, isName) => {
       const o = Object.assign(document.createElement('option'), { value, textContent: text });
-      if (isName) o.setAttribute('data-i18n-skip', ''); // eigen namen niet vertalen
+      if (isName) o.setAttribute('data-i18n-skip', '');
       return o;
     };
-    const all = [[LIVE, I18n.tr('Live (voorpagina)'), false], ...editionList.map((e) => [e.id, edLabel(e), true])];
-    $('hs-show').replaceChildren(...all.map(([v, t, n]) => opt(v, t, n)));
+    return [[LIVE, I18n.tr('Live (voorpagina)'), false], ...editionList.map((e) => [e.id, edLabel(e), true])]
+      .filter(([v]) => v !== skip).map(([v, t, n]) => opt(v, t, n));
+  }
+  function fillEditionSelects() {
+    $('hs-show').replaceChildren(...editionOptions());
     $('hs-show').value = showId;
-    $('hs-cmp').replaceChildren(opt('', I18n.tr('Niet vergelijken'), false), ...all.filter(([v]) => v !== showId).map(([v, t, n]) => opt(v, t, n)));
+    $('hs-cmp').replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: I18n.tr('Niet vergelijken') }), ...editionOptions(showId));
     $('hs-cmp').value = cmpId;
   }
 
@@ -1538,31 +1620,77 @@
 
   async function loadEditions() {
     try { editionList = await api('/api/admin/editions', { expectAuth: true }); } catch { return; }
+    if (editTarget !== LIVE && !edById(editTarget)) { // de editie die je bewerkte bestaat niet meer
+      toast(I18n.tr('Deze editie bestaat niet meer; terug naar de live kaart'));
+      leaveEditing();
+    }
     if (showId !== LIVE && !edById(showId)) showId = LIVE;
     if (cmpId && cmpId !== LIVE && !edById(cmpId)) cmpId = '';
     for (const id of editionHouses.keys()) if (!edById(id)) editionHouses.delete(id);
     fillEditionSelects();
-    if (map) { overlayKey = '-'; render(); } // namen kunnen veranderd zijn: popups en overzicht opnieuw opbouwen
+    if (map) { overlayKey = '-'; syncEditTarget(); render(); } // namen kunnen veranderd zijn: popups en overzicht opnieuw opbouwen
   }
 
-  // Vanuit de lijst in de instellingen een editie (of live) op de kaart zetten.
-  async function viewEdition(id) {
+  // ---- bewerken: de live kaart of een editie ----
+  // Kaartvlakken opnieuw opbouwen: een editie kan dezelfde id's hebben als de live kaart maar een andere vorm.
+  function resetLayers() {
+    liveGroup.clearLayers(); layers.clear();
+    handles.forEach((m) => m.remove()); handles = [];
+    selectedId = null; draft = [];
+    touchHouses();
+  }
+  // Wat er bewerkt wordt, bovenaan de zijbalk en op de knop Opslaan.
+  function syncEditTarget() {
+    const ed = editTarget !== LIVE;
+    const box = $('edit-target');
+    box.classList.toggle('is-edition', ed);
+    const name = Object.assign(document.createElement('b'), { textContent: keyLabel(editTarget) });
+    if (ed) name.setAttribute('data-i18n-skip', '');
+    box.replaceChildren(
+      Object.assign(document.createElement('span'), { textContent: ed ? I18n.tr('Je bewerkt de editie') : I18n.tr('Je bewerkt de live kaart (voorpagina)') }),
+      ...(ed ? [' ', name, Object.assign(document.createElement('small'), { textContent: I18n.tr('Opslaan bewaart alleen in deze editie; de voorpagina verandert niet.') })] : []),
+    );
+    // op een smal scherm alleen "Opslaan" (de melding in de zijbalk zegt al dat het om de editie gaat)
+    $('save').replaceChildren(...(ed ? [Object.assign(document.createElement('span'), { className: 'lbl-long', textContent: 'Editie opslaan' }), Object.assign(document.createElement('span'), { className: 'lbl-short', textContent: 'Opslaan' })] : ['Opslaan']));
+    $('save').classList.toggle('is-edition', ed);
+    $('p-qr').classList.toggle('hidden', ed); // QR-codes horen bij de live kaart
+  }
+  // Bewerken starten op de kaart die gekozen is (bij vergelijken: de kaart bij "Kaart").
+  async function startEditing() {
+    const target = showId;
+    if (target !== LIVE) {
+      try { await housesOf(target); } catch (e) { toast(e.message); return; }
+      liveStash = houses;
+      houses = JSON.parse(JSON.stringify(editionHouses.get(target))); // een kopie: pas Opslaan schrijft naar de editie
+    }
+    editTarget = target; cmpId = '';
+    resetLayers();
+    setDirty(false);
+    syncEditTarget();
+    setEditing(true);
+  }
+  // Terug naar de weergave; niet-opgeslagen wijzigingen in een editie vervallen (de editie zelf is niet aangeraakt).
+  function leaveEditing() {
+    if (editTarget !== LIVE) { houses = liveStash; liveStash = null; }
+    editTarget = LIVE;
+    resetLayers();
+    setDirty(false);
+    syncEditTarget();
+    setEditing(false);
+  }
+  // Vanuit de lijst in de instellingen: een kaart bekijken of bewerken.
+  async function viewEdition(id, edit = false) {
     if (editing) {
       await $('edit-toggle').onclick(); // vraagt zelf om bevestiging bij niet-opgeslagen wijzigingen
       if (editing) return;
     }
     closeSettings();
-    await setShown(id, id === LIVE ? '' : cmpId);
+    await setShown(id, id === LIVE || edit ? '' : cmpId);
+    if (edit && showId === id) await startEditing();
   }
 
   // ---- tab Edities ----
   const fmtDay = (iso) => new Date(iso).toLocaleDateString(I18n.locale, { dateStyle: 'medium' });
-  let edYearTouched = false, edBackups = [];
-  $('ed-year').oninput = () => { edYearTouched = true; };
-  $('ed-from').onchange = () => {
-    const b = edBackups.find((x) => x.id === $('ed-from').value);
-    if (!edYearTouched) $('ed-year').value = new Date(b ? b.createdAt : Date.now()).getFullYear();
-  };
   const noFill = (el) => { el.setAttribute('autocomplete', 'off'); el.setAttribute('data-lpignore', 'true'); el.setAttribute('data-1p-ignore', ''); el.setAttribute('data-bwignore', 'true'); return el; };
   const selectedEditions = () => [...document.querySelectorAll('#ed-list input[type=checkbox]:checked')].map((c) => c.value);
   const syncEditionButtons = () => { $('ed-delete').disabled = selectedEditions().length === 0; };
@@ -1586,6 +1714,15 @@
     return wrap;
   }
 
+  // Tweede regel bij een editie: wanneer aangemaakt, waarvan het een kopie is en of hij daarna bewerkt is.
+  function editionSub(e) {
+    const parts = [e.copiedFrom
+      ? tName('Aangemaakt {datum} als kopie van {naam}', { datum: fmtDay(e.createdAt) }, e.copiedFrom.id === LIVE ? I18n.tr('Live') : e.copiedFrom.label)
+      : I18n.t('Aangemaakt {datum}', { datum: fmtDay(e.createdAt) })];
+    if (e.updatedAt) parts.push(I18n.t('bewerkt {datum}', { datum: fmtDay(e.updatedAt) }));
+    return parts.join(' · ');
+  }
+
   function editionRow(e) {
     const row = document.createElement('div');
     row.className = 'bk-row ed-row';
@@ -1602,23 +1739,25 @@
     if (!live) title.setAttribute('data-i18n-skip', '');
     const sub = document.createElement('span');
     sub.className = 'ed-sub';
-    sub.textContent = live
-      ? I18n.tr(dirty ? 'Zoals nu op de kaart (nog niet opgeslagen)' : 'Zoals nu op de voorpagina')
-      : e.source === 'backup' && e.sourceDate
-        ? I18n.t('Bewaard {datum}, uit de backup van {bron}', { datum: fmtDay(e.createdAt), bron: fmtDate(e.sourceDate) })
-        : I18n.t('Bewaard {datum}', { datum: fmtDay(e.createdAt) });
+    sub.textContent = live ? I18n.tr(dirty && editTarget === LIVE ? 'Zoals nu op de kaart (nog niet opgeslagen)' : 'Zoals nu op de voorpagina') : editionSub(e);
     sub.setAttribute('data-i18n-skip', '');
-    info.append(title, countChips(live ? SMCompare.counts(houses) : e.counts), sub);
-    const view = document.createElement('button');
-    view.append(MDI.svg('eye-outline'), Object.assign(document.createElement('span'), { textContent: I18n.tr('Bekijken') }));
-    view.onclick = () => viewEdition(e.id);
-    row.append(cb, info, view);
+    info.append(title, countChips(live ? SMCompare.counts(liveList()) : e.counts), sub);
+    const btn = (icon, text, onclick) => {
+      const b = document.createElement('button');
+      b.append(MDI.svg(icon), Object.assign(document.createElement('span'), { textContent: I18n.tr(text) }));
+      b.onclick = onclick;
+      return b;
+    };
+    const actions = document.createElement('div');
+    actions.className = 'ed-actions';
+    actions.append(btn('eye-outline', 'Bekijken', () => viewEdition(e.id)), btn('pencil', 'Bewerken', () => viewEdition(e.id, true)));
     if (!live) {
-      const ed = document.createElement('button');
-      ed.append(MDI.svg('pencil')); ed.title = I18n.tr('Naam of jaartal wijzigen'); ed.setAttribute('aria-label', I18n.tr('Naam of jaartal wijzigen'));
-      ed.onclick = () => editEditionRow(row, e, cb);
-      row.append(ed);
+      const ren = document.createElement('button');
+      ren.append(MDI.svg('form-textbox')); ren.title = I18n.tr('Naam of jaartal wijzigen'); ren.setAttribute('aria-label', I18n.tr('Naam of jaartal wijzigen'));
+      ren.onclick = () => editEditionRow(row, e, cb);
+      actions.append(ren);
     }
+    row.append(cb, info, actions);
     return row;
   }
 
@@ -1651,27 +1790,22 @@
   async function renderEditions() {
     $('ed-err').textContent = ''; $('ed-list-err').textContent = '';
     if (!$('ed-year').value) $('ed-year').value = new Date().getFullYear();
-    try { edBackups = (await api('/api/admin/backups', { expectAuth: true })).filter((b) => b.houses > 0); } catch { edBackups = []; } // een lege kaart valt niet te bewaren
-    const from = $('ed-from').value;
-    const sel = $('ed-from');
-    sel.replaceChildren(sel.options[0], ...edBackups.map((b) => Object.assign(document.createElement('option'), {
-      value: b.id, textContent: `${I18n.tr('Backup')}: ${b.title ? `${b.title} · ` : ''}${fmtDate(b.createdAt)} · ${I18n.t('{n} huizen', { n: b.houses })}`,
-    })));
-    sel.value = edBackups.some((b) => b.id === from) ? from : '';
-    for (const o of [...sel.options].slice(1)) o.setAttribute('data-i18n-skip', '');
     await loadEditions();
+    const from = $('ed-from').value || LIVE;
+    $('ed-from').replaceChildren(...editionOptions());
+    $('ed-from').value = from === LIVE || edById(from) ? from : LIVE;
     $('ed-list').replaceChildren(editionRow({ id: LIVE }), ...editionList.map(editionRow));
     syncEditionButtons();
   }
 
   $('ed-save').onclick = async () => {
     $('ed-err').textContent = '';
-    const from = $('ed-from').value;
-    if (!from && dirty && !confirmT('Er zijn niet-opgeslagen wijzigingen op de kaart. De editie bevat de laatst opgeslagen stand. Toch bewaren?')) return;
+    const from = $('ed-from').value || LIVE;
+    if (from === LIVE && dirty && editTarget === LIVE && !confirmT('Er zijn niet-opgeslagen wijzigingen op de live kaart. De nieuwe editie krijgt de laatst opgeslagen stand. Toch aanmaken?')) return;
     try {
-      const e = await post('/api/admin/editions', { name: $('ed-name').value, year: $('ed-year').value, ...(from ? { from } : {}) }, { expectAuth: true });
-      $('ed-name').value = ''; $('ed-from').value = ''; edYearTouched = false;
-      toast(tName('Editie {naam} bewaard ✔', {}, edLabel(e)));
+      const e = await post('/api/admin/editions', { name: $('ed-name').value, year: $('ed-year').value, from }, { expectAuth: true });
+      $('ed-name').value = '';
+      toast(tName('Editie {naam} aangemaakt ✔', {}, edLabel(e)));
       renderEditions();
     } catch (e) { $('ed-err').textContent = e.message; }
   };
@@ -1771,7 +1905,7 @@
   async function reloadFromServer() {
     const raw = await api('/api/map');
     const data = I18n.localize(raw);
-    houses = data.houses;
+    if (editTarget === LIVE) houses = data.houses; else liveStash = data.houses; // een editie in bewerking blijft staan
     savedView = data.view; savedPdf = data.pdfView || null;
     org = { intro: raw.intro || '', logo: raw.logo, logoSmall: raw.logoSmall || null, favicon: raw.favicon || null, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
@@ -1790,6 +1924,7 @@
     org = { intro: raw.intro || '', logo: raw.logo, logoSmall: raw.logoSmall || null, favicon: raw.favicon || null, siteTitle: raw.siteTitle || '', appName: raw.appName || '', appShortName: raw.appShortName || '', labels: raw.labels };
     Wijk.setLabels(data.labels);
     initEditor(data);
+    syncEditTarget();
     setDirty(false);
     setMode('select');
     setEditing(false); // standaard de weergave; "Bewerken" opent het bewerkscherm

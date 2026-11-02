@@ -26,6 +26,7 @@
   <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
   <h2>Eerste keer instellen</h2>
   <p class="muted">Maak een passkey aan om het beheer te beveiligen. Voer de installatiecode in (<code>SETUP_TOKEN</code> uit je <code>.env</code>, of uit de containerlog als je die leeg liet).</p>
+  <p class="muted setup-moved">Had je al een kaart en zie je dit na een update of na het verplaatsen van de stackmap? Dan vindt de server geen gegevens in zijn datamap. Rond dit dan niet af, maar controleer eerst <code>DATA_PATH</code> in je <code>.env</code>; de containerlog noemt welke map hij gebruikt.</p>
   <label for="s-token">Installatiecode</label>
   <input type="text" id="s-token" class="secret" autocomplete="off" spellcheck="false">
   <label for="s-name">Naam van dit apparaat</label>
@@ -69,6 +70,7 @@
 </header>
 <div class="editor">
   <aside class="side">
+    <div id="edit-target" class="edit-target" role="status"></div>
     <form id="search-form">
       <div class="row"><input type="text" id="search" placeholder="Zoek adres of plaats…" style="flex:3"><button style="flex:1">Zoek</button></div>
     </form>
@@ -126,7 +128,7 @@
     <div class="hs-editions" id="hs-editions" hidden>
       <label class="hs-ed-field"><span>Kaart</span><select id="hs-show" aria-label="Welke kaart tonen: live of een eerdere editie"></select></label>
       <label class="hs-ed-field"><span>Vergelijk met</span><select id="hs-cmp" aria-label="Vergelijk met een andere editie"></select></label>
-      <p class="hs-ed-note" id="hs-ed-note" hidden>Alleen bekijken. Bewerken en de voorpagina gaan over de live kaart.</p>
+      <p class="hs-ed-note" id="hs-ed-note" hidden>De voorpagina toont altijd de live kaart. <em>Bewerken</em> past de kaart aan die hier gekozen is.</p>
       <button type="button" id="hs-fold" class="hs-fold" aria-controls="house-stats" aria-expanded="true"></button>
     </div>
     <div id="hs-plain">
@@ -442,20 +444,20 @@
     <!-- ===== Edities ===== -->
     <section data-panel="editions" class="hidden">
       <div class="set-card">
-        <header class="set-card-head"><h4>Editie bewaren</h4><p>Bewaar de kaart van een keer (bijvoorbeeld na afloop van het evenement) als editie, met een eigen naam en jaartal. Daarna kies je rechtsboven op de kaart tussen <em>Live</em> en die editie, en vergelijk je welke huizen toen en nu meedoen. Een editie verandert de live kaart nooit.</p></header>
+        <header class="set-card-head"><h4>Editie aanmaken</h4><p>Een editie is de kaart van één keer, met een eigen naam en jaartal en eigen statussen. Je maakt hem aan als kopie van de live kaart of van een andere editie. Rechtsboven op de kaart kies je daarna welke kaart je ziet; met <em>Bewerken</em> pas je de gekozen editie aan. De live kaart (voorpagina) verandert daarbij nooit.</p></header>
         <div class="ed-grid">
           <div class="field"><label for="ed-name">Naam</label><input type="text" id="ed-name" maxlength="60" placeholder="Bijvoorbeeld: Sint Maarten"></div>
           <div class="field"><label for="ed-year">Jaartal</label><input type="number" id="ed-year" min="1900" max="2100" step="1" inputmode="numeric"></div>
         </div>
-        <div class="field"><label for="ed-from">Bewaren van</label><select id="ed-from" class="ed-from"><option value="">De live kaart zoals die nu is</option></select>
-          <div class="set-hint">Is een eerdere keer al voorbij en is de kaart daarna gewijzigd? Kies dan de backup van dat moment (zie ook <em>Backups</em>; een gedownloade backup kun je daar eerst uploaden).</div>
+        <div class="field"><label for="ed-from">Kopie van</label><select id="ed-from" class="ed-from"></select>
+          <div class="set-hint">De nieuwe editie begint met dezelfde huizen en statussen als de gekozen kaart. Daarna staan ze los van elkaar.</div>
         </div>
         <p class="error" id="ed-err"></p>
-        <div class="set-actions"><button id="ed-save" class="primary"><i data-mdi="content-save-outline"></i> Editie bewaren</button></div>
+        <div class="set-actions"><button id="ed-save" class="primary"><i data-mdi="content-save-outline"></i> Editie aanmaken</button></div>
       </div>
 
       <div class="set-card">
-        <header class="set-card-head"><h4>Edities</h4><p>De aantallen per keer, met de live kaart bovenaan. <em>Bekijken</em> toont een editie op de kaart (alleen bekijken); met ✎ wijzig je de naam of het jaartal.</p></header>
+        <header class="set-card-head"><h4>Edities</h4><p>De aantallen per keer, met de live kaart bovenaan. <em>Bekijken</em> zet de kaart op het scherm, <em>Bewerken</em> opent hem in het bewerkscherm (bij een editie wordt alleen die editie opgeslagen). Naam of jaartal wijzig je met het tekstveld-icoon.</p></header>
         <div id="ed-list" class="bk-list"></div>
         <p class="error" id="ed-list-err"></p>
         <div class="set-actions"><button id="ed-delete" class="danger" disabled>Geselecteerde verwijderen (bevestig met passkey)</button></div>
@@ -465,7 +467,7 @@
     <!-- ===== Backups ===== -->
     <section data-panel="backups" class="hidden">
       <div class="set-card">
-        <header class="set-card-head"><h4>Backups</h4><p>Na elke opslagpoging wordt automatisch een backup gemaakt van de layout (huizen en kaartweergave) én de teksten (uitleg, namen, statusnamen). Het logo valt erbuiten; de nieuwste 200 blijven bewaard.</p></header>
+        <header class="set-card-head"><h4>Backups</h4><p>Na elke opslagpoging wordt automatisch een backup gemaakt van de layout (huizen en kaartweergave), de teksten (uitleg, namen, statusnamen) én alle edities. Terugzetten zet ook de edities terug. Het logo valt erbuiten; de nieuwste 200 blijven bewaard.</p></header>
         <div class="field"><label for="bk-title">Nieuwe backup met titel</label>
           <div class="row row-tight"><input type="text" id="bk-title" maxlength="40" placeholder="Bijvoorbeeld: Alles, voor de actie" aria-label="Titel voor een nieuwe backup"><button id="bk-make">Backup maken</button></div>
           <div class="set-hint">Met een korte titel (ook later via de potloodknop) herken je een backup makkelijk.</div>

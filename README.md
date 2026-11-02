@@ -40,7 +40,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - Inloggen met **passkey** (optioneel ook met wachtwoord, bevestigd met een passkey).
 - Wijzigingen van bewoners **goedkeuren of afwijzen**, met **pushmeldingen**; apparaten **blokkeren** (ook op IP); wijzigen **plannen** tot een datum en tijd.
 - **QR-codes** per huis: tonen, link kopiëren, vernieuwen en een **afdrukbare PDF** met een kaartje per huis om bij de bewoners te bezorgen.
-- **Edities**: bewaar de kaart van elke keer met naam en jaartal, wissel in het beheer tussen *Live* en eerdere edities en vergelijk welke huizen toen en nu meedoen, met de aantallen. Zie [Edities](#edities-eerdere-keren-vergelijken).
+- **Edities**: de kaart van elke keer met naam en jaartal, aangemaakt als kopie van de live kaart of een andere editie en los te bewerken; wissel in het beheer tussen *Live* en edities en vergelijk welke huizen toen en nu meedoen, met de aantallen. De voorpagina verandert daar nooit door. Zie [Edities](#edities-eerdere-keren-vergelijken).
 - Instellingen in zes overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
 - Eigen **logo** (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (ook het icoon van de geïnstalleerde app; standaard de lantaarn), uitleg, infovlak, **site- en appnaam** en eigen namen voor de statussen.
 - Automatische **backups** na elke opslagpoging, met korte titels en handmatige backups.
@@ -201,9 +201,9 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 
 **Beveiliging** – passkeys toevoegen/verwijderen en een optioneel wachtwoord (bevestigen met passkey).
 
-**Edities** – de kaart van een keer bewaren met naam en jaartal (van de live kaart of uit een backup), de aantallen per editie, naam of jaartal wijzigen en verwijderen. Zie [Edities](#edities-eerdere-keren-vergelijken).
+**Edities** – een editie aanmaken met naam en jaartal (kopie van de live kaart of van een andere editie), de aantallen per editie, een editie bekijken of bewerken, naam of jaartal wijzigen en verwijderen. Zie [Edities](#edities-eerdere-keren-vergelijken).
 
-**Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout en teksten. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey.
+**Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout, de teksten en alle edities; bij elke backup staat welke edities erin zitten, en terugzetten zet ook de edities terug. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey.
 
 **Versie** – onderin het menu staat de versie en commit van de draaiende build (zie [Versienummer](#versienummer)).
 
@@ -257,24 +257,26 @@ ook onder die tag gepubliceerd (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). Het de
 Lokaal (zonder build) toont de app `dev` met de commit uit git. De workflow heeft schrijfrechten op de repo nodig om de tag te zetten (staat in `docker.yml`).
 
 ## Backups
-Na **elke opslagpoging** (huizen/layout, teksten, kaartweergave) maakt de server een JSON-backup in `data/backups/` van de layout (huizen + kaartweergave) en de teksten (uitleg, appnaam).
-Identieke staten worden niet dubbel bewaard en de nieuwste 200 blijven staan (`MAX_BACKUPS` om dat aan te passen). Het logo valt buiten de backups.
-Een gedownloade backup (.json, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen; hij komt als nieuwe backup in de lijst. Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); verwijderen vraagt een bevestiging met je passkey.
+Na **elke opslagpoging** (huizen/layout, teksten, kaartweergave, edities) maakt de server een JSON-backup in `data/backups/` van de layout (huizen + kaartweergave), de teksten (uitleg, appnaam) en **alle edities**.
+Identieke staten worden niet dubbel bewaard en de nieuwste 200 blijven staan (`MAX_BACKUPS` om dat aan te passen). Het logo valt buiten de backups. De bestanden zijn compact opgeslagen; met veel edities wordt een backup groter, reken op ongeveer de grootte van de live kaart per editie.
+Een gedownloade backup (.json, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen (maximaal 25 MB); hij komt als nieuwe backup in de lijst. Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); daarna staan er precies de edities uit die backup. Een backup van vóór de edities laat de edities met rust. In de lijst staat bij elke backup hoeveel en welke edities erin zitten. Verwijderen vraagt een bevestiging met je passkey.
 Elke backup kan een **korte titel** krijgen (max. 40 tekens, knop ✎), bijvoorbeeld "Alles" of "Alleen layout". Met *Backup maken* maak je handmatig een backup met een eigen titel, ook als er niets is veranderd.
 
 ## Edities: eerdere keren vergelijken
-Een **editie** is een bewaarde stand van de kaart van één keer (bijvoorbeeld *Sint Maarten 2025*), met een eigen **naam en jaartal**. De **live kaart** is wat de voorpagina toont en wat je bewerkt; een editie verandert die nooit.
+Een **editie** is de kaart van één keer (bijvoorbeeld *Sint Maarten 2025*), met een eigen **naam en jaartal** en eigen statussen. De **live kaart** is wat de voorpagina toont. Een editie aanmaken of bewerken verandert de live kaart **nooit**: de server schrijft edities alleen naar hun eigen bestanden, via eigen API-adressen.
 
-- **Bewaren** – in *Instellingen → Edities* geef je een naam en jaartal en kies je *Bewaren van*: de live kaart zoals die nu is, of een **backup** van een eerder moment (handig als het evenement al voorbij is en de kaart daarna is gewijzigd; een gedownloade backup upload je eerst bij *Backups*). Een lege kaart kun je niet als editie bewaren.
-- **Wisselen** – zodra er een editie is, staat in de overzichtskaart rechtsboven op de kaart een keuzelijst *Kaart*: **Live** of een eerdere editie. Een editie bekijk je alleen; tik op een huis voor de status in die editie en op de live kaart. *Bewerken* zet de kaart altijd terug op live.
+- **Aanmaken** – in *Instellingen → Edities* geef je een naam en jaartal en kies je *Kopie van*: de **live kaart** of een **andere editie**. De nieuwe editie begint met dezelfde huizen en statussen en staat daarna los van de bron. Een backup kan geen bron zijn, en een kaart zonder huizen kopieer je niet.
+- **Wisselen** – zodra er een editie is, staat in de overzichtskaart rechtsboven op de kaart een keuzelijst *Kaart*: **Live** of een editie. Tik bij een editie op een huis voor de status in die editie en op de live kaart, met knoppen om de status **in die editie** meteen te wijzigen.
+- **Bewerken** – *Bewerken* opent de kaart die bij *Kaart* gekozen is. Bij een editie staat bovenaan de zijbalk *Je bewerkt de editie …* en heet de knop *Editie opslaan*: alles (status, straat, huisnummer, vorm, huizen toevoegen of verwijderen) wordt alleen in die editie opgeslagen. Ook vanuit de lijst in *Instellingen → Edities* kun je een editie bekijken of bewerken. QR-codes en wijzigingen van bewoners horen altijd bij de live kaart.
 - **Vergelijken** – met *Vergelijk met* zet je twee kaarten naast elkaar (een editie met live, of twee edities). De huizen kleuren dan naar meedoen (groen): **groen in beide**, **alleen in de oudere** (oranje) of **alleen in de nieuwere** (blauw); de rest staat grijs gestippeld. De overzichtskaart toont de aantallen van beide kaarten met het verschil (totaal, groen, rood, niet gemarkeerd) en hoeveel huizen in elke groep vallen. Huizen worden gekoppeld op het huis zelf, en anders op straat en huisnummer.
-- **Overzicht** – de lijst in *Instellingen → Edities* toont per editie het aantal huizen en hoeveel groen (met percentage), rood en niet gemarkeerd, met de live kaart bovenaan. Met ✎ wijzig je naam of jaartal; verwijderen bevestig je met je passkey.
+- **Overzicht** – de lijst in *Instellingen → Edities* toont per editie het aantal huizen en hoeveel groen (met percentage), rood en niet gemarkeerd, waarvan hij een kopie is en wanneer hij bewerkt is, met de live kaart bovenaan. Naam of jaartal wijzig je met het tekstveld-icoon; verwijderen bevestig je met je passkey.
 - *Aantallen verbergen* klapt de overzichtskaart in tot alleen de keuzelijsten (handig op een telefoon).
 
-Edities staan als losse bestanden in `data/editions/` (maximaal 100) en vallen buiten de backups; neem die map mee als je de datamap veiligstelt.
+Edities staan als losse bestanden in `data/editions/` (maximaal 100) en zitten **in elke backup**; terugzetten zet ze ook terug (zie [Backups](#backups)).
 
 <table>
-<tr><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-vergelijken.png"><img src="docs/screenshots/beheer-edities-vergelijken.png" width="420" alt="Een editie vergelijken met de live kaart"></a><br><sub>Een editie vergelijken met de live kaart</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-edities.png"><img src="docs/screenshots/instellingen-edities.png" width="420" alt="Instellingen: Edities"></a><br><sub>Instellingen: Edities</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-mobiel.png"><img src="docs/screenshots/beheer-edities-mobiel.png" width="170" alt="Vergelijken op een telefoon"></a><br><sub>Vergelijken op een telefoon</sub></td></tr>
+<tr><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-vergelijken.png"><img src="docs/screenshots/beheer-edities-vergelijken.png" width="420" alt="Een editie vergelijken met de live kaart"></a><br><sub>Een editie vergelijken met de live kaart</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-bewerken.png"><img src="docs/screenshots/beheer-edities-bewerken.png" width="420" alt="Een editie bewerken"></a><br><sub>Een editie bewerken</sub></td></tr>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-edities.png"><img src="docs/screenshots/instellingen-edities.png" width="420" alt="Instellingen: Edities"></a><br><sub>Instellingen: Edities</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-edities-mobiel.png"><img src="docs/screenshots/beheer-edities-mobiel.png" width="170" alt="Vergelijken op een telefoon"></a><br><sub>Vergelijken op een telefoon</sub></td></tr>
 </table>
 
 ## Naam van de app
@@ -334,6 +336,8 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 5. Open `ORIGIN/beheer` en maak je eerste passkey aan met de `SETUP_TOKEN` (zie [Onboarding](#het-beheer-beheer)).
 
 **Bijwerken:** `docker compose pull && docker compose up -d`. **Back-up:** kopieer die map (of gebruik de backups in het beheer).
+
+**Ineens weer de installatiecode?** Dan vindt de server in `/data` geen `db.json`: er is een andere, lege map gekoppeld. Dat gebeurt bijvoorbeeld als je de stackmap verplaatst terwijl `DATA_PATH` leeg is, want `./data` verhuist dan mee naar een nieuwe lege map; je gegevens staan nog in de oude. Rond de installatie dan niet af. Bij het starten zet de server in de containerlog welke datamap hij gebruikt en of daar gegevens stonden (`Gegevens: …`); `docker inspect <container>` toont welke hostmap op `/data` zit. Zet `DATA_PATH` in `.env` op het absolute pad van de map met `db.json` (of kopieer de inhoud van de oude map met `cp -a` naar de nieuwe, met de container gestopt) en start opnieuw.
 
 > Is het GHCR-package privé? Maak het publiek (GitHub → Packages → Package settings), of log in met
 > `docker login ghcr.io` (gebruikersnaam + Personal Access Token met `read:packages`).
