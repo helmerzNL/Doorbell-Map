@@ -1,0 +1,4 @@
+# Toont de knop "Sponsor" op de repositorypagina. Dezelfde links staan in de README (badges en "Steun Doorbell Map");
+# haal ze alle drie tegelijk weg als de app niet om donaties mag vragen (App-Guidance: shared/templates/readme/README.md).
+buy_me_a_coffee: flux76
+ko_fi: flux76

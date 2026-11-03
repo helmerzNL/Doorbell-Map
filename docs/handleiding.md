@@ -1,0 +1,324 @@
+# Handleiding Doorbell Map
+
+🇳🇱 **Nederlands** · 🇬🇧 [English](handleiding.en.md)
+
+Alles wat Doorbell Map kan, scherm voor scherm: voor bezoekers, voor bewoners en voor de beheerder. Installeren, configureren, bijwerken, back-ups en meewerken staan in de [README](../README.md).
+
+De voorbeelden tonen willekeurige huizen (kaartgegevens © OpenStreetMap-bijdragers).
+
+## Inhoud
+- [Functies in het kort](#functies-in-het-kort)
+- [De website voor bezoekers](#de-website-voor-bezoekers)
+- [Bewoners: Mijn huis](#bewoners-mijn-huis)
+- [Talen en donkere weergave](#talen-en-donkere-weergave)
+- [Het beheer (/beheer)](#het-beheer-beheer)
+- [Instellingen](#instellingen)
+- [Namen van de statussen](#namen-van-de-statussen)
+- [Nieuwe huizen tekenen](#nieuwe-huizen-tekenen)
+- [Huisnummers en straten](#huisnummers-en-straten)
+- [Hoe werkt het](#hoe-werkt-het)
+- [Inloggen: passkey, wachtwoord en MFA](#inloggen-passkey-wachtwoord-en-mfa)
+- [Meer beheerders uitnodigen](#meer-beheerders-uitnodigen)
+- [Edities: eerdere keren vergelijken](#edities-eerdere-keren-vergelijken)
+- [Naam van de app](#naam-van-de-app)
+- [Beheer als app](#beheer-als-app)
+- [Installeren als app en offline gebruik](#installeren-als-app-en-offline-gebruik)
+- [Problemen oplossen](#problemen-oplossen)
+
+## Functies in het kort
+
+**Voor bezoekers**
+- Kaart op basis van OpenStreetMap (geen API-sleutel) met gekleurde vlakken over de huizen; klik op een huis voor de notitie.
+- Huisnummers op de kaart (schakelaar), straten-filter met tellingen groen/rood, en een uitleg- en infovenster.
+- **PDF** (A4 liggend) met kaart, legenda, aantallen, logo, uitleg en een overzicht van de gemarkeerde huizen, inclusief datum en tijd.
+- **Installeerbaar als app (PWA)** met eigen app-icoon en **offline** gebruik; zolang de app niet geïnstalleerd is, staat er een knop *Installeer* in de menubalk (geen melding die vanzelf opent). Zie [Installeren als app](#installeren-als-app-en-offline-gebruik).
+- Het **overzicht met aantallen** (totaal en per status) staat, als de beheerder dat aanzet, ook op de voorpagina; een knop naast licht/donker verbergt of toont het blok.
+- Werkt op telefoon (menubalk onderin, zwevend statusbalkje) en desktop.
+- **Meertalig** (Nederlands en Engels, in te schakelen in het beheer) en een **donkere/lichte weergave** met een knop rechtsboven. Zie [Talen en donkere weergave](#talen-en-donkere-weergave).
+
+**Voor bewoners**
+- Bewoners wijzigen de status van **hun eigen huis** (één huis per apparaat); de beheerder keurt dat goed. Zie [Bewoners: Mijn huis](#bewoners-mijn-huis).
+- Snel naar je huis met dubbelklikken of lang indrukken.
+- De knop **Mijn locatie** (onder de zoomknoppen) toont je eigen positie standaard als blauwe stip, zodat je maar één telefoon nodig hebt.
+- Optioneel (door de beheerder aan te zetten): de **Community** om je positie live te delen en de andere deelnemers als stippen te zien, met een eigen kleur en symbool. Zie [Mijn locatie en Community](#bewoners-mijn-huis).
+- Optioneel: huis kiezen **alleen met de QR-code** uit de brief (één apparaat per huis), met locatiecontrole (geofence) en/of een toegangscode voor apparaten zonder GPS. Zie [Toegang via QR-code](#toegang-via-qr-code-optioneel).
+
+**Voor de beheerder**
+- Huizen tekenen en bewerken (kleur, straat, huisnummer, notitie, hoekpunten), kaartweergave instellen (midden, zoom, min/max).
+- Inloggen met **passkey** of met **gebruikersnaam en wachtwoord**, optioneel met **tweestapsverificatie (MFA)** en herstelcodes. Zie [Inloggen](#inloggen-passkey-wachtwoord-en-mfa).
+- **Meerdere beheerders**: de eigenaar nodigt anderen uit met een link; ieder kiest zelf een passkey of wachtwoord. Zie [Meer beheerders uitnodigen](#meer-beheerders-uitnodigen).
+- Wijzigingen van bewoners **goedkeuren of afwijzen**, met **pushmeldingen**; apparaten **blokkeren** (ook op IP); wijzigen **plannen** tot een datum en tijd.
+- **QR-codes** per huis: tonen, link kopiëren, vernieuwen en een **afdrukbare PDF** met een kaartje per huis om bij de bewoners te bezorgen.
+- **Edities**: de kaart van elke keer met naam en jaartal, aangemaakt als kopie van de live kaart of een andere editie en los te bewerken; wissel in het beheer tussen *Live* en edities en vergelijk welke huizen toen en nu meedoen, met de aantallen. De voorpagina verandert daar nooit door. Zie [Edities](#edities-eerdere-keren-vergelijken).
+- Instellingen in zeven overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
+- Eigen **logo** (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (ook het icoon van de geïnstalleerde app; standaard de lantaarn), uitleg, infovlak, **site- en appnaam** en eigen namen voor de statussen.
+- Automatische **backups** na elke opslagpoging, met korte titels en handmatige backups.
+- Versienummer en commit zichtbaar in het instellingenmenu.
+
+## De website voor bezoekers
+
+Voorbeeld met willekeurige huizen (kaartgegevens © OpenStreetMap-bijdragers).
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/publiek.png"><img src="screenshots/publiek.png" width="270" alt="Publieke kaart"></a><br><sub>Publieke kaart</sub></td><td align="center" valign="top"><a href="screenshots/straten-popup.png"><img src="screenshots/straten-popup.png" width="270" alt="Straten per straat tonen/verbergen"></a><br><sub>Straten per straat tonen/verbergen</sub></td><td align="center" valign="top"><a href="screenshots/uitleg.png"><img src="screenshots/uitleg.png" width="270" alt="Uitleg met infovlak"></a><br><sub>Uitleg met infovlak</sub></td></tr>
+</table>
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/mobiel.png"><img src="screenshots/mobiel.png" width="220" alt="Mobiel"></a><br><sub>Mobiel</sub></td><td align="center" valign="top"><a href="screenshots/straten-popup-mobiel.png"><img src="screenshots/straten-popup-mobiel.png" width="220" alt="Straten (mobiel)"></a><br><sub>Straten (mobiel)</sub></td><td align="center" valign="top"><a href="screenshots/info-vlak-mobiel.png"><img src="screenshots/info-vlak-mobiel.png" width="220" alt="Infovlak in de uitleg"></a><br><sub>Infovlak in de uitleg</sub></td></tr>
+</table>
+
+**Publieke kaart** – met het logo van de vereniging; klik op een huis voor de notitie. Bovenaan staan de knoppen voor de uitleg, de straten en het menu *Meer* (⋯) met de PDF-knoppen.
+
+**Mobiel** – bovenaan alleen het logo, de titel, de schakelaars voor huisnummers en bewerken en (rechts) de taalkeuze en de donker/licht-knop; de acties (uitleg, straten, Meer) staan onderaan, met het statusbalkje (groen/rood) er altijd net boven.
+
+**Straten** – met het straat-icoon (🛣️) in de menubalk zet je per straat de huizen op de kaart (en in de PDF) aan of uit. Per straat staat hoeveel huizen **groen** en **rood** zijn, en bovenaan het totaal van de zichtbare straten.
+
+**Uitleg en infovlak** – de tekst van de vereniging; wordt de eerste keer automatisch getoond en sluit met het kruisje rechtsboven. Bovenaan staat het opvallende groene **infovlak** dat uitlegt dat bewoners hun eigen huis kunnen wijzigen; dat verdwijnt zodra wijzigen is uitgeschakeld.
+
+**Overzicht met aantallen** – rechtsboven op de kaart staat het *totaal aantal huizen* en per status het aantal en het percentage, met een verdelingsbalk. De beheerder zet het blok voor bezoekers aan met *Ook op de voorpagina tonen* (*Instellingen → Config → Weergave*; standaard uit). Is het zichtbaar, dan staat naast de licht/donker-knop een knop waarmee een bezoeker het blok verbergt of weer toont; die keuze wordt alleen op dat apparaat onthouden.
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/voorpagina-totaal.png"><img src="screenshots/voorpagina-totaal.png" width="400" alt="Overzicht met aantallen"></a><br><sub>Overzicht met aantallen</sub></td><td align="center" valign="top"><a href="screenshots/voorpagina-totaal-verborgen.png"><img src="screenshots/voorpagina-totaal-verborgen.png" width="400" alt="Verborgen met de knop rechtsboven"></a><br><sub>Verborgen met de knop rechtsboven</sub></td></tr>
+</table>
+
+**PDF-export** – A4 liggend met legenda, aantallen en de datum en het tijdstip (HH:MM) van de stand. Pagina 2 bevat het logo, de uitleg en het overzicht van de gemarkeerde huizen. De PDF volgt de gekozen straten en de huisnummers.
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/pdf.png"><img src="screenshots/pdf.png" width="400" alt="PDF: kaart met legenda en aantallen"></a><br><sub>PDF: kaart met legenda en aantallen</sub></td><td align="center" valign="top"><a href="screenshots/pdf-toelichting.png"><img src="screenshots/pdf-toelichting.png" width="400" alt="PDF: logo, uitleg en overzicht"></a><br><sub>PDF: logo, uitleg en overzicht</sub></td></tr>
+</table>
+
+## Bewoners: Mijn huis
+- In de **geïnstalleerde app** (PWA) staat in de menubalk altijd een knop **Mijn huis**, plus een knop **Sync** (🔄) waarmee je de huizen direct bijwerkt (de app ververst ook zelf elke 30 seconden).
+- In een **gewone browser** staat bovenin een schakelaar **Bewerken** (✏️). Die staat **standaard aan** (zet je hem uit, dan onthoudt de browser dat), zodat de knop *Mijn huis* in de menubalk staat; zet je hem uit, dan verdwijnt die knop. *PDF opslaan* en *PDF bekijken* staan onder het menu **Meer** (⋯), ook in de app. Het balkje met de statuskleuren zweeft op een klein scherm altijd net boven de menubalk. In de app is deze schakelaar verborgen.
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/bewerken-meer-mobiel.png"><img src="screenshots/bewerken-meer-mobiel.png" width="190" alt="Menu Meer"></a><br><sub>Menu Meer</sub></td><td align="center" valign="top"><a href="screenshots/bewoner-kies-huis.png"><img src="screenshots/bewoner-kies-huis.png" width="190" alt="Huis kiezen"></a><br><sub>Huis kiezen</sub></td><td align="center" valign="top"><a href="screenshots/bewoner-wacht.png"><img src="screenshots/bewoner-wacht.png" width="190" alt="Wacht op goedkeuring"></a><br><sub>Wacht op goedkeuring</sub></td><td align="center" valign="top"><a href="screenshots/bewoner-heropend.png"><img src="screenshots/bewoner-heropend.png" width="190" alt="App heropend: koppeling blijft"></a><br><sub>App heropend: koppeling blijft</sub></td></tr>
+</table>
+
+**Snel naar jouw huis** – met een muis dubbelklik je op een huis, op een touchscreen druk je er lang op (ruim een halve seconde). Dan gaat *Bewerken* aan (in de browser), springt de kaart naar het huis en start de wijzigmodus; heb je nog geen huis gekozen, dan vraagt de app of het jouw huis is. Een dubbelklik buiten de huizen zoomt gewoon in. In het beheer selecteert hetzelfde gebaar het huis in de selecteermodus.
+
+**Mijn locatie** – onder de zoomknoppen staat de knop *Mijn locatie* (het richtkruis). De locatie staat **standaard aan**: bij het openen van de kaart vraagt de browser om toestemming (nadat de uitleg is gesloten). Bij het eerste bezoek komt eerst de uitleg en daarna de locatievraag. Geef je die, dan schakelt de knop in (blauw), verschijnt je positie als blauwe stip met een lichte cirkel voor de nauwkeurigheid, zoomt de kaart naar je toe en volgt hij je terwijl je loopt. Zonder toestemming blijft de kaart zoals hij was en volgt er geen melding. Schuif je de kaart zelf weg, dan stopt het volgen (de stip blijft) en brengt een tik op de knop je terug; nog een tik op de volgende stand zet de locatie uit. Wie de locatie zelf uitzet, krijgt hem op dat apparaat niet meer vanzelf aan (alleen die keuze wordt onthouden, in de browser); een tik op de knop zet hem weer aan. Zolang de locatie aan staat blijft het scherm aan, zodat je de telefoon tijdens het lopen niet steeds hoeft te ontgrendelen (als je browser dat ondersteunt; anders dimt het scherm gewoon, en na terugkeren naar de pagina wordt het opnieuw aangevraagd). Je positie blijft op je telefoon: ze wordt nergens opgeslagen of verstuurd, behalve als je zelf kiest voor delen met de Community (zie hieronder). Het tonen van je locatie werkt alleen via **https**. De beheerder kan de knop, en daarmee de locatie, verbergen (zie *Config*).
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/mijn-locatie-mobiel.png"><img src="screenshots/mijn-locatie-mobiel.png" width="220" alt="Mijn locatie: blauwe stip met nauwkeurigheidscirkel"></a><br><sub>Mijn locatie: blauwe stip met nauwkeurigheidscirkel</sub></td></tr>
+</table>
+
+**Community** – optioneel, standaard **uit**; de beheerder zet het aan onder *Instellingen → Config → Weergave → Community*. Dan verschijnt onder *Mijn locatie* een tweede knop (de drie poppetjes) om je positie live te delen. Delen is altijd vrijwillig: je moet het eerst bevestigen en stoppen kan met één tik. Wie meedoet ziet de andere deelnemers als **stippen** (met het aantal op de knop); wie niet deelt, ziet niemand. Er staat geen naam bij. In het bevestigingsvenster kiest een deelnemer ook een **kleur en een symbool** (bijvoorbeeld een dier) waarmee anderen hem zien; zonder keuze is het de standaard paarse stip. De beheerder zet die keuze uit met *Kleur en symbool kiezen* (standaard aan), dan zijn alle stippen paars. De **titel en de tekst** van het bevestigingsvenster stelt de beheerder in onder *Config → Teksten* (per taal; leeg = standaardtekst). De server bewaart posities alleen kort in het geheugen (niet op schijf) en wist ze zodra iemand stopt, de pagina sluit, of na 45 seconden zonder signaal; de beheerder zet de functie uit en alle posities zijn direct weg. In het beheer ziet de beheerder alle deelnemers als stippen op de kaart, met het aantal in de zijbalk. Dit werkt alleen als de knop *Mijn locatie* ook aan staat.
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/community-venster-mobiel.png"><img src="screenshots/community-venster-mobiel.png" width="220" alt="Delen bevestigen, met kleur en symbool"></a><br><sub>Delen bevestigen, met kleur en symbool</sub></td><td align="center" valign="top"><a href="screenshots/community-kaart-mobiel.png"><img src="screenshots/community-kaart-mobiel.png" width="220" alt="Deelnemers als stippen, het aantal op de knop"></a><br><sub>Deelnemers als stippen, het aantal op de knop</sub></td><td align="center" valign="top"><a href="screenshots/beheer-community.png"><img src="screenshots/beheer-community.png" width="220" alt="Beheer: alle deelnemers op de kaart"></a><br><sub>Beheer: alle deelnemers op de kaart</sub></td></tr>
+</table>
+
+**In het beheer** werkt dit ook: dubbelklik (of druk lang) op een huis en de selecteermodus gaat aan met dat huis geselecteerd, ook als je net aan het tekenen was (zolang er nog geen vlak loopt).
+
+### Toegang via QR-code (optioneel)
+Wil je dat bewoners alleen hun **eigen huis** kunnen koppelen, dan zet je onder *Instellingen → Bewoners → Toegang via QR-code* de schakelaar *Huis kiezen alleen via QR-code* aan. Elk huis heeft dan een eigen QR-code met een geheim dat **niet** op de kaart staat (de huis-id's zijn openbaar, daarom is het geheim apart).
+- **Uitdelen:** kies *QR-codes afdrukken (PDF)* (alle straten of één straat): een A4 met per huis een kaartje om bij de bewoners te bezorgen. De QR is één geheel: de sitetitel bovenaan en straat + huisnummer onderaan zijn in de afbeelding verwerkt, met het app-icoon in het midden van de code. Bij een geselecteerd huis in de editor staat een knop **QR-code** om de code te tonen, de **link te kopiëren**, als PNG te downloaden of te **vernieuwen**.
+- **Delen via WhatsApp:** in de popup van een huis staan *Delen via WhatsApp* (en, op telefoon, het delen van het kaartje) met een voorbereide tekst. Die tekst pas je aan onder *Instellingen → Config → Teksten → Tekst bij delen via WhatsApp* (per taal; in *Bewoners → Toegang via QR-code* staat een verwijzing met de knop *Naar Config*). Het bericht en het kaartje gaan in de standaardtaal van de site; is *Meertalig* aan, dan staat in de popup een taalkiezer (met vlaggen) om ze in een andere taal te tonen en te delen, en de afdrukbare PDF volgt de standaardtaal; `{adres}` wordt het adres van het huis en `{link}` de persoonlijke link (ontbreekt `{link}`, dan komt de link achter de tekst). Leeg = standaardtekst.
+- **Bewoner:** scant de code met de camera van de telefoon, bevestigt "Is dit jouw huis?" en kan daarna het huis wijzigen. In het scherm *Mijn huis* staat zonder koppeling alleen de uitleg om te scannen; de kaart en de adreslijst werken dan niet meer voor het kiezen van een huis.
+- **Eén apparaat per huis:** is een huis al gekoppeld, dan weigert de server een tweede apparaat. Verwijder de koppeling (*Instellingen → Bewoners → Apparaten*) om opnieuw te kunnen scannen.
+- **Al gekoppeld, of huis bezet:** scant iemand een QR met een apparaat dat al aan een huis is gekoppeld (of een huis dat al aan een ander apparaat hangt), dan verschijnt een venster om de beheerder een **kort bericht** (max. 300 tekens) te sturen, bijvoorbeeld bij een nieuwe telefoon of een verhuizing. De beheerder krijgt een pushmelding.
+- **Intrekken:** *Vernieuwen* (per huis of alle huizen) maakt de oude QR-codes ongeldig.
+- **Combinatie:** een geldige QR vervangt de toegangscode voor apparaten zonder GPS; de locatiecontrole en de goedkeuring door de beheerder blijven gelden. Schakel je QR-only uit, dan werkt alles weer zoals voorheen (kaart/lijst).
+- **Let op:** een QR is zo veilig als de brief: wie hem fotografeert, kan hem gebruiken (daarom één apparaat per huis, vernieuwen en jouw goedkeuring). Op iPhone opent een gescande link in de browser, niet in de geïnstalleerde app; gebruik je *Alleen in de geïnstalleerde app*, dan moet de bewoner na het scannen de app openen. De geheimen staan in `data/db.json`, niet in de backups.
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/qr-instellingen.png"><img src="screenshots/qr-instellingen.png" width="400" alt="Instellingen: Toegang via QR-code"></a><br><sub>Instellingen: Toegang via QR-code</sub></td><td align="center" valign="top"><a href="screenshots/qr-dialoog.png"><img src="screenshots/qr-dialoog.png" width="400" alt="QR-code van één huis"></a><br><sub>QR-code van één huis</sub></td></tr>
+<tr><td align="center" valign="top"><a href="screenshots/qr-pdf.png"><img src="screenshots/qr-pdf.png" width="400" alt="Afdrukbare PDF met een kaartje per huis"></a><br><sub>Afdrukbare PDF met een kaartje per huis</sub></td><td align="center" valign="top"><table><tr><td align="center" valign="top"><a href="screenshots/qr-bevestigen.png"><img src="screenshots/qr-bevestigen.png" width="150" alt="Na het scannen: bevestigen"></a><br><sub>Na het scannen: bevestigen</sub></td><td align="center" valign="top"><a href="screenshots/qr-zonder-scan.png"><img src="screenshots/qr-zonder-scan.png" width="150" alt="Zonder QR (QR-only)"></a><br><sub>Zonder QR (QR-only)</sub></td></tr></table></td></tr>
+</table>
+
+**Wijzigen plannen** – zet onder *Instellingen → Bewoners → Planning* de schakelaar *Wijzigen uitschakelen op een datum en tijd* aan en kies met de datum-/tijdkiezer wanneer. Tot dat moment kunnen bewoners wijzigen (browser én app); daarna staat het uit. De twee schakelaars eronder worden in die tijd uitgeschakeld en genegeerd; zet je de planning uit, dan gelden ze weer.
+
+**Na de einddatum nog groen ↔ rood wisselen** – naast de planning staat de schakelaar *Na die datum mogen bewoners hun eigen huis nog wisselen tussen groen en rood*. Staat die aan, dan kunnen bewoners die al een huis hebben na de einddatum nog hun eigen huis wisselen van groen naar rood of andersom (niet van of naar *niet gemarkeerd*, en geen nieuw huis kiezen), nog steeds met jouw goedkeuring. De knop *Mijn huis* toont dan alleen nog die twee kleuren; bezoekers zonder huis zien de knop (en *Bewerken*) niet meer. Deze schakelaar gaat voor de twee schakelaars eronder en werkt alleen als de planning aan staat.
+
+**Eenvoudige weergave** – onder *Instellingen → Config → Weergave* zet je *Eenvoudige weergave* aan. Op de website verdwijnen dan de schakelaars *Huisnummers* en *Bewerken* en de knop *Straten*; *Uitleg*, *Mijn huis* en *PDF opslaan* staan dan direct in de menubalk (het menu *Meer* vervalt) en Bewerken staat vast aan.
+
+**Toegangscode voor apparaten zonder GPS (optioneel)** – onder *Instellingen → Bewoners → Toegang* stel je een code van 4 tot 6 cijfers in (of kies *Willekeurig*) en zet je de schakelaar aan. Wie dan op een laptop of desktop op *Mijn huis* drukt, krijgt eerst een veld om de code in te vullen (die deel je bijvoorbeeld in de buurtapp op WhatsApp). Het apparaat onthoudt de code (cookie, 1 jaar); wijzig je de code, dan moet iedereen hem opnieuw invullen. Telefoons en tablets met GPS hoeven niets in te vullen. Standaard staat dit uit. Foute pogingen worden per IP-adres beperkt. Het is een gebruiksbeperking, geen harde beveiliging (de code staat bij de beheerder in leesbare vorm, en het apparaattype komt van de browser).
+
+**Geofence (optioneel)** – onder *Instellingen → Bewoners → Toegang* zet je de schakelaar *Alleen in de wijk (locatie)* aan en kies je een straal (50–5000 m, standaard 500). Het midden is het midden van de kaartweergave (of anders van de huizen). De controle geldt **alleen voor telefoons en tablets met GPS**; laptops en desktops (zonder GPS) worden niet beperkt en kunnen gewoon wijzigen. Bij het openen van de wijzigmodus en bij elke wijziging vraagt de browser om de locatie; staat die buiten de straal, is hij minder nauwkeurig dan 200 m, uit of niet toegestaan, dan kan er niet worden gewijzigd en volgt een duidelijke melding. De kaart bekijken kan overal. Vereist HTTPS. De locatie komt van het apparaat zelf en de server kan die niet controleren: het is een gebruiksbeperking, geen harde beveiliging.
+
+**Infovlak** – onder *Instellingen → Config → Teksten* staat een apart tekstveld voor het infovlak. Dat staat als opvallend groen blok bovenaan de uitleg op de website en legt uit dat bewoners hun eigen huis kunnen wijzigen. Het verdwijnt vanzelf zodra wijzigen door bewoners uit staat (of de geplande datum is verstreken).
+
+**Misbruik tegengaan** – onder *Instellingen → Goedkeuren* en *Bewoners → Apparaten* staat bij elke openstaande wijziging en bij elk aangemeld apparaat een knop **Blokkeren**. Het apparaat verliest zijn koppeling en openstaande wijzigingen, en kan niet meer wijzigen of een huis kiezen. Je kunt er ook het **IP-adres** bij blokkeren (let op: huisgenoten of buren achter dezelfde router delen vaak een IP). Onder *Geblokkeerd* haal je een blokkade weer weg.
+
+**Alleen in de app toestaan** – onder *Instellingen → Bewoners* zet je **Alleen in de geïnstalleerde app** aan. De schakelaar *Bewerken* verdwijnt dan voor browserbezoekers (ook bij een open pagina, na het verversen), en de server weigert wijzigingen die niet vanuit de app komen. De app meldt zich daarvoor met een kop (`X-App-Mode: standalone`). Dat is een gebruiksbeperking: wie de verzoeken zelf nabootst kan de kop meesturen, maar elke wijziging moet nog steeds door de beheerder worden goedgekeurd.
+
+- Een bewoner tikt op zijn huis (of kiest zijn adres) en bevestigt dat. Dat apparaat is dan aan **één huis** gekoppeld (cookie, 1 jaar). Een enkele tik op het eigen huis doet niets bijzonders (net als bij elk huis een popup); wijzigen begint pas met **dubbelklikken of lang indrukken** (of *Mijn huis*). Daarna wisselt elke tik op dat huis (of een keuze in het venster) de kleur: niet gemarkeerd → groen → rood → niet gemarkeerd. Andere huizen kunnen niet worden gewijzigd.
+- De wijziging is **pas zichtbaar voor anderen nadat de beheerder die goedkeurt**. De bewoner ziet het huis in de tussentijd met een gestippelde rand en de melding *Wacht op goedkeuring*; na de beslissing volgt een bericht (goedgekeurd of niet doorgevoerd). De beheerder kan de status van een huis altijd zelf aanpassen; een openstaand voorstel volgt dan de nieuwe status of vervalt als het precies overeenkomt.
+- Er worden alleen een willekeurig apparaat-token (als hash), het IP-adres van het laatste verzoek (voor het blokkeren) en het gekozen huis bewaard, geen namen of andere persoonsgegevens.
+- De koppeling en het voorstel blijven **bewaard na het afsluiten van de app**: ze staan op de server, met een lokale kopie van het token als reserve (voor als de cookie wordt gewist) en van de laatste status (voor als er geen verbinding is). Het eigen huis blijft ook buiten de wijzigmodus zichtbaar (⏳ zolang de wijziging op goedkeuring wacht, daarna 🏠).
+- De app **ververst zichzelf** (elke 30 seconden, en zodra je terugkeert naar de app of weer online bent). Keurt de beheerder een wijziging goed, dan verschijnt die vanzelf op het apparaat, inclusief een melding "Je wijziging is goedgekeurd".
+
+## Talen en donkere weergave
+- **Standaardtaal** – onder *Instellingen → Config → Taal* kies je met een uitklapmenu (met vlaggen) de standaardtaal: 🇳🇱 Nederlands of 🇬🇧 English. Die taal geldt voor de site, de app, de PDF's, het beheer en de pushmeldingen aan de beheerder, **ook als meertalig uit staat**.
+- **Meertalig** – met de schakelaar *Meertalig* (standaard uit) verschijnt rechtsboven in de menubalk een vlag met een uitklapmenu met de ondersteunde talen. De keuze van een bezoeker wordt onthouden in zijn browser en geldt voor die bezoeker (het beheer volgt dezelfde keuze). Staat de schakelaar uit, dan krijgt iedereen de standaardtaal.
+- **Teksten per taal** – is *Meertalig* aan, dan staat onder het taalblokje in *Config* een **taalbalk met vlaggen**. De velden eronder zijn per taal: kies een vlag en je bewerkt de naam van de site en de app, de korte naam, de namen van de statussen, het infovlak, de uitleg en de tekst bij delen via WhatsApp voor die taal; een vlaggetje bij het veld toont voor welke taal het geldt. Wat je intikt blijft bij het wisselen van taal bewaard tot je op *Opslaan* drukt. Een leeg veld in een andere taal valt terug op de Nederlandse tekst (het standaard-infovlak en de standaard-WhatsApptekst worden automatisch vertaald); het Nederlands blijft de bron. Is *Meertalig* uit, dan bewerk je de velden van de standaardtaal. Het logo en de overige instellingen gelden voor alle talen. In de Engelse weergave heet *Sint Maarten* overal *Halloween*.
+- **Donker/licht** – naast de vlag staat een knop (maan/zon) waarmee elke bezoeker wisselt tussen de lichte en de donkere weergave. Standaard volgt de site de instelling van het apparaat; de keuze wordt onthouden. In de donkere weergave **keert het logo automatisch om** (zwart wordt wit) en wordt de kaart wat gedimd. De knop staat altijd in beeld, ook als meertalig uit staat.
+- **Vertalingen toevoegen** – de bron van alle teksten is Nederlands; een woordenboek per taal (`public/js/lang-en.js`, sleutel = Nederlandse tekst, waarde = vertaling; `{naam}` is een variabele) vertaalt de pagina in de browser en de pushmeldingen op de server. De tests (`npm test`) controleren dat elke vertaling dezelfde variabelen heeft.
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/instellingen-config-talen.png"><img src="screenshots/instellingen-config-talen.png" width="400" alt="Config: taalbalk met vlaggen"></a><br><sub>Config: taalbalk met vlaggen</sub></td><td align="center" valign="top"><a href="screenshots/publiek-engels-taalmenu.png"><img src="screenshots/publiek-engels-taalmenu.png" width="400" alt="Engelse site met taalmenu"></a><br><sub>Engelse site met taalmenu</sub></td><td align="center" valign="top"><a href="screenshots/mobiel-engels-donker.png"><img src="screenshots/mobiel-engels-donker.png" width="150" alt="Mobiel: Engels en donker"></a><br><sub>Mobiel: Engels en donker</sub></td></tr>
+</table>
+
+## Het beheer (`/beheer`)
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/onboarding.png"><img src="screenshots/onboarding.png" width="400" alt="Onboarding met installatiecode"></a><br><sub>Onboarding met installatiecode</sub></td><td align="center" valign="top"><a href="screenshots/beheer-login.png"><img src="screenshots/beheer-login.png" width="400" alt="Inloggen met passkey"></a><br><sub>Inloggen met passkey</sub></td></tr>
+<tr><td align="center" valign="top"><a href="screenshots/beheer-tekenen.png"><img src="screenshots/beheer-tekenen.png" width="400" alt="Huis tekenen"></a><br><sub>Huis tekenen</sub></td><td align="center" valign="top"><a href="screenshots/beheer.png"><img src="screenshots/beheer.png" width="400" alt="Huis bewerken"></a><br><sub>Huis bewerken</sub></td></tr>
+</table>
+
+**Onboarding** – de eerste keer kies je met de installatiecode (`SETUP_TOKEN`) een gebruikersnaam en hoe je inlogt: met een **passkey** of met een **wachtwoord** (daarna kun je meteen tweestapsverificatie aanzetten, of later). Kan een passkey hier niet (geen HTTPS of geen echte domeinnaam), dan legt de wizard uit waarom en kies je het wachtwoord.
+
+**Inloggen** – met passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel) of met gebruikersnaam en wachtwoord, en zo nodig de code uit je authenticator-app. Zie [Inloggen](#inloggen-passkey-wachtwoord-en-mfa).
+
+**Weergave en bewerken** – het beheer opent in de **weergave**: alleen de kaart, zonder zijbalk. Dubbelklik (of druk lang op een touchscreen) op een huis voor een **popup** waarmee je het huis direct **groen, rood of niet gemarkeerd** maakt (het wordt meteen opgeslagen) en waarin het **QR-kaartje** voor de bewoners staat: met logo, adres, QR en uitleg. Daaronder staat de **directe link** met een kopieerknop, een knop **Delen via WhatsApp** (opent WhatsApp met een kant-en-klaar bericht en de link), op telefoons ook **Kaartje delen…** (het plaatje via het deelmenu), een **PNG** om te downloaden en *Vernieuwen*. Met **✏️ Bewerken** open je het bewerkscherm (huizen tekenen, selecteren, zoeken, kaartweergave); **✓ Weergave** brengt je terug (bij niet-opgeslagen wijzigingen vraagt het eerst).
+
+**Onderbalk** – op een telefoon en in de geïnstalleerde beheer-app staat onderaan een balk met **Bewerken** en **Instellingen** (met een badge voor wachtende meldingen); op een laptop staan die knoppen in de kopbalk.
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/beheer-huis-popup.png"><img src="screenshots/beheer-huis-popup.png" width="420" alt="Popup op een laptop"></a><br><sub>Popup op een laptop</sub></td><td align="center" valign="top"><a href="screenshots/beheer-weergave-mobiel.png"><img src="screenshots/beheer-weergave-mobiel.png" width="170" alt="Weergave met onderbalk"></a><br><sub>Weergave met onderbalk</sub></td><td align="center" valign="top"><a href="screenshots/beheer-huis-popup-mobiel.png"><img src="screenshots/beheer-huis-popup-mobiel.png" width="170" alt="Popup op een telefoon"></a><br><sub>Popup op een telefoon</sub></td></tr>
+</table>
+
+**Huis tekenen** – kies een kleur en klik de hoekpunten van het huis; sluit af met het gele beginpunt, dubbelklik of Enter. Nieuwe huizen krijgen standaard *geen status* en de actieve straat.
+
+**Huis bewerken** (in het bewerkscherm) – selecteer een huis (klik, dubbelklik of lang indrukken) om de kleur, straat, huisnummer en notitie aan te passen, of sleep de hoekpunten. Sneltoetsen: **G** groen, **R** rood, **Delete** verwijderen, **Ctrl+S** opslaan. De lijst links heeft een filter per straat; de rest wordt op de kaart gedimd.
+
+## Instellingen
+Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ingedeeld in zeven tabs (*Goedkeuren*, *Bewoners*, *Config*, *Beveiliging*, *Gebruikers* (alleen voor de eigenaar), *Edities* en *Backups*, met iconen uit [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); elke tab bestaat uit kaarten met duidelijke schakelaars en een korte uitleg (ook op een telefoon).
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/instellingen-goedkeuren.png"><img src="screenshots/instellingen-goedkeuren.png" width="270" alt="Goedkeuren"></a><br><sub>Goedkeuren</sub></td><td align="center" valign="top"><a href="screenshots/instellingen-bewoners.png"><img src="screenshots/instellingen-bewoners.png" width="270" alt="Bewoners"></a><br><sub>Bewoners</sub></td><td align="center" valign="top"><a href="screenshots/instellingen-bewoners-apparaten.png"><img src="screenshots/instellingen-bewoners-apparaten.png" width="270" alt="Bewoners: apparaten en meldingen"></a><br><sub>Bewoners: apparaten en meldingen</sub></td></tr>
+<tr><td align="center" valign="top"><a href="screenshots/instellingen-config.png"><img src="screenshots/instellingen-config.png" width="270" alt="Config"></a><br><sub>Config</sub></td><td align="center" valign="top"><a href="screenshots/instellingen-beveiliging.png"><img src="screenshots/instellingen-beveiliging.png" width="270" alt="Beveiliging"></a><br><sub>Beveiliging</sub></td><td align="center" valign="top"><a href="screenshots/instellingen-backups.png"><img src="screenshots/instellingen-backups.png" width="270" alt="Backups"></a><br><sub>Backups</sub></td></tr>
+<tr><td align="center" valign="top"><a href="screenshots/instellingen-gebruikers.png"><img src="screenshots/instellingen-gebruikers.png" width="270" alt="Gebruikers"></a><br><sub>Gebruikers</sub></td></tr>
+</table>
+
+<p align="center"><a href="screenshots/instellingen-mobiel.png"><img src="screenshots/instellingen-mobiel.png" width="220" alt="Instellingen op een telefoon"></a><br><sub>Instellingen op een telefoon</sub></p>
+
+**Goedkeuren** – de wijzigingen die bewoners voor hun eigen huis hebben aangevraagd en de **berichten van bewoners**. Rode **badges** met het aantal staan bij het tandwiel, bij de tab en bij elke lijst, in de paginatitel en – in het geïnstalleerde beheer – op het **app-icoon**; ze worden ook bijgewerkt door een pushmelding als de app dicht is. Keur wijzigingen goed of af (of alles tegelijk) en klik *Afgehandeld* bij een bericht om het te verwijderen.
+
+**Bewoners** – alles rond het wijzigen door bewoners:
+- *Wijzigen door bewoners*: aan/uit, en eventueel alleen in de geïnstalleerde app (de schakelaar *Bewerken* verdwijnt dan in de browser en de server weigert wijzigingen zonder de app-kop `X-App-Mode: standalone`).
+- *Planning*: wijzigen automatisch afsluiten op een datum en tijd (met datumkiezer), met eventueel daarna nog groen ↔ rood wisselen.
+- *Toegang*: alleen in de wijk (locatie/geofence) en een toegangscode voor apparaten zonder GPS.
+- *Apparaten*: aangemelde apparaten, **alfabetisch** op straat en huisnummer (handig zoeken bij veel huizen), met koppeling verwijderen of **blokkeren** (eventueel met IP-adres), en de lijst *Geblokkeerd*.
+- *Meldingen op dit apparaat*: pushmeldingen voor nieuwe wijzigingen.
+
+**Config** – taal (meertalig en standaardtaal), logo, naam van de site en de app, de eenvoudige weergave, de knop *Mijn locatie* voor bezoekers (aan of uit; standaard aan), de *Community* (live deelnemers; standaard uit), *Kleur en symbool kiezen* voor de community (aan of uit; standaard aan), de namen van de statussen, het infovlak, de uitleg, de tekst bij delen via WhatsApp en de titel en tekst van het communityvenster (de teksten per taal).
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/instellingen-config-afbeeldingen.png"><img src="screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, klein logo en favicon"></a><br><sub>Config: logo, klein logo en favicon</sub></td><td align="center" valign="top"><a href="screenshots/instellingen-config-locatie.png"><img src="screenshots/instellingen-config-locatie.png" width="270" alt="Config: Mijn locatie en Community"></a><br><sub>Config: Mijn locatie en Community</sub></td><td align="center" valign="top"><a href="screenshots/instellingen-config-communityteksten.png"><img src="screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: titel en tekst van het communityvenster"></a><br><sub>Config: titel en tekst van het communityvenster</sub></td></tr>
+</table>
+
+**Beveiliging** – je eigen inlog: gebruikersnaam, passkeys, wachtwoord en tweestapsverificatie (MFA) met herstelcodes. Zie [Inloggen](#inloggen-passkey-wachtwoord-en-mfa).
+
+**Gebruikers** (alleen de eigenaar) – wie het beheer kan openen en hoe ieder inlogt, uitnodigingslinks maken en intrekken, een nieuwe inloglink voor wie buitengesloten is, en gebruikers verwijderen. Zie [Meer beheerders uitnodigen](#meer-beheerders-uitnodigen).
+
+**Edities** – een editie aanmaken met naam en jaartal (kopie van de live kaart of van een andere editie), de aantallen per editie, een editie bekijken of bewerken, naam of jaartal wijzigen en verwijderen. Zie [Edities](#edities-eerdere-keren-vergelijken).
+
+**Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout, de teksten en alle edities; bij elke backup staat welke edities erin zitten, en terugzetten zet ook de edities terug. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey (zonder passkey: met je wachtwoord en eventueel een MFA-code).
+
+**Versie** – onderin het menu staat de versie en commit van de draaiende build (zie [Versienummer](../README.md#stabiel-en-beta)).
+
+### Pushmeldingen voor de beheerder
+- Zet in *Instellingen → Bewoners → Meldingen op dit apparaat* meldingen aan op je eigen telefoon of computer. De server maakt daarvoor zelf de (VAPID-)sleutels en bewaart ze in `data/db.json`.
+- Bij een nieuwe wijziging ontvang je een pushmelding (meerdere wijzigingen kort na elkaar worden samengevoegd). Tik je erop, dan opent het beheer bij *Wijzigingen* en kun je goedkeuren of afwijzen; pas dan wordt de wijziging doorgevoerd.
+- Vereist **HTTPS**. Op een iPhone/iPad werkt Web Push alleen als je het beheer eerst aan het beginscherm toevoegt (iOS 16.4 of nieuwer) en het daar opent. Een knop *Testmelding* controleert of het werkt.
+- Verlopen apparaten worden automatisch opgeruimd.
+
+## Namen van de statussen
+Onder *Instellingen (⚙) → Config → Weergave* kun je de namen **Groen**, **Rood** en **Niet gemarkeerd** aanpassen, bijvoorbeeld naar *Akkoord* en *Nog niet bezocht*. De kleuren blijven groen en rood. De namen gelden overal: legenda, popups, straten-filter, de PDF, het beheer en de pushmelding. Leeg laten = standaardnaam.
+
+## Nieuwe huizen tekenen
+Een nieuw getekend huis heeft standaard **geen status** (niet gemarkeerd; kies in het beheer desgewenst een andere status voor nieuwe huizen). Het veld **Straat voor nieuwe huizen** toont de actieve of laatst gebruikte straat: die volgt het huis dat je selecteert, het straat-filter of wat je zelf invult. Nieuwe, nog lege huizen krijgen die straat vooraf ingevuld, zodat je alleen het huisnummer hoeft in te vullen.
+
+## Huisnummers en straten
+- In het beheer heeft elk huis een **straat** en een **huisnummer** (aparte velden; het straatveld stelt bestaande straten voor). Met *Filter op straat* toon je alleen de huizen van één straat in de lijst; de rest wordt op de kaart gedimd.
+- De schakelaar *Huisnummers op de kaart* toont het nummer midden op elk huis (wit met donkere rand, dus goed leesbaar). Nummers die niet in het huis passen verdwijnen en komen terug bij verder inzoomen.
+- In *Kaartweergave instellen* bepaal je of de nummers voor bezoekers **standaard** aan staan; bezoekers kunnen dat zelf wisselen met de schakelaar in de menubalk (de keuze wordt onthouden).
+- Op de site kun je met het straat-icoon per straat de huizen verbergen of tonen. De PDF volgt die keuzes (huisnummers en zichtbare straten).
+- Oudere gegevens met één veld *huisnummer/naam* worden automatisch omgezet: dat veld wordt het huisnummer.
+
+## Hoe werkt het
+- **Kaart**: OpenStreetMap (via Leaflet), geen API-sleutel nodig. Google Maps is bewust niet gebruikt: dat vereist een betaalde sleutel en de voorwaarden staan het overtekenen en exporteren naar PDF niet toe.
+- **Beheer instellen**: zoek je straat en zoom ver in; stel via *Kaartweergave instellen* het midden, de startzoom en de minimale/maximale zoom in (of neem de huidige weergave over). Bezoekers openen de kaart (ook in de app) met precies die weergave; met *Automatisch* toont de site alle huizen. In dezelfde dialoog bepaal je of de huisnummers voor bezoekers standaard aan staan. Onder *Kaartvlak in de PDF* zie je met een kader op de kaart welk gebied de PDF toont (standaard automatisch alle huizen) en kun je een eigen vlak vastleggen: zet de kaart op het gewenste gebied, kies *Huidige kaart als PDF-vlak* en sla op. *Automatisch* herstelt het standaardgedrag.
+- **Onboarding**: de allereerste keer vraagt `/beheer` om de `SETUP_TOKEN`, een gebruikersnaam en een passkey of wachtwoord; die eerste gebruiker is de **eigenaar**. Daarna kun je via *Instellingen* (⚙) → *Beveiliging* een extra passkey toevoegen of MFA aanzetten (doe dat zodat je niet buitengesloten raakt) en via *Gebruikers* anderen uitnodigen.
+
+> De PDF haalt kaarttegels rechtstreeks bij OpenStreetMap op; houd het gebruik bescheiden
+> ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)).
+
+## Inloggen: passkey, wachtwoord en MFA
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/onboarding-wachtwoord.png"><img src="screenshots/onboarding-wachtwoord.png" width="420" alt="Installatie met gebruikersnaam en wachtwoord"></a><br><sub>Installatie met gebruikersnaam en wachtwoord</sub></td><td align="center" valign="top"><a href="screenshots/mfa-instellen.png"><img src="screenshots/mfa-instellen.png" width="170" alt="MFA instellen: QR-code voor de app"></a><br><sub>MFA instellen: QR-code voor de app</sub></td><td align="center" valign="top"><a href="screenshots/mfa-herstelcodes.png"><img src="screenshots/mfa-herstelcodes.png" width="170" alt="Herstelcodes, één keer getoond"></a><br><sub>Herstelcodes, één keer getoond</sub></td><td align="center" valign="top"><a href="screenshots/beheer-login-mfa.png"><img src="screenshots/beheer-login-mfa.png" width="170" alt="Inloggen: de MFA-stap"></a><br><sub>Inloggen: de MFA-stap</sub></td></tr>
+</table>
+
+Elke gebruiker van het beheer logt in op een van deze manieren, of op allebei:
+- **Passkey** (aanbevolen): vingerafdruk, gezicht, pincode of beveiligingssleutel; geen wachtwoord nodig. Werkt alleen via **HTTPS** met een echte domeinnaam (of op `localhost`). Open je het beheer via een IP-adres, een naam zonder domein (`nas`) of een naam die alleen thuis bestaat (`.local`, `.lan`), dan legt de wizard uit waarom een passkey daar niet kan.
+- **Gebruikersnaam en wachtwoord**: werkt overal. Minimaal 10 tekens, minstens 4 verschillende tekens en zonder je gebruikersnaam; het wordt alleen als `scrypt`-hash opgeslagen. De gebruikersnaam is niet hoofdlettergevoelig.
+- **Tweestapsverificatie (MFA)**, optioneel bij een wachtwoord: na het wachtwoord vraagt het beheer een code van 6 cijfers uit een authenticator-app (TOTP, bijvoorbeeld Microsoft Authenticator, Google Authenticator of 1Password); een code werkt één keer. Bij het aanzetten krijg je **8 herstelcodes** die je maar één keer ziet (kopiëren of downloaden); elke herstelcode werkt één keer in plaats van een code uit de app. Het MFA-geheim staat versleuteld in `db.json`; de sleutel staat in `secret.key` in dezelfde datamap, dus neem die map altijd in zijn geheel mee in je back-up.
+
+Instellen en wijzigen doe je in *Instellingen* (⚙) → *Beveiliging*. Gevoelige acties (wachtwoord, MFA, backups of edities verwijderen) bevestig je opnieuw: met je passkey als je die hebt, anders met je huidige wachtwoord en eventueel een MFA-code. Heb je zowel een passkey als een wachtwoord, dan kan een sessie die met het wachtwoord is gestart de kaart beheren, maar je inlog niet wijzigen; daarvoor log je in met de passkey. Je laatste passkey kun je alleen verwijderen als je een wachtwoord hebt, en het wachtwoord alleen als je een passkey hebt. Een nieuw wachtwoord of MFA aan- of uitzetten meldt je op je andere apparaten af.
+Mislukte pogingen (wachtwoord, MFA-code, installatiecode) worden per IP-adres en globaal beperkt.
+
+## Meer beheerders uitnodigen
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/instellingen-gebruikers.png"><img src="screenshots/instellingen-gebruikers.png" width="420" alt="Gebruikers: uitnodigen, nieuwe inloglink, verwijderen"></a><br><sub>Gebruikers: uitnodigen, nieuwe inloglink, verwijderen</sub></td><td align="center" valign="top"><a href="screenshots/uitnodiging.png"><img src="screenshots/uitnodiging.png" width="170" alt="De uitnodiging op de telefoon van de gast"></a><br><sub>De uitnodiging op de telefoon van de gast</sub></td></tr>
+</table>
+
+De eerste gebruiker is de **eigenaar**. Die nodigt anderen uit via *Instellingen* (⚙) → *Gebruikers* → *Iemand uitnodigen*, eventueel met een voorgestelde gebruikersnaam. Je krijgt een link (`…/beheer#invite=…`) die je **één keer te zien** krijgt, **één keer werkt** en na **7 dagen** verloopt; stuur hem zelf door (chat, mail of persoonlijk). Wie hem opent kiest zelf een gebruikersnaam en een passkey of wachtwoord (en eventueel MFA), dus de eigenaar kent niemands wachtwoord. Alleen de hash van de link wordt bewaard.
+- Iedereen beheert de kaart, de bewoners, de teksten, edities en backups; alleen de eigenaar beheert gebruikers (dat dwingt de server af).
+- **Nieuwe inloglink** maakt een link voor iemand die niet meer kan inloggen (telefoon kwijt, wachtwoord vergeten). De oude inlog blijft werken tot de nieuwe is ingesteld; dan vervallen de oude passkeys, het wachtwoord en MFA, en wordt die gebruiker op alle apparaten afgemeld.
+- **Verwijderen** haalt de gebruiker met alle passkeys weg en beëindigt de sessies van die gebruiker. De eigenaar kan niet worden gereset of verwijderd.
+- Maximaal 50 gebruikers (open uitnodigingen tellen mee). Gebruikers, uitnodigingen en inloggegevens zitten niet in de backups van het beheer.
+
+Kan niemand meer inloggen? Het herstelcommando staat in de README: [Niemand kan meer inloggen?](../README.md#niemand-kan-meer-inloggen).
+
+## Edities: eerdere keren vergelijken
+Een **editie** is de kaart van één keer (bijvoorbeeld *Sint Maarten 2025*), met een eigen **naam en jaartal** en eigen statussen. De **live kaart** is wat de voorpagina toont. Een editie aanmaken of bewerken verandert de live kaart **nooit**: de server schrijft edities alleen naar hun eigen bestanden, via eigen API-adressen.
+
+- **Aanmaken** – in *Instellingen → Edities* geef je een naam en jaartal en kies je *Kopie van*: de **live kaart** of een **andere editie**. De nieuwe editie begint met dezelfde huizen en statussen en staat daarna los van de bron. Een backup kan geen bron zijn, en een kaart zonder huizen kopieer je niet.
+- **Wisselen** – zodra er een editie is, staat in de overzichtskaart rechtsboven op de kaart een keuzelijst *Kaart*: **Live** of een editie. Tik bij een editie op een huis voor de status in die editie en op de live kaart, met knoppen om de status **in die editie** meteen te wijzigen.
+- **Bewerken** – *Bewerken* opent de kaart die bij *Kaart* gekozen is. Bij een editie staat bovenaan de zijbalk *Je bewerkt de editie …* en heet de knop *Editie opslaan*: alles (status, straat, huisnummer, vorm, huizen toevoegen of verwijderen) wordt alleen in die editie opgeslagen. Ook vanuit de lijst in *Instellingen → Edities* kun je een editie bekijken of bewerken. QR-codes en wijzigingen van bewoners horen altijd bij de live kaart.
+- **Vergelijken** – met *Vergelijk met* zet je twee kaarten naast elkaar (een editie met live, of twee edities). De huizen kleuren dan naar meedoen (groen): **groen in beide**, **alleen in de oudere** (oranje) of **alleen in de nieuwere** (blauw); de rest staat grijs gestippeld. De overzichtskaart toont de aantallen van beide kaarten met het verschil (totaal, groen, rood, niet gemarkeerd) en hoeveel huizen in elke groep vallen. Huizen worden gekoppeld op het huis zelf, en anders op straat en huisnummer.
+- **Overzicht** – de lijst in *Instellingen → Edities* toont per editie het aantal huizen en hoeveel groen (met percentage), rood en niet gemarkeerd, waarvan hij een kopie is en wanneer hij bewerkt is, met de live kaart bovenaan. Naam of jaartal wijzig je met het tekstveld-icoon; verwijderen bevestig je met je passkey of wachtwoord.
+- *Aantallen verbergen* klapt de overzichtskaart in tot alleen de keuzelijsten (handig op een telefoon).
+
+Edities staan als losse bestanden in `data/editions/` (maximaal 100) en zitten **in elke backup**; terugzetten zet ze ook terug (zie [Backups](../README.md#data-en-back-ups)).
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/beheer-edities-vergelijken.png"><img src="screenshots/beheer-edities-vergelijken.png" width="420" alt="Een editie vergelijken met de live kaart"></a><br><sub>Een editie vergelijken met de live kaart</sub></td><td align="center" valign="top"><a href="screenshots/beheer-edities-bewerken.png"><img src="screenshots/beheer-edities-bewerken.png" width="420" alt="Een editie bewerken"></a><br><sub>Een editie bewerken</sub></td></tr>
+<tr><td align="center" valign="top"><a href="screenshots/instellingen-edities.png"><img src="screenshots/instellingen-edities.png" width="420" alt="Instellingen: Edities"></a><br><sub>Instellingen: Edities</sub></td><td align="center" valign="top"><a href="screenshots/beheer-edities-mobiel.png"><img src="screenshots/beheer-edities-mobiel.png" width="170" alt="Vergelijken op een telefoon"></a><br><sub>Vergelijken op een telefoon</sub></td></tr>
+</table>
+
+## Naam van de app
+Bij *Instellingen* (⚙) → *Config* stel je ook de **naam van de site** in (naast het logo en in de PDF; standaard `SITE_TITLE`) en de **naam van de app** en een korte naam (max. 12 tekens, onder het icoon) in. Die worden gebruikt als de site op een telefoon of computer wordt geïnstalleerd.
+Zonder invoer geldt de sitenaam (`SITE_TITLE`). Een al geïnstalleerde app neemt een nieuwe naam pas na een tijdje over.
+
+## Beheer als app
+Ook het beheer (`/beheer`) is te installeren als eigen app, met een eigen donkerblauwe lantaarn met tandwiel als icoon en een eigen favicon, zodat je het onderscheidt van de publieke kaart (Chrome/Edge: installeer-icoon in de adresbalk of *App installeren*; iPhone/iPad: *Zet in beginscherm*). De app opent direct op `/beheer`; pushmeldingen voor nieuwe wijzigingen gebruiken hetzelfde icoon. Een nieuw icoon maak je met `python3 tools/make-icons.py`.
+
+## Installeren als app en offline gebruik
+
+<table>
+<tr><td align="center" valign="top"><a href="screenshots/installatiemelding-ios.png"><img src="screenshots/installatiemelding-ios.png" width="220" alt="Installeren op iPhone/iPad"></a><br><sub>Installeren op iPhone/iPad</sub></td><td align="center" valign="top"><a href="screenshots/installatiemelding-android.png"><img src="screenshots/installatiemelding-android.png" width="220" alt="Installeren op Android"></a><br><sub>Installeren op Android</sub></td></tr>
+</table>
+
+- **Knop *Installeer* in de menubalk**: zolang de app niet geïnstalleerd is, staat er in de menubalk een knop **Installeer** (een telefoon met een pijl). Er opent niets vanzelf. Is de app geïnstalleerd en open je hem als app, dan verdwijnt de knop. Hij staat op iPhone/iPad, Android en Windows (Chrome/Edge), en in elke andere browser die zelf installeren aanbiedt (bijvoorbeeld Chrome op macOS of Linux):
+  - **Android (Chrome), Windows en andere desktopbrowsers**: de knop start meteen de installatie van de browser. Kan dat niet (bijvoorbeeld omdat je de vraag van de browser net hebt weggeklikt), dan opent een venster met de stappen: menu ⋮ → *App installeren*; op Windows het installeer-icoon in de adresbalk of menu → *App installeren* (Edge: *Apps* → *Deze site als app installeren*).
+  - **iPhone/iPad (Safari)**: de knop opent een venster met de stappen. Een webpagina kan het deelmenu van Safari niet zelf openen en iOS heeft geen installatieprompt, dus je opent zelf het deelmenu van Safari (via het paginamenu bij de adresbalk → *Deel*, of met de deelknop in de werkbalk) en kiest *Zet in beginscherm* → *Voeg toe*.
+  - Safari op macOS en Firefox kunnen niet via de pagina installeren; daar staat de knop niet.
+  - Open je de website in de browser terwijl de app al geïnstalleerd is, dan staat de knop er toch (de browser meldt dat niet aan de pagina); open dan de app zelf.
+- **Offline**: de app bewaart zichzelf, de laatst bekende kaartgegevens, het logo en de kaarttegels van het wijkgebied (en de PDF-uitsnede).
+  Zonder verbinding zie je de laatst bekende stand (met de melding *Offline*), en de PDF blijft te maken. Alleen het beheer vereist altijd een verbinding.
+- Dit werkt alleen via **HTTPS** (zie `ORIGIN`). Na een update van de site haalt de app de nieuwe versie bij het eerstvolgende bezoek op.
+
+## Problemen oplossen
+
+### Na een update: oude pagina's of scripts
+Scripts en stijlen worden per build met `?v=<versie>-<commit>` opgevraagd en de HTML wordt nooit gecachet; zo krijg je nooit een oude `admin.js` bij nieuwe HTML (dat geeft fouten als
+*Cannot set properties of null*). Zie je zo'n fout toch na een update, ververs dan hard (Ctrl+Shift+R) of wis de sitegegevens; eventueel staat een proxy/CDN (bijv. Cloudflare) te agressief te cachen.
+
+### Ineens weer de installatiecode?
+Dan vindt de server in `/data` geen `db.json`: er is een andere, lege map gekoppeld. Dat gebeurt bijvoorbeeld als je de stackmap verplaatst terwijl `DATA_PATH` leeg is, want `./data` verhuist dan mee naar een nieuwe lege map; je gegevens staan nog in de oude. Rond de installatie dan niet af. Bij het starten zet de server in de containerlog welke datamap hij gebruikt en of daar gegevens stonden (`Gegevens: …`); `docker inspect <container>` toont welke hostmap op `/data` zit. Zet `DATA_PATH` in `.env` op het absolute pad van de map met `db.json` (of kopieer de inhoud van de oude map met `cp -a` naar de nieuwe, met de container gestopt) en start opnieuw.
+
+> Is het GHCR-package privé? Maak het publiek (GitHub → Packages → Package settings), of log in met
+> `docker login ghcr.io` (gebruikersnaam + Personal Access Token met `read:packages`).
