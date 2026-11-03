@@ -8,9 +8,20 @@ Het project volgt de richtlijnen van [App-Guidance](https://github.com/Flux76HQ/
 
 ## Over deze repository
 
-Doorbell Map (`doorbell-map`, voorheen Sint Maarten) is een evenement-neutrale interactieve wijkkaart (Node 22 + Express, JSON-opslag, passkeys), uitgerold als
-Docker-container. Zie [README.md](README.md). Wijzigingen zijn bijna altijd kleine functies of fixes in `server/`, `public/` of
+Doorbell Map (`doorbell-map`, voorheen Sint Maarten) is een evenement-neutrale interactieve wijkkaart (Node 22 + Express, JSON-opslag, inloggen met
+passkey of gebruikersnaam + wachtwoord met optionele TOTP), uitgerold als Docker-container. Zie [README.md](README.md). Wijzigingen zijn bijna altijd kleine functies of fixes in `server/`, `public/` of
 de tooling; de app heeft Nederlandse bron-teksten en een Engelse vertaling (`public/js/lang-en.js`).
+
+## Inloggen en gebruikers
+
+- Het gebruikersbeheer (eigenaar, uitnodigingslinks, reset, verwijderen) volgt
+  [`shared/guidelines/user-management.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/user-management.md);
+  inloggen, MFA en sessies volgen
+  [`auth-passkeys-password-mfa.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/framework/technical-framework/auth-passkeys-password-mfa.md)
+  en de installatie-wizard [`onboarding-wizard.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/framework/technical-framework/onboarding-wizard.md).
+  De code staat in `server/users.js` (gegevens en regels) en `server/account.js` (routes); de tests in `test/account.test.js`.
+- Standaarden via bestaande modules (baseline §19): WebAuthn met `@simplewebauthn/*`, TOTP met `otpauth`. Geen eigen implementatie.
+- Het herstelcommando in de README (`server/reset-login.js`) wordt door een test gedraaid; pas README en test samen aan.
 
 ## Git workflow
 

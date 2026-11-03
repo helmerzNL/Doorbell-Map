@@ -3,15 +3,12 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const express = require('express');
-const {
-  generateRegistrationOptions, verifyRegistrationResponse,
-  generateAuthenticationOptions, verifyAuthenticationResponse,
-} = require('@simplewebauthn/server');
 
 const config = require('./config');
 const store = require('./store');
 const auth = require('./auth');
-const { hashPassword, verifyPassword } = require('./password');
+const users = require('./users');
+const account = require('./account');
 const backups = require('./backups');
 const editions = require('./editions');
 const residents = require('./residents');
@@ -38,31 +35,11 @@ const jsonBody = express.json({ limit: '2mb' });
 app.use((req, res, next) => (req.path === '/api/admin/backups/import' ? next() : jsonBody(req, res, next)));
 app.use(auth.sameOrigin);
 
-// ---------- challenges (in-memory, kort geldig) ----------
-const challenges = new Map();
-function putChallenge(data) {
-  const id = crypto.randomBytes(16).toString('base64url');
-  challenges.set(id, { ...data, exp: Date.now() + 5 * 60 * 1000 });
-  return id;
-}
-function takeChallenge(id) {
-  const c = challenges.get(id);
-  challenges.delete(id);
-  for (const [k, v] of challenges) if (v.exp < Date.now()) challenges.delete(k);
-  return c && c.exp > Date.now() ? c : null;
-}
-
 const asyncRoute = (fn) => (req, res) =>
   Promise.resolve(fn(req, res)).catch((err) => {
     console.error(err);
     res.status(err.status || 400).json({ error: err.message || 'Er ging iets mis' });
   });
-
-function userId() {
-  const db = store.db();
-  if (!db.userId) { db.userId = crypto.randomBytes(32).toString('base64url'); store.save(); }
-  return Buffer.from(db.userId, 'base64url');
-}
 
 // ---------- publiek ----------
 // Naam van de site: instelling in het beheer, anders SITE_TITLE uit de omgeving.
@@ -170,182 +147,17 @@ app.get('/beheer.webmanifest', (req, res) => {
 });
 
 // ---------- auth ----------
-app.get('/api/auth/status', (req, res) => {
-  const db = store.db();
-  const method = auth.sessionMethod(req);
-  res.json({ configured: db.passkeys.length > 0, loggedIn: !!method, method, passwordEnabled: !!db.password });
-});
-
-app.post('/api/auth/register/options', asyncRoute(async (req, res) => {
-  const db = store.db();
-  const loggedIn = auth.isLoggedIn(req);
-  if (loggedIn && auth.sessionMethod(req) !== 'pk') return res.status(403).json({ error: 'Log in met een passkey om dit te wijzigen' });
-  if (!loggedIn) {
-    if (db.passkeys.length > 0) return res.status(401).json({ error: 'Niet ingelogd' });
-    if (auth.limiter.blocked(req.ip)) return res.status(429).json({ error: 'Te veel pogingen, probeer later opnieuw' });
-    if (!auth.safeEqual(req.body.setupToken || '', config.setupToken)) {
-      auth.limiter.fail(req.ip);
-      return res.status(403).json({ error: 'Onjuiste installatiecode' });
-    }
-  }
-  const name = String(req.body.name || 'Passkey').slice(0, 60);
-  const options = await generateRegistrationOptions({
-    rpName: siteTitle(),
-    rpID: config.rpID,
-    userName: 'beheerder',
-    userDisplayName: 'Beheerder',
-    userID: userId(),
-    attestationType: 'none',
-    excludeCredentials: db.passkeys.map((p) => ({ id: p.id, transports: p.transports })),
-    authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
-  });
-  const challengeId = putChallenge({ challenge: options.challenge, kind: 'register', name, firstSetup: !loggedIn });
-  res.json({ challengeId, options });
-}));
-
-app.post('/api/auth/register/verify', asyncRoute(async (req, res) => {
-  const c = takeChallenge(req.body.challengeId);
-  if (!c || c.kind !== 'register') return res.status(400).json({ error: 'Sessie verlopen, begin opnieuw' });
-  const db = store.db();
-  // Een eerste setup mag alleen lukken zolang er nog geen passkey is.
-  if (c.firstSetup && db.passkeys.length > 0) return res.status(403).json({ error: 'Er is al een passkey ingesteld' });
-  if (!c.firstSetup && auth.sessionMethod(req) !== 'pk') return res.status(401).json({ error: 'Niet ingelogd met een passkey' });
-
-  const v = await verifyRegistrationResponse({
-    response: req.body.response,
-    expectedChallenge: c.challenge,
-    expectedOrigin: config.origin,
-    expectedRPID: config.rpID,
-  });
-  if (!v.verified) return res.status(400).json({ error: 'Passkey kon niet worden geverifieerd' });
-  const { credential } = v.registrationInfo;
-  db.passkeys.push({
-    id: credential.id,
-    publicKey: Buffer.from(credential.publicKey).toString('base64url'),
-    counter: credential.counter,
-    transports: credential.transports || [],
-    name: c.name,
-    createdAt: new Date().toISOString(),
-  });
-  store.save();
-  auth.limiter.reset(req.ip);
-  if (c.firstSetup) auth.startSession(res);
-  res.json({ ok: true });
-}));
-
-app.post('/api/auth/login/options', asyncRoute(async (req, res) => {
-  const db = store.db();
-  if (!db.passkeys.length) return res.status(409).json({ error: 'Nog geen passkey ingesteld' });
-  if (auth.limiter.blocked(req.ip)) return res.status(429).json({ error: 'Te veel pogingen, probeer later opnieuw' });
-  const options = await generateAuthenticationOptions({
-    rpID: config.rpID,
-    userVerification: 'preferred',
-    allowCredentials: db.passkeys.map((p) => ({ id: p.id, transports: p.transports })),
-  });
-  res.json({ challengeId: putChallenge({ challenge: options.challenge, kind: 'login' }), options });
-}));
-
-// Controleert een passkey-antwoord op een eerder uitgegeven uitdaging ("login" of "confirm").
-async function verifyAssertion(req, kind) {
-  const c = takeChallenge(req.body.challengeId);
-  if (!c || c.kind !== kind) throw Object.assign(new Error('Sessie verlopen, begin opnieuw'), { status: 400 });
-  const db = store.db();
-  const pk = db.passkeys.find((p) => p.id === req.body.response?.id);
-  if (!pk) throw Object.assign(new Error('Onbekende passkey'), { status: 400 });
-  const v = await verifyAuthenticationResponse({
-    response: req.body.response,
-    expectedChallenge: c.challenge,
-    expectedOrigin: config.origin,
-    expectedRPID: config.rpID,
-    requireUserVerification: true,
-    credential: { id: pk.id, publicKey: Buffer.from(pk.publicKey, 'base64url'), counter: pk.counter, transports: pk.transports },
-  });
-  if (!v.verified) throw Object.assign(new Error('Passkey kon niet worden geverifieerd'), { status: 400 });
-  pk.counter = v.authenticationInfo.newCounter;
-  pk.lastUsed = new Date().toISOString();
-  store.save();
-}
-
-app.post('/api/auth/login/verify', asyncRoute(async (req, res) => {
-  if (auth.limiter.blocked(req.ip)) return res.status(429).json({ error: 'Te veel pogingen, probeer later opnieuw' });
-  try {
-    await verifyAssertion(req, 'login');
-  } catch (err) {
-    auth.limiter.fail(req.ip);
-    throw err;
-  }
-  auth.limiter.reset(req.ip);
-  auth.startSession(res, 'pk');
-  res.json({ ok: true });
-}));
-
-// Inloggen met wachtwoord (alleen als dat in het beheer is ingesteld).
-const PW_GLOBAL = '*password';
-app.post('/api/auth/password-login', asyncRoute(async (req, res) => {
-  const db = store.db();
-  if (auth.limiter.blocked(req.ip) || auth.limiter.blocked(PW_GLOBAL, 30)) {
-    return res.status(429).json({ error: 'Te veel pogingen, probeer later opnieuw' });
-  }
-  const password = typeof req.body.password === 'string' ? req.body.password.slice(0, 200) : '';
-  // Ook zonder ingesteld wachtwoord rekenen we, zodat de responstijd niets verklapt.
-  const stored = db.password || await hashPassword('x');
-  const ok = await verifyPassword(password, stored);
-  if (!db.password || !ok) {
-    auth.limiter.fail(req.ip);
-    auth.limiter.fail(PW_GLOBAL);
-    return res.status(401).json({ error: 'Onjuist wachtwoord' });
-  }
-  auth.limiter.reset(req.ip);
-  auth.startSession(res, 'pw');
-  res.json({ ok: true });
-}));
-
-app.post('/api/auth/logout', (req, res) => { auth.endSession(res); res.json({ ok: true }); });
+// Inloggen, de installatie-wizard en uitnodigingen staan in account.js.
+users.migrate();
+app.use('/api/auth', account.pub);
+app.use('/api/invites', account.invites);
 
 // ---------- beheer ----------
 const admin = express.Router();
 admin.use(auth.requireAdmin);
+admin.use(account.admin); // eigen inlog (passkeys, wachtwoord, MFA), bevestigen en gebruikersbeheer
 
 const pwError = (res, err) => res.status(err.status || 400).json({ error: err.message });
-
-// Wachtwoord instellen of verwijderen moet met een passkey worden bevestigd.
-admin.post('/password/options', auth.requirePasskeySession, asyncRoute(async (req, res) => {
-  const db = store.db();
-  const options = await generateAuthenticationOptions({
-    rpID: config.rpID,
-    userVerification: 'required',
-    allowCredentials: db.passkeys.map((p) => ({ id: p.id, transports: p.transports })),
-  });
-  res.json({ challengeId: putChallenge({ challenge: options.challenge, kind: 'confirm' }), options });
-}));
-
-admin.put('/password', auth.requirePasskeySession, asyncRoute(async (req, res) => {
-  const password = req.body.password;
-  if (typeof password !== 'string' || password.length < 10 || password.length > 200) {
-    return res.status(400).json({ error: 'Het wachtwoord moet 10 tot 200 tekens lang zijn' });
-  }
-  try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
-  store.db().password = await hashPassword(password);
-  store.save();
-  res.json({ ok: true });
-}));
-
-admin.post('/password/remove', auth.requirePasskeySession, asyncRoute(async (req, res) => {
-  try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
-  store.db().password = null;
-  store.save();
-  res.json({ ok: true });
-}));
-
-// Algemene bevestiging met een passkey (voor o.a. het verwijderen van backups).
-admin.post('/confirm/options', asyncRoute(async (req, res) => {
-  const options = await generateAuthenticationOptions({
-    rpID: config.rpID,
-    userVerification: 'required',
-    allowCredentials: store.db().passkeys.map((p) => ({ id: p.id, transports: p.transports })),
-  });
-  res.json({ challengeId: putChallenge({ challenge: options.challenge, kind: 'confirm' }), options });
-}));
 
 admin.get('/info', (req, res) => {
   const { version, build, buildFull, label, channel } = appVersion;
@@ -446,7 +258,7 @@ admin.post('/backups/delete', asyncRoute(async (req, res) => {
   if (!Array.isArray(idsToDelete) || !idsToDelete.length || idsToDelete.length > 500 || !idsToDelete.every((i) => typeof i === 'string' && backups.ID.test(i))) {
     return res.status(400).json({ error: 'Geen geldige backups geselecteerd' });
   }
-  try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
+  try { await account.confirm(req); } catch (err) { return pwError(res, err); }
   res.json({ deleted: backups.remove(idsToDelete) });
 }));
 
@@ -507,21 +319,9 @@ admin.post('/editions/delete', backups.afterSave('Edities verwijderd'), asyncRou
   if (!Array.isArray(idsToDelete) || !idsToDelete.length || idsToDelete.length > editions.MAX_EDITIONS || !idsToDelete.every((i) => typeof i === 'string' && editions.ID.test(i))) {
     return res.status(400).json({ error: 'Geen geldige edities geselecteerd' });
   }
-  try { await verifyAssertion(req, 'confirm'); } catch (err) { return pwError(res, err); }
+  try { await account.confirm(req); } catch (err) { return pwError(res, err); }
   res.json({ deleted: editions.remove(idsToDelete) });
 }));
-
-admin.get('/passkeys', (req, res) => {
-  res.json(store.db().passkeys.map(({ id, name, createdAt, lastUsed }) => ({ id, name, createdAt, lastUsed })));
-});
-
-admin.delete('/passkeys/:id', auth.requirePasskeySession, (req, res) => {
-  const db = store.db();
-  if (db.passkeys.length <= 1) return res.status(400).json({ error: 'Je kunt de laatste passkey niet verwijderen' });
-  db.passkeys = db.passkeys.filter((p) => p.id !== req.params.id);
-  store.save();
-  res.json({ ok: true });
-});
 
 // Afmetingen uit de kop van de afbeelding (PNG, JPEG, WebP); null als ze niet te lezen zijn.
 function imageSize(b, ext) {
@@ -854,8 +654,8 @@ if (require.main === module) {
     console.log(`Doorbell Map draait op poort ${config.port} (${config.origin}, rpID ${config.rpID})`);
     console.log(`Versie ${appVersion.label}`);
     console.log(store.startupReport());
-    if (config.setupTokenGenerated && !store.db().passkeys.length) {
-      console.log(`\nINSTALLATIE: er is geen SETUP_TOKEN ingesteld. Tijdelijke code voor de eerste passkey:\n  ${config.setupToken}\n`);
+    if (config.setupTokenGenerated && !users.configured()) {
+      console.log(`\nINSTALLATIE: er is geen SETUP_TOKEN ingesteld. Tijdelijke installatiecode voor de eerste inlog:\n  ${config.setupToken}\n`);
     }
     if (config.sessionSecretGenerated) {
       console.warn('Let op: SESSION_SECRET niet ingesteld; sessies vervallen bij elke herstart.');

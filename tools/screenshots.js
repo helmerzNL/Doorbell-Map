@@ -277,6 +277,18 @@ async function main() {
   await shot(a, 'instellingen-config');
   await openTab(a, 'security');
   await shot(a, 'instellingen-beveiliging');
+  // gebruikers: één uitnodiging is afgerond (met wachtwoord), één staat nog open
+  {
+    const inv = await post('/api/admin/users/invites', { username: 'Marieke' });
+    const guest = await request.newContext({ baseURL: BASE });
+    const r = await guest.post('/api/invites/password', { data: { token: inv.token, username: 'Marieke', password: 'voorbeeld-wachtwoord-1' } });
+    if (!r.ok()) throw new Error(`uitnodiging ${r.status()}`);
+    await guest.dispose();
+    await post('/api/admin/users/invites', { username: 'Joost' });
+  }
+  await openTab(a, 'users');
+  await a.waitForSelector('#us-list .us-row');
+  await shot(a, 'instellingen-gebruikers');
   await openTab(a, 'backups');
   await shot(a, 'instellingen-backups');
 
