@@ -4,7 +4,7 @@
 
 > This is the English version of the README. The screenshots show the Dutch interface; the app itself can be switched to English (see [Languages and dark mode](#languages-and-dark-mode)).
 
-An interactive map of the neighbourhood in which every house is **green**, **red** or **not marked** (for example for Halloween, St. Martin's Day or another door-to-door event: which houses do or do not want visitors to ring the bell). Visitors view the map in the browser or as an app on their phone; the admin draws the houses and manages everything in `/beheer` (the admin area), secured with a **passkey**. It runs as a single Docker container, for example on a NAS: you deploy it with [`docker-compose.yml`](docker-compose.yml) and your own `.env` (a copy of [`.env.example`](.env.example)); see [Deploy it yourself with Docker](#deploy-it-yourself-with-docker).
+An interactive map of the neighbourhood in which every house is **green**, **red** or **not marked** (for example for Halloween, St. Martin's Day or another door-to-door event: which houses do or do not want visitors to ring the bell). Visitors view the map in the browser or as an app on their phone; the admin draws the houses and manages everything in `/beheer` (the admin area), secured with a **passkey** or a **username and password** (optionally with two-step verification), and can invite others as admins. It runs as a single Docker container, for example on a NAS: you deploy it with [`docker-compose.yml`](docker-compose.yml) and your own `.env` (a copy of [`.env.example`](.env.example)); see [Deploy it yourself with Docker](#deploy-it-yourself-with-docker).
 
 ## Contents
 - [Features in brief](#features-in-brief)
@@ -14,6 +14,8 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - [Languages and dark mode](#languages-and-dark-mode)
 - [The admin area](#the-admin-area-beheer)
 - [Settings](#settings)
+- [Logging in: passkey, password and MFA](#logging-in-passkey-password-and-mfa)
+- [Inviting more admins](#inviting-more-admins)
 - [Editions: comparing earlier occasions](#editions-comparing-earlier-occasions)
 - [Installing as an app and offline use](#installing-as-an-app-and-offline-use)
 - [Deploy it yourself with Docker](#deploy-it-yourself-with-docker)
@@ -39,11 +41,12 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 
 **For the admin**
 - Draw and edit houses (colour, street, house number, note, corner points), set the map view (centre, zoom, min/max).
-- Log in with a **passkey** or a **password**; a password also works on an address without https.
+- Log in with a **passkey** or with a **username and password**, optionally with **two-step verification (MFA)** and recovery codes. See [Logging in](#logging-in-passkey-password-and-mfa).
+- **Multiple admins**: the owner invites others with a link; everyone chooses their own passkey or password. See [Inviting more admins](#inviting-more-admins).
 - **Approve or reject** changes by residents, with **push notifications**; **block** devices (also by IP); **schedule** changes until a date and time.
 - **QR codes** per house: show, copy the link, renew, and a **printable PDF** with a card per house to deliver to the residents.
 - **Editions**: the map of every occasion with a name and year, created as a copy of the live map or of another edition and edited separately; switch in the admin area between *Live* and editions and compare which houses took part then and now, with the numbers. The front page never changes because of them. See [Editions](#editions-comparing-earlier-occasions).
-- Settings in six clear tabs; the admin area can also be installed as its own **app**.
+- Settings in seven clear tabs; the admin area can also be installed as its own **app**.
 - Your own **logo** (with an optional small logo for the header), an optional **favicon** (also the icon of the installed app; the lantern by default), explanation, info box, **site and app name** and your own names for the statuses.
 - Automatic **backups** after every save attempt, with short titles and manual backups.
 - Version number and commit visible in the settings menu.
@@ -160,9 +163,9 @@ If you want residents to only be able to link **their own house**, switch on *Ch
 <tr><td align="center" valign="top"><a href="docs/screenshots/beheer-tekenen.png"><img src="docs/screenshots/beheer-tekenen.png" width="400" alt="Drawing a house"></a><br><sub>Drawing a house</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer.png"><img src="docs/screenshots/beheer.png" width="400" alt="Editing a house"></a><br><sub>Editing a house</sub></td></tr>
 </table>
 
-**Onboarding** – the first time you set up a passkey or a password with the setup code (`SETUP_TOKEN`). On an address without https (for example `http://192.168.1.10:9888`) passkeys do not work and you choose a password.
+**Onboarding** – the first time you use the setup code (`SETUP_TOKEN`) to choose a username and how you log in: with a **passkey** or with a **password** (then turn on two-step verification right away, or later). If a passkey cannot work here (no HTTPS or no real domain name), the wizard explains why and you choose the password.
 
-**Logging in** – with a passkey (fingerprint, face, PIN or security key) and/or with a password.
+**Logging in** – with a passkey (fingerprint, face, PIN or security key) or with a username and password, plus the code from your authenticator app if MFA is on. See [Logging in](#logging-in-passkey-password-and-mfa).
 
 **View and edit** – the admin area opens in **view** mode: only the map, without a side bar. Double-click (or long-press on a touchscreen) a house for a **popup** with which you directly make the house **green, red or not marked** (it is saved immediately) and which contains the **QR card** for the residents: with logo, address, QR and explanation. Below it are the **direct link** with a copy button, a **Share via WhatsApp** button (opens WhatsApp with a ready-made message and the link), on phones also **Share card…** (the image via the share menu), a **PNG** to download and *Renew*. With **✏️ Edit** you open the edit screen (drawing houses, selecting, searching, map view); **✓ View** takes you back (with unsaved changes it asks first).
 
@@ -177,11 +180,12 @@ If you want residents to only be able to link **their own house**, switch on *Ch
 **Editing a house** (in the edit screen) – select a house (click, double-click or long-press) to change the colour, street, house number and note, or drag the corner points. Shortcuts: **G** green, **R** red, **Delete** delete, **Ctrl+S** save. The list on the left has a filter per street; the rest is dimmed on the map.
 
 ## Settings
-The cog (⚙) in the bar slides the settings menu into view. It is divided into six tabs (*Approve*, *Residents*, *Config*, *Security*, *Editions* and *Backups*, with icons from [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); each tab consists of cards with clear switches and a short explanation (also on a phone).
+The cog (⚙) in the bar slides the settings menu into view. It is divided into seven tabs (*Approve*, *Residents*, *Config*, *Security*, *Users* (owner only), *Editions* and *Backups*, with icons from [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); each tab consists of cards with clear switches and a short explanation (also on a phone).
 
 <table>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-goedkeuren.png"><img src="docs/screenshots/instellingen-goedkeuren.png" width="270" alt="Approve"></a><br><sub>Approve</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners.png"><img src="docs/screenshots/instellingen-bewoners.png" width="270" alt="Residents"></a><br><sub>Residents</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners-apparaten.png"><img src="docs/screenshots/instellingen-bewoners-apparaten.png" width="270" alt="Residents: devices and notifications"></a><br><sub>Residents: devices and notifications</sub></td></tr>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config.png"><img src="docs/screenshots/instellingen-config.png" width="270" alt="Config"></a><br><sub>Config</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-beveiliging.png"><img src="docs/screenshots/instellingen-beveiliging.png" width="270" alt="Security"></a><br><sub>Security</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-backups.png"><img src="docs/screenshots/instellingen-backups.png" width="270" alt="Backups"></a><br><sub>Backups</sub></td></tr>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-gebruikers.png"><img src="docs/screenshots/instellingen-gebruikers.png" width="270" alt="Users"></a><br><sub>Users</sub></td></tr>
 </table>
 
 <p align="center"><a href="docs/screenshots/instellingen-mobiel.png"><img src="docs/screenshots/instellingen-mobiel.png" width="220" alt="Settings on a phone"></a><br><sub>Settings on a phone</sub></p>
@@ -201,11 +205,13 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-afbeeldingen.png"><img src="docs/screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, small logo and favicon"></a><br><sub>Config: logo, small logo and favicon</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-locatie.png"><img src="docs/screenshots/instellingen-config-locatie.png" width="270" alt="Config: My location and Community"></a><br><sub>Config: My location and Community</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-communityteksten.png"><img src="docs/screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: title and text of the community window"></a><br><sub>Config: title and text of the community window</sub></td></tr>
 </table>
 
-**Security** – add/remove passkeys and set, change or remove the password (see [Logging in with a password](#logging-in-with-a-password)).
+**Security** – your own login: username, passkeys, password and two-step verification (MFA) with recovery codes. See [Logging in](#logging-in-passkey-password-and-mfa).
+
+**Users** (owner only) – who can open the admin area and how each of them logs in, create and revoke invitation links, a new login link for someone who is locked out, and removing users. See [Inviting more admins](#inviting-more-admins).
 
 **Editions** – create an edition with a name and year (a copy of the live map or of another edition), the numbers per edition, view or edit an edition, change the name or year, and delete. See [Editions](#editions-comparing-earlier-occasions).
 
-**Backups** – after every save attempt a backup of the layout, the texts and all editions is made automatically; each backup shows which editions it contains, and restoring also restores the editions. Give a backup a **short title** (✎, max. 40 characters, for example "Everything" or "Layout only") or make one yourself with *Make backup*. Restoring or downloading is always possible; deleting (one or several at once) must be confirmed with your passkey.
+**Backups** – after every save attempt a backup of the layout, the texts and all editions is made automatically; each backup shows which editions it contains, and restoring also restores the editions. Give a backup a **short title** (✎, max. 40 characters, for example "Everything" or "Layout only") or make one yourself with *Make backup*. Restoring or downloading is always possible; deleting (one or several at once) must be confirmed with your passkey (without a passkey: with your password and, if on, an MFA code).
 
 **Version** – at the bottom of the menu is the version and commit of the running build (see [Version number](#version-number)).
 
@@ -231,20 +237,45 @@ A newly drawn house has **no status** by default (not marked; in the admin area 
 ## How it works
 - **Map**: OpenStreetMap (via Leaflet), no API key needed. Google Maps was deliberately not used: it requires a paid key and its terms do not allow drawing over it and exporting to PDF.
 - **Setting up the admin area**: search for your street and zoom in far; set the centre, the start zoom and the minimum/maximum zoom via *Set map view* (or adopt the current view). Visitors open the map (also in the app) with exactly that view; with *Automatic* the site shows all houses. In the same dialog you decide whether the house numbers are on by default for visitors. Under *Map area in the PDF* a frame on the map shows which area the PDF displays (by default all houses automatically) and you can set your own: move the map to the area you want, choose *Use current map as PDF area* and save. *Automatic* restores the default.
-- **Onboarding**: the very first time `/beheer` asks for the `SETUP_TOKEN` and then creates a passkey or a password. After that you can add extra devices via *Settings* (⚙) → *Security* (do that so you do not get locked out).
+- **Onboarding**: the very first time `/beheer` asks for the `SETUP_TOKEN`, a username and a passkey or password; that first user is the **owner**. After that you can add an extra passkey or turn on MFA via *Settings* (⚙) → *Security* (do that so you do not get locked out) and invite others via *Users*.
 
 > The PDF fetches map tiles directly from OpenStreetMap; keep usage modest
 > ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)).
 
-## Logging in with a password
-A password (at least 10 characters) is for an address without https, where a browser does not create a passkey, or for anyone who would rather not use one.
-The password is only stored as a `scrypt` hash; failed attempts are limited per IP address and globally.
+## Logging in: passkey, password and MFA
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/onboarding-wachtwoord.png"><img src="docs/screenshots/onboarding-wachtwoord.png" width="420" alt="Setup with username and password"></a><br><sub>Setup with username and password</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-instellen.png"><img src="docs/screenshots/mfa-instellen.png" width="170" alt="Setting up MFA: QR code for the app"></a><br><sub>Setting up MFA: QR code for the app</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-herstelcodes.png"><img src="docs/screenshots/mfa-herstelcodes.png" width="170" alt="Recovery codes, shown once"></a><br><sub>Recovery codes, shown once</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-login-mfa.png"><img src="docs/screenshots/beheer-login-mfa.png" width="170" alt="Logging in: the MFA step"></a><br><sub>Logging in: the MFA step</sub></td></tr>
+</table>
 
-- **Only a password** (chosen during onboarding): you change it under *Settings* (⚙) → *Security* → *Password* with your current password, and you confirm
-  deleting backups and editions with the password. It cannot be removed, because you could then no longer log in. Once the admin can be reached over https,
-  add a passkey under *Security*.
-- **Passkey and password**: as soon as there is a passkey, setting, changing and removing the password must be **confirmed with a passkey**. A session started
-  with a password can then manage the map and texts, but cannot change passkeys or the password; for that you log in with a passkey.
+Every user of the admin area logs in in one of these ways, or both:
+- **Passkey** (recommended): fingerprint, face, PIN or security key; no password needed. Only works over **HTTPS** with a real domain name (or on `localhost`). If you open the admin area through an IP address, a name without a domain (`nas`) or a name that only exists at home (`.local`, `.lan`), the wizard explains why a passkey cannot work there.
+- **Username and password**: works everywhere. At least 10 characters, at least 4 different characters and without your username; it is only stored as a `scrypt` hash. The username is not case-sensitive.
+- **Two-step verification (MFA)**, optional with a password: after the password the admin area asks for a 6-digit code from an authenticator app (TOTP, for example Microsoft Authenticator, Google Authenticator or 1Password); a code works once. When you turn it on you get **8 recovery codes** that you only see once (copy or download them); each recovery code works once instead of a code from the app. The MFA secret is stored encrypted in `db.json`; the key is `secret.key` in the same data folder, so always back up that folder as a whole.
+
+You set this up and change it in *Settings* (⚙) → *Security*. Sensitive actions (password, MFA, deleting backups or editions) are confirmed again: with your passkey if you have one, otherwise with your current password and, if on, an MFA code. If you have both a passkey and a password, a session started with the password can manage the map but not change your login; for that you log in with the passkey. You can only remove your last passkey if you have a password, and the password only if you have a passkey. A new password or turning MFA on or off signs you out on your other devices.
+Failed attempts (password, MFA code, setup code) are limited per IP address and globally.
+
+## Inviting more admins
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-gebruikers.png"><img src="docs/screenshots/instellingen-gebruikers.png" width="420" alt="Users: invite, new login link, remove"></a><br><sub>Users: invite, new login link, remove</sub></td><td align="center" valign="top"><a href="docs/screenshots/uitnodiging.png"><img src="docs/screenshots/uitnodiging.png" width="170" alt="The invitation on the guest's phone"></a><br><sub>The invitation on the guest's phone</sub></td></tr>
+</table>
+
+The first user is the **owner**. The owner invites others via *Settings* (⚙) → *Users* → *Invite someone*, optionally with a suggested username. You get a link (`…/beheer#invite=…`) that is **shown once**, **works once** and expires after **7 days**; send it yourself (chat, email or in person). Whoever opens it chooses their own username and passkey or password (and optionally MFA), so the owner never knows anyone's password. Only the hash of the link is stored.
+- Everyone manages the map, the residents, the texts, editions and backups; only the owner manages users (the server enforces this).
+- **New login link** creates a link for someone who can no longer log in (lost phone, forgotten password). The old login keeps working until the new one is set up; then the old passkeys, password and MFA stop working and that user is signed out on every device.
+- **Remove** deletes the user with all their passkeys and ends their sessions. The owner cannot be reset or removed.
+- At most 50 users (open invitations count). Users, invitations and login details are not part of the backups in the admin area.
+
+### Nobody can log in any more?
+If the owner has no working passkey, password or recovery code left, reset all login details to a fresh installation. The map, editions, backups and settings stay; all users and invitations are removed. Stop the container first, otherwise the running server writes its data back:
+
+```bash
+docker compose stop doorbell-map
+docker compose run --rm doorbell-map node server/reset-login.js
+docker compose up -d
+```
+
+Then open `/beheer`: the setup wizard asks for the setup code (`SETUP_TOKEN`) again. Invite the others again afterwards.
 
 ## After an update: old pages or scripts
 Scripts and styles are requested per build with `?v=<version>-<commit>` and the HTML is never cached; this way you never get an old `admin.js` with new HTML (which gives errors such as
@@ -265,7 +296,7 @@ Locally (without a build) the app shows `dev` with the commit from git. The work
 ## Backups
 After **every save attempt** (houses/layout, texts, map view, editions) the server makes a JSON backup in `data/backups/` of the layout (houses + map view), the texts (explanation, app name) and **all editions**.
 Identical states are not stored twice and the newest 200 are kept (`MAX_BACKUPS` to change that). The logo is not part of the backups. The files are stored compactly; with many editions a backup gets bigger, count on roughly the size of the live map per edition.
-A downloaded backup (.json, download button in the list) can be added again with **Upload backup** (25 MB at most); it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); afterwards exactly the editions from that backup are there. A backup from before editions existed leaves the editions alone. The list shows for each backup how many and which editions it contains. Deleting asks for confirmation with your passkey.
+A downloaded backup (.json, download button in the list) can be added again with **Upload backup** (25 MB at most); it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); afterwards exactly the editions from that backup are there. A backup from before editions existed leaves the editions alone. The list shows for each backup how many and which editions it contains. Deleting asks for confirmation with your passkey or password.
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
 
 ## Editions: comparing earlier occasions
@@ -275,7 +306,7 @@ An **edition** is the map of one occasion (for example *Sint Maarten 2025*), wit
 - **Switching** – as soon as there is an edition, the overview card at the top right of the map has a *Map* list: **Live** or an edition. For an edition, tap a house to see its status in that edition and on the live map, with buttons to change the status **in that edition** right away.
 - **Editing** – *Edit* opens the map chosen under *Map*. For an edition the top of the side panel says *You are editing the edition …* and the button reads *Save edition*: everything (status, street, house number, shape, adding or removing houses) is saved in that edition only. You can also view or edit an edition from the list in *Settings → Editions*. QR codes and changes by residents always belong to the live map.
 - **Comparing** – *Compare with* puts two maps side by side (an edition and live, or two editions). The houses are then coloured by taking part (green): **green in both**, **only in the older one** (orange) or **only in the newer one** (blue); the rest is shown dashed grey. The overview card shows the numbers of both maps with the difference (total, green, red, not marked) and how many houses fall into each group. Houses are matched on the house itself, and otherwise on street and house number.
-- **Overview** – the list in *Settings → Editions* shows the number of houses per edition and how many are green (with percentage), red and not marked, what it is a copy of and when it was edited, with the live map at the top. The text field icon changes the name or year; deleting is confirmed with your passkey.
+- **Overview** – the list in *Settings → Editions* shows the number of houses per edition and how many are green (with percentage), red and not marked, what it is a copy of and when it was edited, with the live map at the top. The text field icon changes the name or year; deleting is confirmed with your passkey or password.
 - *Hide counts* folds the overview card down to just the lists (handy on a phone).
 
 Editions are stored as separate files in `data/editions/` (at most 100) and are part of **every backup**; restoring brings them back too (see [Backups](#backups)).
@@ -329,17 +360,17 @@ You do not have to build the code: the image is built and published automaticall
 
    | Variable | Meaning |
    | --- | --- |
-   | `ORIGIN` | Optional. The full URL with which you open the site, for example `https://sintmaarten.flux76.app`; it must then be exactly the address in the browser. Empty means: the address the site is opened on (behind a reverse proxy via `X-Forwarded-Proto` and `X-Forwarded-Host`); the links in the QR codes then get the address you open the admin on. Fill it in when the site should only be reachable on one address. Passkeys only work over **HTTPS** (or on `localhost`); without https you log in with a password. |
-   | `SETUP_TOKEN` | Secret code for setting up the very first passkey or password (onboarding). Generate one with `openssl rand -hex 12`. |
+   | `ORIGIN` | Optional. The full URL with which you open the site, for example `https://sintmaarten.flux76.app`; it must then be exactly the address in the browser. Empty means: the address the site is opened on (behind a reverse proxy via `X-Forwarded-Proto` and `X-Forwarded-Host`); the links in QR codes and invitations then get the address you open the admin on. Fill it in when the site should only be reachable on one address. Passkeys only work over **HTTPS** (or on `localhost`); without HTTPS you log in with a username and password. |
+   | `SETUP_TOKEN` | Secret code for the very first login (the setup wizard: passkey or password). Generate one with `openssl rand -hex 12`. |
    | `SESSION_SECRET` | Key for signing sessions (at least 16 characters), for example `openssl rand -hex 32`. If you leave it empty, sessions expire at every restart. |
    | `SITE_TITLE` | Name of the site (can be changed later in the admin area). |
    | `PORT` | Port of the web server, default **9888**. |
    | `DOORBELL_MAP_TAG` | Which version runs: `latest` (stable, default), `beta` or a version number to pin (for example `v1.0.21`). With `beta` a **BETA** label appears next to the name, in the tab title and under the app icon. If this variable is still called `SINTMAARTEN_TAG` on your setup, it keeps working; rename it when convenient. |
    | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/doorbell-map`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
-3. Start the container: `docker compose up -d`. Your data (houses, passkeys, logo, explanation, backups) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
-4. For passkeys, the home-screen app and notifications: put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy). Without https the map works too, and you log in with a password.
-5. Open `<address>/beheer` and set up your first passkey or password with the `SETUP_TOKEN` (see [Onboarding](#the-admin-area-beheer)).
+3. Start the container: `docker compose up -d`. Your data (houses, users and login details, logo, explanation, backups, and `secret.key` for MFA) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
+4. For passkeys, the home-screen app and notifications: put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy). Without HTTPS the map works too, and you log in with a username and password.
+5. Open `<address>/beheer` and complete the setup with the `SETUP_TOKEN`: choose a username and a passkey or password (see [Onboarding](#the-admin-area-beheer)).
 
 **Updating:** `docker compose pull && docker compose up -d`. **Back-up:** copy the data folder (`DATA_PATH`) (or use the backups in the admin area).
 
@@ -374,7 +405,6 @@ npm test
 You regenerate the screenshots in this README with `node tools/screenshots.js` (Playwright + Chromium and internet for the map tiles; the example data is in `tools/screenshots/`, the buildings come from OpenStreetMap © OpenStreetMap contributors). With one or more words after it you only make the screenshots with that name, for example `node tools/screenshots.js qr`.
 
 ## Security
-Passkeys via WebAuthn (SimpleWebAuthn), password as a `scrypt` hash, session cookie `HttpOnly`/`SameSite=Strict` (over https also `Secure`),
-origin check on changes, limiting of failed attempts.
-Back-up: copy the `data/` folder. Lost your passkey and have no other device? Set `"passkeys": []` in `data/db.json`. If you still know the password, log in
-with it and add a new passkey; otherwise also set `"password": null` and go through the onboarding again.
+Passkeys via WebAuthn ([SimpleWebAuthn](https://simplewebauthn.dev/)), passwords as a `scrypt` hash, two-step verification via TOTP ([otpauth](https://github.com/hectorm/otpauth)) with an encrypted secret and hashed recovery codes, session cookie `HttpOnly`/`SameSite=Strict` (over HTTPS also `Secure`) with a session epoch per user (a new password, MFA change or reset signs out the other sessions), origin check on changes and limiting of failed attempts.
+User management follows [App-Guidance: user management](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/user-management.md).
+Back-up: copy the `data/` folder (with `db.json` and `secret.key`). Nobody can log in any more? See [Nobody can log in any more?](#nobody-can-log-in-any-more).

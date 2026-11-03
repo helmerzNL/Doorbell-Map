@@ -18,6 +18,7 @@
     "express": "^5.2.1",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
+    "otpauth": "^9.5.2",
     "qrcode-generator": "^2.0.4",
     "web-push": "^3.6.7"
   }

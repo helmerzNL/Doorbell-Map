@@ -8,7 +8,7 @@ const dbFile = path.join(config.dataDir, 'db.json');
 const uploadDir = path.join(config.dataDir, 'uploads');
 fs.mkdirSync(uploadDir, { recursive: true });
 
-const empty = () => ({ userId: null, passkeys: [], password: null, view: null, pdfView: null, houses: [], residents: [], proposals: [], blocked: [], houseSecrets: {}, messages: [], push: null, settings: { intro: '', logo: null, appName: '', appShortName: '', siteTitle: '', residentsEnabled: true, residentsAppOnly: false, labels: { green: 'Groen', red: 'Rood', none: 'Niet gemarkeerd' } }, version: 2 });
+const empty = () => ({ users: [], passkeys: [], invites: [], view: null, pdfView: null, houses: [], residents: [], proposals: [], blocked: [], houseSecrets: {}, messages: [], push: null, settings: { intro: '', logo: null, appName: '', appShortName: '', siteTitle: '', residentsEnabled: true, residentsAppOnly: false, labels: { green: 'Groen', red: 'Rood', none: 'Niet gemarkeerd' } }, version: 2 });
 let db = empty();
 const found = fs.existsSync(dbFile); // stonden er bij het starten al gegevens in de datamap?
 if (found) {

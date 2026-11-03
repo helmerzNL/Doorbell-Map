@@ -21,52 +21,98 @@
 </head>
 <body class="app admin">
 
-<!-- Onboarding: eerste passkey of wachtwoord -->
+<!-- Installatie (eerste keer) en uitnodiging (#invite=…): passkey óf gebruikersnaam + wachtwoord, daarna optioneel MFA.
+     Zie App-Guidance: technical-framework/onboarding-wizard.md en guidelines/user-management.md. -->
 <section id="v-setup" class="card hidden">
   <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
-  <h2>Eerste keer instellen</h2>
-  <p class="muted">Beveilig het beheer met een passkey of een wachtwoord. Voer de installatiecode in (<code>SETUP_TOKEN</code> uit je <code>.env</code>, of uit de containerlog als je die leeg liet).</p>
-  <p class="muted setup-moved">Had je al een kaart en zie je dit na een update of na het verplaatsen van de stackmap? Dan vindt de server geen gegevens in zijn datamap. Rond dit dan niet af, maar controleer eerst <code>DATA_PATH</code> in je <code>.env</code>; de containerlog noemt welke map hij gebruikt.</p>
-  <label for="s-token">Installatiecode</label>
-  <input type="text" id="s-token" class="secret" autocomplete="off" spellcheck="false">
-  <div id="s-pk">
-    <label for="s-name">Naam van dit apparaat</label>
-    <input type="text" id="s-name" value="Mijn apparaat" maxlength="60">
-    <button class="primary" id="s-go">Passkey aanmaken</button>
+  <h2 id="s-title">Eerste keer instellen</h2>
+  <div id="s-step-account">
+    <p class="muted s-setup">Beveilig het beheer: voer de installatiecode in (<code>SETUP_TOKEN</code> uit je <code>.env</code>, of uit de containerlog als je die leeg liet) en kies hoe je wilt inloggen.</p>
+    <p class="muted setup-moved s-setup">Had je al een kaart en zie je dit na een update of na het verplaatsen van de stackmap? Dan vindt de server geen gegevens in zijn datamap. Rond dit dan niet af, maar controleer eerst <code>DATA_PATH</code> in je <code>.env</code>; de containerlog noemt welke map hij gebruikt.</p>
+    <p class="muted s-invite" id="s-invite-text"></p>
+    <div class="s-setup">
+      <label for="s-token">Installatiecode</label>
+      <input type="text" id="s-token" class="secret" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="s-account">
+      <label for="s-user">Gebruikersnaam</label>
+      <input type="text" id="s-user" maxlength="40" spellcheck="false" autocapitalize="none">
+      <p class="s-label" id="s-method-label">Hoe wil je inloggen?</p>
+      <div class="s-methods" role="radiogroup" aria-labelledby="s-method-label">
+        <label class="s-method"><input type="radio" name="s-method" value="passkey"><span class="s-method-body"><span class="s-method-title">Passkey (aanbevolen)</span><span class="s-method-text">Met vingerafdruk, gezicht, pincode of beveiligingssleutel. Geen wachtwoord om te onthouden.</span><span class="s-method-why" id="s-pk-why"></span></span></label>
+        <label class="s-method"><input type="radio" name="s-method" value="password"><span class="s-method-body"><span class="s-method-title">Gebruikersnaam en wachtwoord</span><span class="s-method-text">Werkt overal. Daarna kun je tweestapsverificatie (MFA) aanzetten.</span></span></label>
+      </div>
+      <div id="s-pk" class="hidden">
+        <label for="s-name">Naam van dit apparaat</label>
+        <input type="text" id="s-name" value="Mijn apparaat" maxlength="60">
+        <button class="primary" id="s-go" type="button">Passkey aanmaken</button>
+      </div>
+      <!-- De wachtwoordvelden komen er pas bij de keuze voor een wachtwoord, zodat wachtwoordmanagers niet onnodig reageren. -->
+      <div id="s-pw-slot"></div>
+      <template id="s-pw-tpl">
+        <form id="s-pw" autocomplete="on">
+          <input type="text" name="username" id="s-pw-user" autocomplete="username" hidden>
+          <label for="s-pw1">Wachtwoord (minimaal 10 tekens)</label>
+          <input type="password" id="s-pw1" autocomplete="new-password" maxlength="200">
+          <label for="s-pw2">Herhaal wachtwoord</label>
+          <input type="password" id="s-pw2" autocomplete="new-password" maxlength="200">
+          <button class="primary" id="s-pw-go" type="submit">Account aanmaken</button>
+        </form>
+      </template>
+    </div>
+    <p class="error" id="s-err"></p>
+    <p class="s-invite-back hidden" id="s-invite-back"><a href="/beheer" class="back-link">Naar het inlogscherm</a></p>
   </div>
-  <p class="muted hidden" id="s-no-pk">Passkeys werken alleen via https (of op localhost). Op dit adres stel je een wachtwoord in; een passkey kun je later toevoegen als het beheer via https bereikbaar is.</p>
-  <form id="s-pw-form" autocomplete="on">
-    <p class="muted" id="s-pw-or" style="margin-top:20px">of met een wachtwoord</p>
-    <input type="text" name="username" value="beheerder" autocomplete="username" hidden>
-    <label for="s-pw">Wachtwoord (minimaal 10 tekens)</label>
-    <input type="password" id="s-pw" autocomplete="new-password" maxlength="200">
-    <label for="s-pw2">Herhaal wachtwoord</label>
-    <input type="password" id="s-pw2" autocomplete="new-password" maxlength="200">
-    <button id="s-pw-go">Instellen met wachtwoord</button>
-  </form>
-  <p class="error" id="s-err"></p>
+  <div id="s-step-mfa" class="hidden">
+    <p class="muted" id="s-mfa-intro">Je bent ingelogd. Wil je ook tweestapsverificatie (MFA) aanzetten? Dan log je in met je wachtwoord én een code uit een authenticator-app, zoals Microsoft Authenticator, Google Authenticator of 1Password. Je kunt dit ook later doen via Instellingen → Beveiliging.</p>
+    <div class="row" id="s-mfa-choice"><button class="primary" id="s-mfa-yes" type="button">MFA instellen</button><button id="s-mfa-no" type="button">Niet nu</button></div>
+    <div id="s-mfa-box"></div>
+  </div>
 </section>
 
 <!-- Inloggen -->
 <section id="v-login" class="card hidden">
   <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
   <h2>Beheer</h2>
-  <p class="muted" id="l-text">Log in met je passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel).</p>
+  <p class="muted" id="l-intro">Log in met je passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel).</p>
   <p class="error" id="l-err"></p>
   <button class="primary" id="l-go">Inloggen met passkey</button>
   <div id="pw-form-slot"></div>
   <template id="pw-form-tpl">
     <form id="pw-form" autocomplete="on">
-    <p class="muted" id="l-pw-or" style="margin-top:20px">of met je wachtwoord</p>
-    <input type="text" name="username" value="beheerder" autocomplete="username" hidden>
-    <label for="l-pw">Wachtwoord</label>
-    <input type="password" id="l-pw" autocomplete="current-password" maxlength="200">
-    <p class="error" id="l-pw-err"></p>
-    <button id="l-pw-go">Inloggen met wachtwoord</button>
-  </form>
+      <p class="muted l-or">of met je gebruikersnaam en wachtwoord</p>
+      <label for="l-user">Gebruikersnaam</label>
+      <input type="text" id="l-user" name="username" autocomplete="username" maxlength="40" spellcheck="false" autocapitalize="none">
+      <label for="l-pw">Wachtwoord</label>
+      <input type="password" id="l-pw" autocomplete="current-password" maxlength="200">
+      <p class="error" id="l-pw-err"></p>
+      <button id="l-pw-go">Inloggen met wachtwoord</button>
+    </form>
+  </template>
+  <template id="mfa-form-tpl">
+    <form id="mfa-form" autocomplete="off">
+      <h3>Tweestapsverificatie</h3>
+      <p class="muted">Voer de code van 6 cijfers uit je authenticator-app in, of een van je herstelcodes.</p>
+      <label for="l-code">Code</label>
+      <input type="text" id="l-code" autocomplete="one-time-code" maxlength="24" spellcheck="false" autocapitalize="characters">
+      <p class="error" id="l-code-err"></p>
+      <button class="primary" id="l-code-go">Inloggen</button>
+      <button type="button" id="l-code-back">Annuleren</button>
+    </form>
   </template>
   <p><a href="/" class="back-link"><i data-mdi="arrow-left"></i> Naar de kaart</a></p>
 </section>
+
+<!-- Bevestigen met wachtwoord (voor wie geen passkey heeft); de velden worden pas bij het openen ingevoegd. -->
+<dialog id="cf-dialog" aria-labelledby="cf-title">
+  <form id="cf-form" autocomplete="on">
+    <h3 id="cf-title">Bevestigen</h3>
+    <p class="muted" id="cf-text">Voer ter bevestiging je huidige wachtwoord in.</p>
+    <div id="cf-fields"></div>
+    <p class="error" id="cf-err"></p>
+    <div class="row"><button class="primary" type="submit" id="cf-ok">Bevestigen</button><button type="button" id="cf-cancel">Annuleren</button></div>
+  </form>
+</dialog>
 
 <!-- Editor -->
 <div id="v-edit" class="hidden view-mode" style="display:contents">
@@ -157,17 +203,6 @@
 </div>
 </div>
 
-<!-- Bevestigen met het wachtwoord, als er (nog) geen passkey is -->
-<dialog id="pwc-dialog" aria-labelledby="pwc-title">
-  <form id="pwc-form" autocomplete="on">
-    <h3 id="pwc-title">Bevestig met je wachtwoord</h3>
-    <input type="text" name="username" value="beheerder" autocomplete="username" hidden>
-    <label for="pwc-pw">Wachtwoord</label>
-    <input type="password" id="pwc-pw" autocomplete="current-password" maxlength="200">
-    <div class="row"><button class="primary" type="submit">Bevestigen</button><button type="button" id="pwc-cancel">Annuleren</button></div>
-  </form>
-</dialog>
-
 <dialog id="view-dialog">
   <h3>Kaartweergave</h3>
   <p class="muted">Dit is de weergave waarmee bezoekers de kaart openen (ook in de app). Sleep en zoom de kaart naar de gewenste plek en neem die over, of vul de waarden in.</p>
@@ -239,6 +274,7 @@
     <button role="tab" data-tab="residents"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17,16H15V22H12V17H8V22H5V16H3L10,10L17,16M6,2L10,6H9V9H7V6H5V9H3V6H2L6,2M18,3L23,8H22V12H19V9H17V12H15.34L14,10.87V8H13L18,3Z"/></svg><span>Bewoners</span></button>
     <button role="tab" data-tab="org"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13C6.14 13 4.59 14.28 4.14 16H2V18H4.14C4.59 19.72 6.14 21 8 21S11.41 19.72 11.86 18H22V16H11.86C11.41 14.28 9.86 13 8 13M8 19C6.9 19 6 18.1 6 17C6 15.9 6.9 15 8 15S10 15.9 10 17C10 18.1 9.1 19 8 19M19.86 6C19.41 4.28 17.86 3 16 3S12.59 4.28 12.14 6H2V8H12.14C12.59 9.72 14.14 11 16 11S19.41 9.72 19.86 8H22V6H19.86M16 9C14.9 9 14 8.1 14 7C14 5.9 14.9 5 16 5S18 5.9 18 7C18 8.1 17.1 9 16 9Z"/></svg><span>Config</span></button>
     <button role="tab" data-tab="security" class="active"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21,11C21,16.55 17.16,21.74 12,23C6.84,21.74 3,16.55 3,11V5L12,1L21,5V11M12,21C15.75,20 19,15.54 19,11.22V6.3L12,3.18L5,6.3V11.22C5,15.54 8.25,20 12,21M14.8,11V9.5C14.8,8.1 13.4,7 12,7C10.6,7 9.2,8.1 9.2,9.5V11C8.6,11 8,11.6 8,12.2V15.7C8,16.4 8.6,17 9.2,17H14.7C15.4,17 16,16.4 16,15.8V12.3C16,11.6 15.4,11 14.8,11M13.5,11H10.5V9.5C10.5,8.7 11.2,8.2 12,8.2C12.8,8.2 13.5,8.7 13.5,9.5V11Z"/></svg><span>Beveiliging</span></button>
+    <button role="tab" data-tab="users" hidden><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 17V19H2V17S2 13 9 13 16 17 16 17M12.5 7.5A3.5 3.5 0 1 0 9 11A3.5 3.5 0 0 0 12.5 7.5M15.94 13A5.32 5.32 0 0 1 18 17V19H22V17S22 13.37 15.94 13M15 4A3.39 3.39 0 0 0 13.07 4.59A5 5 0 0 1 13.07 10.41A3.39 3.39 0 0 0 15 11A3.5 3.5 0 0 0 15 4Z"/></svg><span>Gebruikers</span></button>
     <button role="tab" data-tab="editions"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,18.54L19.37,12.8L21,14.07L12,21.07L3,14.07L4.62,12.81L12,18.54M12,16L3,9L12,2L21,9L12,16M12,4.53L6.26,9L12,13.47L17.74,9L12,4.53Z"/></svg><span>Edities</span></button>
     <button role="tab" data-tab="backups"><svg class="tab-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3A9,9 0 0,0 3,12H0L4,16L8,12H5A7,7 0 0,1 12,5A7,7 0 0,1 19,12A7,7 0 0,1 12,19C10.5,19 9.09,18.5 7.94,17.7L6.5,19.14C8.04,20.3 9.94,21 12,21A9,9 0 0,0 21,12A9,9 0 0,0 12,3M14,12A2,2 0 0,0 12,10A2,2 0 0,0 10,12A2,2 0 0,0 12,14A2,2 0 0,0 14,12Z"/></svg><span>Backups</span></button>
   </nav>
@@ -442,26 +478,67 @@
 
     <!-- ===== Beveiliging ===== -->
     <section data-panel="security">
+      <p class="set-hint set-warn hidden" id="pw-locked">Je bent met een wachtwoord ingelogd. Log in met een passkey om je passkeys, wachtwoord, MFA of gebruikersnaam te wijzigen.</p>
+      <div class="set-card">
+        <header class="set-card-head"><h4>Account</h4><p id="acc-status"></p></header>
+        <div class="field"><label for="acc-name">Gebruikersnaam</label>
+          <div class="row row-tight"><input type="text" id="acc-name" maxlength="40" spellcheck="false" autocapitalize="none"><button id="acc-save">Opslaan</button></div>
+        </div>
+        <p class="error" id="acc-err"></p>
+      </div>
+
       <div class="set-card">
         <header class="set-card-head"><h4>Passkeys</h4><p>Hiermee log je in op het beheer. Voeg ook een tweede apparaat toe, zodat je nooit buitengesloten raakt.</p></header>
         <div id="pk-list"></div>
+        <p class="set-hint hidden" id="pk-why"></p>
         <div class="field"><label for="pk-name">Nieuwe passkey toevoegen</label>
           <div class="row row-tight"><input type="text" id="pk-name" value="Extra apparaat" maxlength="60"><button id="pk-add" class="primary">Toevoegen</button></div>
         </div>
-        <p class="set-hint hidden" id="pk-https">Passkeys werken alleen via https (of op localhost). Open het beheer via een https-adres om een passkey toe te voegen.</p>
         <p class="error" id="pk-err"></p>
       </div>
 
       <div class="set-card">
         <header class="set-card-head"><h4>Wachtwoord</h4><p id="pw-status"></p></header>
         <div id="pw-edit">
-          <p class="set-hint" id="pw-hint">Het instellen, wijzigen en verwijderen van het wachtwoord moet je bevestigen met een passkey.</p>
+          <p class="set-hint" id="pw-hint"></p>
           <p class="error" id="pw-err"></p>
           <div class="row row-tight"><button id="pw-start" class="primary">Wachtwoord instellen…</button><button id="pw-remove" class="danger">Wachtwoord verwijderen</button></div>
           <!-- De wachtwoordvelden worden pas ingevoegd na een klik op de knop, zodat wachtwoordmanagers niet onnodig reageren. -->
           <form id="pw-form-set" class="hidden" autocomplete="off"></form>
         </div>
-        <p class="set-hint hidden" id="pw-locked">Je bent met een wachtwoord ingelogd. Log in met een passkey om passkeys of het wachtwoord te wijzigen.</p>
+      </div>
+
+      <div class="set-card" id="mfa-card">
+        <header class="set-card-head"><h4>Tweestapsverificatie (MFA)</h4><p id="mfa-status"></p></header>
+        <div id="mfa-edit">
+          <div class="row row-tight" id="mfa-actions"><button id="mfa-start" class="primary">MFA instellen…</button><button id="mfa-codes">Nieuwe herstelcodes…</button><button id="mfa-off" class="danger">MFA uitzetten</button></div>
+          <div id="mfa-box"></div>
+        </div>
+        <p class="error" id="mfa-err"></p>
+      </div>
+    </section>
+
+    <!-- ===== Gebruikers (alleen de eigenaar; de server dwingt dat af) ===== -->
+    <section data-panel="users" class="hidden">
+      <div class="set-card">
+        <header class="set-card-head"><h4>Gebruikers</h4><p>Wie het beheer kan openen. Iedereen kiest zelf een passkey of wachtwoord; jij kent die nooit.</p></header>
+        <div id="us-list" class="bk-list"></div>
+        <p class="error" id="us-err"></p>
+      </div>
+      <div class="set-card">
+        <header class="set-card-head"><h4>Iemand uitnodigen</h4><p>Je krijgt een link die één keer werkt en na 7 dagen verloopt. Wie hem opent kiest zelf een gebruikersnaam en een passkey of wachtwoord, dus jij weet die nooit.</p></header>
+        <div class="field"><label for="us-name">Gebruikersnaam (optioneel)</label>
+          <div class="row row-tight"><input type="text" id="us-name" maxlength="40" placeholder="Leeg: de gast kiest zelf"><button id="us-invite" class="primary">Link maken</button></div>
+        </div>
+        <div id="us-link" class="us-link hidden">
+          <p class="set-hint" id="us-link-text"></p>
+          <div class="row row-tight"><input type="text" id="us-link-url" readonly aria-label="Link"><button id="us-copy" type="button"><i data-mdi="content-copy"></i> Kopiëren</button></div>
+          <p class="set-hint">Deze link wordt niet nog een keer getoond. Kwijt? Trek hem in en maak een nieuwe.</p>
+        </div>
+      </div>
+      <div class="set-card">
+        <header class="set-card-head"><h4>Open uitnodigingen</h4></header>
+        <div id="us-invites" class="bk-list"></div>
       </div>
     </section>
 
@@ -484,7 +561,7 @@
         <header class="set-card-head"><h4>Edities</h4><p>De aantallen per keer, met de live kaart bovenaan. <em>Bekijken</em> zet de kaart op het scherm, <em>Bewerken</em> opent hem in het bewerkscherm (bij een editie wordt alleen die editie opgeslagen). Naam of jaartal wijzig je met het tekstveld-icoon.</p></header>
         <div id="ed-list" class="bk-list"></div>
         <p class="error" id="ed-list-err"></p>
-        <div class="set-actions"><button id="ed-delete" class="danger" disabled>Geselecteerde verwijderen (bevestig met passkey)</button></div>
+        <div class="set-actions"><button id="ed-delete" class="danger confirm-label" disabled>Geselecteerde verwijderen (bevestig met passkey)</button></div>
       </div>
     </section>
 
@@ -502,7 +579,7 @@
         </div>
         <div id="bk-list" class="bk-list"></div>
         <p class="error" id="bk-err"></p>
-        <div class="set-actions"><button id="bk-delete" class="danger" disabled>Geselecteerde verwijderen (bevestig met passkey)</button></div>
+        <div class="set-actions"><button id="bk-delete" class="danger confirm-label" disabled>Geselecteerde verwijderen (bevestig met passkey)</button></div>
       </div>
     </section>
 

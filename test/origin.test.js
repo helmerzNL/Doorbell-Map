@@ -24,10 +24,12 @@ test('met ORIGIN telt alleen precies dat adres', async () => {
   assert.equal((await post('/api/auth/logout', {}, { Origin: 'http://map.example.com' })).status, 403);
 });
 
-test('met ORIGIN horen passkeys bij dat domein en is de cookie Secure', async () => {
-  const r = await post('/api/auth/register/options', { setupToken: 'test-setup-token-123' }, { Origin: 'https://map.example.com' });
+test('met ORIGIN horen passkeys bij dat domein, ongeacht de host, en is de cookie Secure', async () => {
+  const status = await (await fetch(`${base}/api/auth/status`)).json();
+  assert.equal(status.passkey.available, true); // de aanvraag komt via localhost, maar ORIGIN telt
+  const r = await post('/api/auth/register/options', { setupToken: 'test-setup-token-123' }, { Origin: 'https://map.example.com', 'X-Forwarded-Host': 'other.example' });
   assert.equal((await r.json()).options.rp.id, 'map.example.com');
-  const setup = await post('/api/auth/setup-password', { setupToken: 'test-setup-token-123', password: 'een-lang-wachtwoord' }, { Origin: 'https://map.example.com' });
+  const setup = await post('/api/auth/setup/password', { setupToken: 'test-setup-token-123', username: 'Helmer', password: 'een-lang-wachtwoord' }, { Origin: 'https://map.example.com' });
   assert.equal(setup.status, 200);
   assert.match(setup.headers.get('set-cookie'), /;\s*Secure/i);
 });
