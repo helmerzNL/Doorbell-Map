@@ -34,6 +34,8 @@
 
   const friendly = (err) =>
     err && err.name === 'NotAllowedError' ? 'Geannuleerd of niet toegestaan door het apparaat.' : err.message;
+  // Een browser maakt en gebruikt passkeys alleen op een veilig adres: https, of http://localhost.
+  const passkeysUsable = () => !!window.PublicKeyCredential && window.isSecureContext;
 
   // ---------- passkey flows ----------
   async function registerPasskey({ setupToken, name }) {
@@ -56,16 +58,48 @@
       boot();
     } catch (e) { $('s-err').textContent = friendly(e); }
   };
+  // Eerste installatie met een wachtwoord: voor een adres zonder https, of als je liever geen passkey gebruikt.
+  $('s-pw-form').onsubmit = async (e) => {
+    e.preventDefault();
+    $('s-err').textContent = '';
+    const pw = $('s-pw').value;
+    if (pw.length < 10) { $('s-err').textContent = 'Kies een wachtwoord van minimaal 10 tekens.'; return; }
+    if (pw !== $('s-pw2').value) { $('s-err').textContent = 'De twee wachtwoorden zijn niet gelijk.'; return; }
+    try { await post('/api/auth/setup-password', { setupToken: $('s-token').value, password: pw }); boot(); }
+    catch (err) { $('s-err').textContent = err.message; }
+  };
+  function showSetup() {
+    const pk = passkeysUsable();
+    $('s-pk').classList.toggle('hidden', !pk);
+    $('s-pw-or').classList.toggle('hidden', !pk);
+    $('s-no-pk').classList.toggle('hidden', pk);
+    $('s-pw-go').classList.toggle('primary', !pk);
+    show('v-setup');
+  }
   $('l-go').onclick = async () => {
     $('l-err').textContent = '';
     try { await login(); boot(); } catch (e) { $('l-err').textContent = friendly(e); }
   };
+  // Het inlogscherm: met passkey als die er is en op dit adres werkt, en met wachtwoord als dat is ingesteld.
+  function showLogin(st) {
+    const pk = st.passkeys > 0 && passkeysUsable();
+    $('l-go').classList.toggle('hidden', !pk);
+    $('l-text').textContent = pk ? 'Log in met je passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel).'
+      : st.passkeys > 0 ? (st.passwordEnabled
+        ? 'Passkeys werken alleen via https (of op localhost). Log hier in met je wachtwoord, of open het beheer via je https-adres.'
+        : 'Passkeys werken alleen via https (of op localhost). Open het beheer via je https-adres om in te loggen.')
+        : 'Log in met je wachtwoord.';
+    mountPwLogin(st.passwordEnabled, !pk);
+    show('v-login');
+  }
   // Het inlogformulier met wachtwoordveld bestaat alleen op het inlogscherm (niet in de editor).
-  function mountPwLogin(enabled) {
+  function mountPwLogin(enabled, only = false) {
     const slot = $('pw-form-slot');
     slot.replaceChildren();
     if (!enabled) return;
     slot.append($('pw-form-tpl').content.cloneNode(true));
+    $('l-pw-or').classList.toggle('hidden', only);
+    $('l-pw-go').classList.toggle('primary', only);
     $('pw-form').onsubmit = async (e) => {
       e.preventDefault();
       $('l-pw-err').textContent = '';
@@ -81,21 +115,42 @@
   };
 
   // ---------- passkeys dialoog ----------
-  let session = { method: null, passwordEnabled: false };
-  const locked = () => session.method === 'pw';
+  let session = { method: null, passwordEnabled: false, passkeys: 0, fullSession: false };
+  // Met een wachtwoord ingelogd terwijl er passkeys zijn: passkeys en wachtwoord blijven dan op slot.
+  const locked = () => !session.fullSession;
+  // Zonder passkey is het wachtwoord de enige manier van inloggen; bevestigen gaat dan met het wachtwoord.
+  const passwordOnly = () => !session.passkeys;
+
+  // De verwijderknoppen van backups en edities noemen hoe je bevestigt.
+  function confirmLabels() {
+    const text = passwordOnly() ? 'Geselecteerde verwijderen (bevestig met wachtwoord)' : 'Geselecteerde verwijderen (bevestig met passkey)';
+    for (const id of ['bk-delete', 'ed-delete']) $(id).textContent = text;
+  }
 
   async function renderPasskeys() {
     session = await api('/api/auth/status');
-    $('pw-status').textContent = session.passwordEnabled ? 'Er is een wachtwoord ingesteld.' : 'Er is nog geen wachtwoord ingesteld; inloggen kan alleen met een passkey.';
+    confirmLabels();
+    $('pw-status').textContent = !session.passwordEnabled ? 'Er is nog geen wachtwoord ingesteld; inloggen kan alleen met een passkey.'
+      : passwordOnly() ? 'Er is een wachtwoord ingesteld. Zolang er geen passkey is, log je alleen hiermee in.' : 'Er is een wachtwoord ingesteld.';
+    $('pw-hint').textContent = passwordOnly()
+      ? 'Wijzigen bevestig je met je huidige wachtwoord. Verwijderen kan pas als er een passkey is.'
+      : 'Het instellen, wijzigen en verwijderen van het wachtwoord moet je bevestigen met een passkey.';
     $('pw-start').textContent = session.passwordEnabled ? 'Wachtwoord wijzigen…' : 'Wachtwoord instellen…';
-    $('pw-remove').classList.toggle('hidden', !session.passwordEnabled);
+    $('pw-remove').classList.toggle('hidden', !session.passwordEnabled || passwordOnly());
     $('pw-edit').classList.toggle('hidden', locked());
     if (locked()) closePwForm();
     $('pw-locked').classList.toggle('hidden', !locked());
-    $('pk-add').disabled = locked();
-    $('pk-name').disabled = locked();
+    const canAdd = !locked() && passkeysUsable();
+    $('pk-add').disabled = !canAdd;
+    $('pk-name').disabled = !canAdd;
+    $('pk-https').classList.toggle('hidden', passkeysUsable());
     const list = await api('/api/admin/passkeys');
     $('pk-list').innerHTML = '';
+    if (!list.length) {
+      const none = document.createElement('p');
+      none.className = 'set-hint'; none.textContent = 'Nog geen passkey: je logt in met je wachtwoord.';
+      $('pk-list').append(none);
+    }
     for (const p of list) {
       const row = document.createElement('div');
       row.className = 'pk';
@@ -112,11 +167,37 @@
       $('pk-list').append(row);
     }
   }
-  // Wachtwoord instellen/verwijderen: altijd bevestigen met een passkey (vingerafdruk/pincode).
-  async function confirmWithPasskey() {
-    const { challengeId, options } = await post('/api/admin/password/options');
+  // Wachtwoord instellen/verwijderen: bevestigen met een passkey (vingerafdruk/pincode).
+  async function confirmWithPasskey(url = '/api/admin/password/options') {
+    const { challengeId, options } = await post(url);
     const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
     return { challengeId, response };
+  }
+  // Het wachtwoord vragen in een eigen dialoog (prompt() zou het leesbaar tonen). Geeft null bij annuleren.
+  function askPassword() {
+    return new Promise((resolve) => {
+      const dlg = $('pwc-dialog');
+      const field = $('pwc-pw');
+      field.value = '';
+      dlg.onclose = () => { field.value = ''; resolve(null); };
+      $('pwc-cancel').onclick = () => dlg.close();
+      $('pwc-form').onsubmit = (e) => {
+        e.preventDefault();
+        const v = field.value;
+        dlg.onclose = null;
+        dlg.close();
+        field.value = '';
+        resolve(v);
+      };
+      dlg.showModal();
+      field.focus();
+    });
+  }
+  // Bewijs voor een gevoelige actie (zoals verwijderen): een passkey als die er is, anders het wachtwoord. Null bij annuleren.
+  async function confirmProof() {
+    if (!passwordOnly()) return confirmWithPasskey('/api/admin/confirm/options');
+    const password = await askPassword();
+    return password === null ? null : { password };
   }
   // De wachtwoordvelden worden pas aangemaakt als je op "Wachtwoord instellen" klikt en daarna weer verwijderd.
   function closePwForm() { $('pw-form-set').replaceChildren(); $('pw-form-set').classList.add('hidden'); $('pw-start').classList.remove('hidden'); }
@@ -133,13 +214,16 @@
     user.type = 'text'; user.name = 'username'; user.value = 'beheerder'; user.autocomplete = 'username'; user.hidden = true;
     const err = document.createElement('p'); err.className = 'error'; err.id = 'pw-set-err';
     const row = document.createElement('div'); row.className = 'row';
-    const ok = document.createElement('button'); ok.type = 'submit'; ok.className = 'primary'; ok.textContent = 'Opslaan (bevestig met passkey)';
+    const ok = document.createElement('button'); ok.type = 'submit'; ok.className = 'primary'; ok.textContent = passwordOnly() ? 'Opslaan' : 'Opslaan (bevestig met passkey)';
     const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Annuleren'; cancel.onclick = closePwForm;
     row.append(ok, cancel);
-    f.replaceChildren(user, ...field('pw-new', session.passwordEnabled ? 'Nieuw wachtwoord (minimaal 10 tekens)' : 'Wachtwoord (minimaal 10 tekens)'), ...field('pw-new2', 'Herhaal wachtwoord'), err, row);
+    // zonder passkey bevestig je met het huidige wachtwoord
+    const current = passwordOnly() && session.passwordEnabled ? field('pw-cur', 'Huidig wachtwoord') : [];
+    if (current.length) current[1].autocomplete = 'current-password';
+    f.replaceChildren(user, ...current, ...field('pw-new', session.passwordEnabled ? 'Nieuw wachtwoord (minimaal 10 tekens)' : 'Wachtwoord (minimaal 10 tekens)'), ...field('pw-new2', 'Herhaal wachtwoord'), err, row);
     f.classList.remove('hidden');
     $('pw-start').classList.add('hidden');
-    $('pw-new').focus();
+    ($('pw-cur') || $('pw-new')).focus();
   };
   $('pw-form-set').onsubmit = async (e) => {
     e.preventDefault();
@@ -149,7 +233,7 @@
     if (pw.length < 10) { err.textContent = 'Kies een wachtwoord van minimaal 10 tekens.'; return; }
     if (pw !== $('pw-new2').value) { err.textContent = 'De twee wachtwoorden zijn niet gelijk.'; return; }
     try {
-      const proof = await confirmWithPasskey();
+      const proof = passwordOnly() ? { currentPassword: $('pw-cur')?.value || '' } : await confirmWithPasskey();
       await api('/api/admin/password', { method: 'PUT', body: JSON.stringify({ ...proof, password: pw }) });
       closePwForm();
       toast('Wachtwoord opgeslagen ✔');
@@ -550,12 +634,14 @@
   $('bk-delete').onclick = async () => {
     const ids = selectedBackups();
     if (!ids.length) return;
-    if (!confirmT(`${ids.length} backup(s) definitief verwijderen? Je moet dit bevestigen met je passkey.`)) return;
+    if (!confirmT(passwordOnly()
+      ? `${ids.length} backup(s) definitief verwijderen? Je moet dit bevestigen met je wachtwoord.`
+      : `${ids.length} backup(s) definitief verwijderen? Je moet dit bevestigen met je passkey.`)) return;
     $('bk-err').textContent = '';
     try {
-      const { challengeId, options } = await post('/api/admin/confirm/options');
-      const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
-      const res = await post('/api/admin/backups/delete', { ids, challengeId, response });
+      const proof = await confirmProof();
+      if (!proof) return;
+      const res = await post('/api/admin/backups/delete', { ids, ...proof });
       toast(`${res.deleted} backup(s) verwijderd`);
       renderBackups();
     } catch (e) { $('bk-err').textContent = friendly(e); }
@@ -1813,12 +1899,14 @@
   $('ed-delete').onclick = async () => {
     const ids = selectedEditions();
     if (!ids.length) return;
-    if (!confirmT(`${ids.length} editie(s) definitief verwijderen? Je moet dit bevestigen met je passkey.`)) return;
+    if (!confirmT(passwordOnly()
+      ? `${ids.length} editie(s) definitief verwijderen? Je moet dit bevestigen met je wachtwoord.`
+      : `${ids.length} editie(s) definitief verwijderen? Je moet dit bevestigen met je passkey.`)) return;
     $('ed-list-err').textContent = '';
     try {
-      const { challengeId, options } = await post('/api/admin/confirm/options');
-      const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
-      const res = await post('/api/admin/editions/delete', { ids, challengeId, response });
+      const proof = await confirmProof();
+      if (!proof) return;
+      const res = await post('/api/admin/editions/delete', { ids, ...proof });
       toast(`${res.deleted} editie(s) verwijderd`);
       renderEditions();
     } catch (e) { $('ed-list-err').textContent = friendly(e); }
@@ -1938,7 +2026,7 @@
   }
 
   // Gewone invoervelden niet door wachtwoordmanagers laten aanvullen of aanbieden.
-  document.querySelectorAll('input:not([type=password]):not([type=file]):not([type=checkbox]), textarea, #s-token').forEach((el) => {
+  document.querySelectorAll('input:not([type=password]):not([type=file]):not([type=checkbox]):not([autocomplete=username]), textarea, #s-token').forEach((el) => {
     el.setAttribute('autocomplete', 'off');
     el.setAttribute('data-lpignore', 'true');
     el.setAttribute('data-1p-ignore', '');
@@ -1949,9 +2037,8 @@
   async function boot() {
     const st = await api('/api/auth/status');
     session = st;
-    if (st.loggedIn) { mountPwLogin(false); return openEditor(); }
-    mountPwLogin(st.passwordEnabled);
-    show(st.configured ? 'v-login' : 'v-setup');
+    if (st.loggedIn) { mountPwLogin(false); confirmLabels(); return openEditor(); }
+    if (st.configured) showLogin(st); else { mountPwLogin(false); showSetup(); }
   }
   boot().catch((e) => { document.body.textContent = e.message; });
 })();

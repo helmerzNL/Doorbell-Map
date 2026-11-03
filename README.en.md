@@ -39,7 +39,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 
 **For the admin**
 - Draw and edit houses (colour, street, house number, note, corner points), set the map view (centre, zoom, min/max).
-- Log in with a **passkey** (optionally also with a password, confirmed with a passkey).
+- Log in with a **passkey** or a **password**; a password also works on an address without https.
 - **Approve or reject** changes by residents, with **push notifications**; **block** devices (also by IP); **schedule** changes until a date and time.
 - **QR codes** per house: show, copy the link, renew, and a **printable PDF** with a card per house to deliver to the residents.
 - **Editions**: the map of every occasion with a name and year, created as a copy of the live map or of another edition and edited separately; switch in the admin area between *Live* and editions and compare which houses took part then and now, with the numbers. The front page never changes because of them. See [Editions](#editions-comparing-earlier-occasions).
@@ -160,9 +160,9 @@ If you want residents to only be able to link **their own house**, switch on *Ch
 <tr><td align="center" valign="top"><a href="docs/screenshots/beheer-tekenen.png"><img src="docs/screenshots/beheer-tekenen.png" width="400" alt="Drawing a house"></a><br><sub>Drawing a house</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer.png"><img src="docs/screenshots/beheer.png" width="400" alt="Editing a house"></a><br><sub>Editing a house</sub></td></tr>
 </table>
 
-**Onboarding** – the first time you create a passkey with the setup code (`SETUP_TOKEN`).
+**Onboarding** – the first time you set up a passkey or a password with the setup code (`SETUP_TOKEN`). On an address without https (for example `http://192.168.1.10:9888`) passkeys do not work and you choose a password.
 
-**Logging in** – with a passkey (fingerprint, face, PIN or security key), optionally with a password that you confirm with a passkey.
+**Logging in** – with a passkey (fingerprint, face, PIN or security key) and/or with a password.
 
 **View and edit** – the admin area opens in **view** mode: only the map, without a side bar. Double-click (or long-press on a touchscreen) a house for a **popup** with which you directly make the house **green, red or not marked** (it is saved immediately) and which contains the **QR card** for the residents: with logo, address, QR and explanation. Below it are the **direct link** with a copy button, a **Share via WhatsApp** button (opens WhatsApp with a ready-made message and the link), on phones also **Share card…** (the image via the share menu), a **PNG** to download and *Renew*. With **✏️ Edit** you open the edit screen (drawing houses, selecting, searching, map view); **✓ View** takes you back (with unsaved changes it asks first).
 
@@ -201,7 +201,7 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-afbeeldingen.png"><img src="docs/screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, small logo and favicon"></a><br><sub>Config: logo, small logo and favicon</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-locatie.png"><img src="docs/screenshots/instellingen-config-locatie.png" width="270" alt="Config: My location and Community"></a><br><sub>Config: My location and Community</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-communityteksten.png"><img src="docs/screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: title and text of the community window"></a><br><sub>Config: title and text of the community window</sub></td></tr>
 </table>
 
-**Security** – add/remove passkeys and an optional password (confirm with passkey).
+**Security** – add/remove passkeys and set, change or remove the password (see [Logging in with a password](#logging-in-with-a-password)).
 
 **Editions** – create an edition with a name and year (a copy of the live map or of another edition), the numbers per edition, view or edit an edition, change the name or year, and delete. See [Editions](#editions-comparing-earlier-occasions).
 
@@ -231,16 +231,20 @@ A newly drawn house has **no status** by default (not marked; in the admin area 
 ## How it works
 - **Map**: OpenStreetMap (via Leaflet), no API key needed. Google Maps was deliberately not used: it requires a paid key and its terms do not allow drawing over it and exporting to PDF.
 - **Setting up the admin area**: search for your street and zoom in far; set the centre, the start zoom and the minimum/maximum zoom via *Set map view* (or adopt the current view). Visitors open the map (also in the app) with exactly that view; with *Automatic* the site shows all houses. In the same dialog you decide whether the house numbers are on by default for visitors. Under *Map area in the PDF* a frame on the map shows which area the PDF displays (by default all houses automatically) and you can set your own: move the map to the area you want, choose *Use current map as PDF area* and save. *Automatic* restores the default.
-- **Onboarding**: the very first time `/beheer` asks for the `SETUP_TOKEN` and then creates a passkey. After that you can add extra devices via *Settings* (⚙) → *Security* (do that so you do not get locked out).
+- **Onboarding**: the very first time `/beheer` asks for the `SETUP_TOKEN` and then creates a passkey or a password. After that you can add extra devices via *Settings* (⚙) → *Security* (do that so you do not get locked out).
 
 > The PDF fetches map tiles directly from OpenStreetMap; keep usage modest
 > ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)).
 
-## Logging in with a password (optional)
-By default you can only log in with a passkey. If you also want to be able to log in with a password, set it via *Settings* (⚙) → *Security* → *Password*
-(at least 10 characters). Setting, changing or removing it must be **confirmed with a passkey**. The password is only stored as a `scrypt` hash.
-A session started with a password can manage the map and texts, but cannot change passkeys or the password; for that you log in with a passkey.
-Failed attempts are limited per IP address and globally.
+## Logging in with a password
+A password (at least 10 characters) is for an address without https, where a browser does not create a passkey, or for anyone who would rather not use one.
+The password is only stored as a `scrypt` hash; failed attempts are limited per IP address and globally.
+
+- **Only a password** (chosen during onboarding): you change it under *Settings* (⚙) → *Security* → *Password* with your current password, and you confirm
+  deleting backups and editions with the password. It cannot be removed, because you could then no longer log in. Once the admin can be reached over https,
+  add a passkey under *Security*.
+- **Passkey and password**: as soon as there is a passkey, setting, changing and removing the password must be **confirmed with a passkey**. A session started
+  with a password can then manage the map and texts, but cannot change passkeys or the password; for that you log in with a passkey.
 
 ## After an update: old pages or scripts
 Scripts and styles are requested per build with `?v=<version>-<commit>` and the HTML is never cached; this way you never get an old `admin.js` with new HTML (which gives errors such as
@@ -325,8 +329,8 @@ You do not have to build the code: the image is built and published automaticall
 
    | Variable | Meaning |
    | --- | --- |
-   | `ORIGIN` | The full URL with which you open the site, for example `https://sintmaarten.flux76.app`. Must be exactly the address in the browser; passkeys only work over **HTTPS** (or on `localhost`). |
-   | `SETUP_TOKEN` | Secret code for creating the very first passkey (onboarding). Generate one with `openssl rand -hex 12`. |
+   | `ORIGIN` | Optional. The full URL with which you open the site, for example `https://sintmaarten.flux76.app`; it must then be exactly the address in the browser. Empty means: the address the site is opened on (behind a reverse proxy via `X-Forwarded-Proto` and `X-Forwarded-Host`); the links in the QR codes then get the address you open the admin on. Fill it in when the site should only be reachable on one address. Passkeys only work over **HTTPS** (or on `localhost`); without https you log in with a password. |
+   | `SETUP_TOKEN` | Secret code for setting up the very first passkey or password (onboarding). Generate one with `openssl rand -hex 12`. |
    | `SESSION_SECRET` | Key for signing sessions (at least 16 characters), for example `openssl rand -hex 32`. If you leave it empty, sessions expire at every restart. |
    | `SITE_TITLE` | Name of the site (can be changed later in the admin area). |
    | `PORT` | Port of the web server, default **9888**. |
@@ -334,8 +338,8 @@ You do not have to build the code: the image is built and published automaticall
    | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/doorbell-map`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
 3. Start the container: `docker compose up -d`. Your data (houses, passkeys, logo, explanation, backups) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
-4. Put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy), so that `ORIGIN` is correct.
-5. Open `ORIGIN/beheer` and create your first passkey with the `SETUP_TOKEN` (see [Onboarding](#the-admin-area-beheer)).
+4. For passkeys, the home-screen app and notifications: put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy). Without https the map works too, and you log in with a password.
+5. Open `<address>/beheer` and set up your first passkey or password with the `SETUP_TOKEN` (see [Onboarding](#the-admin-area-beheer)).
 
 **Updating:** `docker compose pull && docker compose up -d`. **Back-up:** copy the data folder (`DATA_PATH`) (or use the backups in the admin area).
 
@@ -370,7 +374,7 @@ npm test
 You regenerate the screenshots in this README with `node tools/screenshots.js` (Playwright + Chromium and internet for the map tiles; the example data is in `tools/screenshots/`, the buildings come from OpenStreetMap © OpenStreetMap contributors). With one or more words after it you only make the screenshots with that name, for example `node tools/screenshots.js qr`.
 
 ## Security
-Passkeys via WebAuthn (SimpleWebAuthn), session cookie `HttpOnly`/`SameSite=Strict`/`Secure`, origin check on changes,
-limiting of failed attempts.
-Back-up: copy the `data/` folder. Lost your passkey and have no other device? Set `"passkeys": []` in `data/db.json`
-and go through the onboarding again.
+Passkeys via WebAuthn (SimpleWebAuthn), password as a `scrypt` hash, session cookie `HttpOnly`/`SameSite=Strict` (over https also `Secure`),
+origin check on changes, limiting of failed attempts.
+Back-up: copy the `data/` folder. Lost your passkey and have no other device? Set `"passkeys": []` in `data/db.json`. If you still know the password, log in
+with it and add a new passkey; otherwise also set `"password": null` and go through the onboarding again.

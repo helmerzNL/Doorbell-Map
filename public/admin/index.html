@@ -21,31 +21,43 @@
 </head>
 <body class="app admin">
 
-<!-- Onboarding: eerste passkey -->
+<!-- Onboarding: eerste passkey of wachtwoord -->
 <section id="v-setup" class="card hidden">
   <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
   <h2>Eerste keer instellen</h2>
-  <p class="muted">Maak een passkey aan om het beheer te beveiligen. Voer de installatiecode in (<code>SETUP_TOKEN</code> uit je <code>.env</code>, of uit de containerlog als je die leeg liet).</p>
+  <p class="muted">Beveilig het beheer met een passkey of een wachtwoord. Voer de installatiecode in (<code>SETUP_TOKEN</code> uit je <code>.env</code>, of uit de containerlog als je die leeg liet).</p>
   <p class="muted setup-moved">Had je al een kaart en zie je dit na een update of na het verplaatsen van de stackmap? Dan vindt de server geen gegevens in zijn datamap. Rond dit dan niet af, maar controleer eerst <code>DATA_PATH</code> in je <code>.env</code>; de containerlog noemt welke map hij gebruikt.</p>
   <label for="s-token">Installatiecode</label>
   <input type="text" id="s-token" class="secret" autocomplete="off" spellcheck="false">
-  <label for="s-name">Naam van dit apparaat</label>
-  <input type="text" id="s-name" value="Mijn apparaat" maxlength="60">
+  <div id="s-pk">
+    <label for="s-name">Naam van dit apparaat</label>
+    <input type="text" id="s-name" value="Mijn apparaat" maxlength="60">
+    <button class="primary" id="s-go">Passkey aanmaken</button>
+  </div>
+  <p class="muted hidden" id="s-no-pk">Passkeys werken alleen via https (of op localhost). Op dit adres stel je een wachtwoord in; een passkey kun je later toevoegen als het beheer via https bereikbaar is.</p>
+  <form id="s-pw-form" autocomplete="on">
+    <p class="muted" id="s-pw-or" style="margin-top:20px">of met een wachtwoord</p>
+    <input type="text" name="username" value="beheerder" autocomplete="username" hidden>
+    <label for="s-pw">Wachtwoord (minimaal 10 tekens)</label>
+    <input type="password" id="s-pw" autocomplete="new-password" maxlength="200">
+    <label for="s-pw2">Herhaal wachtwoord</label>
+    <input type="password" id="s-pw2" autocomplete="new-password" maxlength="200">
+    <button id="s-pw-go">Instellen met wachtwoord</button>
+  </form>
   <p class="error" id="s-err"></p>
-  <button class="primary" id="s-go">Passkey aanmaken</button>
 </section>
 
 <!-- Inloggen -->
 <section id="v-login" class="card hidden">
   <span class="brand-mark lg" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></span>
   <h2>Beheer</h2>
-  <p class="muted">Log in met je passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel).</p>
+  <p class="muted" id="l-text">Log in met je passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel).</p>
   <p class="error" id="l-err"></p>
   <button class="primary" id="l-go">Inloggen met passkey</button>
   <div id="pw-form-slot"></div>
   <template id="pw-form-tpl">
     <form id="pw-form" autocomplete="on">
-    <p class="muted" style="margin-top:20px">of met je wachtwoord</p>
+    <p class="muted" id="l-pw-or" style="margin-top:20px">of met je wachtwoord</p>
     <input type="text" name="username" value="beheerder" autocomplete="username" hidden>
     <label for="l-pw">Wachtwoord</label>
     <input type="password" id="l-pw" autocomplete="current-password" maxlength="200">
@@ -144,6 +156,17 @@
   <div id="view-hint" class="view-hint">Dubbelklik (of druk lang) op een huis voor de status en de QR-code</div>
 </div>
 </div>
+
+<!-- Bevestigen met het wachtwoord, als er (nog) geen passkey is -->
+<dialog id="pwc-dialog" aria-labelledby="pwc-title">
+  <form id="pwc-form" autocomplete="on">
+    <h3 id="pwc-title">Bevestig met je wachtwoord</h3>
+    <input type="text" name="username" value="beheerder" autocomplete="username" hidden>
+    <label for="pwc-pw">Wachtwoord</label>
+    <input type="password" id="pwc-pw" autocomplete="current-password" maxlength="200">
+    <div class="row"><button class="primary" type="submit">Bevestigen</button><button type="button" id="pwc-cancel">Annuleren</button></div>
+  </form>
+</dialog>
 
 <dialog id="view-dialog">
   <h3>Kaartweergave</h3>
@@ -425,13 +448,14 @@
         <div class="field"><label for="pk-name">Nieuwe passkey toevoegen</label>
           <div class="row row-tight"><input type="text" id="pk-name" value="Extra apparaat" maxlength="60"><button id="pk-add" class="primary">Toevoegen</button></div>
         </div>
+        <p class="set-hint hidden" id="pk-https">Passkeys werken alleen via https (of op localhost). Open het beheer via een https-adres om een passkey toe te voegen.</p>
         <p class="error" id="pk-err"></p>
       </div>
 
       <div class="set-card">
         <header class="set-card-head"><h4>Wachtwoord</h4><p id="pw-status"></p></header>
         <div id="pw-edit">
-          <p class="set-hint">Het instellen, wijzigen en verwijderen van het wachtwoord moet je bevestigen met een passkey.</p>
+          <p class="set-hint" id="pw-hint">Het instellen, wijzigen en verwijderen van het wachtwoord moet je bevestigen met een passkey.</p>
           <p class="error" id="pw-err"></p>
           <div class="row row-tight"><button id="pw-start" class="primary">Wachtwoord instellen…</button><button id="pw-remove" class="danger">Wachtwoord verwijderen</button></div>
           <!-- De wachtwoordvelden worden pas ingevoegd na een klik op de knop, zodat wachtwoordmanagers niet onnodig reageren. -->

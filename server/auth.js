@@ -1,6 +1,8 @@
 'use strict';
 const crypto = require('node:crypto');
 const config = require('./config');
+const store = require('./store');
+const origin = require('./origin');
 
 const COOKIE = 'sm_session';
 
@@ -40,10 +42,10 @@ function sessionMethod(req) {
 
 const isLoggedIn = (req) => sessionMethod(req) !== null;
 
-function startSession(res, method = 'pk') {
+function startSession(req, res, method = 'pk') {
   const exp = String(Date.now() + config.sessionHours * 3600 * 1000);
   const flags = ['Path=/', 'HttpOnly', 'SameSite=Strict', `Max-Age=${config.sessionHours * 3600}`];
-  if (config.secureCookie) flags.push('Secure');
+  if (origin.secureCookie(req)) flags.push('Secure');
   res.append('Set-Cookie', `${COOKIE}=${exp}.${method}.${sign(`${exp}.${method}`)}; ${flags.join('; ')}`);
 }
 
@@ -56,11 +58,17 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Gevoelige acties (passkeys en wachtwoord beheren) vragen een sessie die met een passkey is gestart.
-function requirePasskeySession(req, res, next) {
+// Gevoelige acties (passkeys en wachtwoord beheren) vragen een sessie die met een passkey is gestart. Zonder passkeys is het
+// wachtwoord de enige manier van inloggen (bijvoorbeeld op een adres zonder https) en telt een wachtwoordsessie dus ook.
+const hasPasskeys = () => store.db().passkeys.length > 0;
+function fullSession(req) {
   const m = sessionMethod(req);
-  if (!m) return res.status(401).json({ error: 'Niet ingelogd' });
-  if (m !== 'pk') return res.status(403).json({ error: 'Log in met een passkey om dit te wijzigen' });
+  return m === 'pk' || (m === 'pw' && !hasPasskeys());
+}
+
+function requireFullSession(req, res, next) {
+  if (!sessionMethod(req)) return res.status(401).json({ error: 'Niet ingelogd' });
+  if (!fullSession(req)) return res.status(403).json({ error: 'Log in met een passkey om dit te wijzigen' });
   next();
 }
 
@@ -68,7 +76,7 @@ function requirePasskeySession(req, res, next) {
 function sameOrigin(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const o = req.headers.origin;
-  if (o && o !== config.origin) return res.status(403).json({ error: 'Ongeldige origin' });
+  if (o && !origin.isOwnOrigin(req, o)) return res.status(403).json({ error: 'Ongeldige origin' });
   next();
 }
 
@@ -86,4 +94,4 @@ const limiter = {
   reset(ip) { fails.delete(ip); },
 };
 
-module.exports = { parseCookies, sessionMethod, requirePasskeySession, isLoggedIn, startSession, endSession, requireAdmin, sameOrigin, safeEqual, limiter };
+module.exports = { parseCookies, sessionMethod, fullSession, hasPasskeys, requireFullSession, isLoggedIn, startSession, endSession, requireAdmin, sameOrigin, safeEqual, limiter };

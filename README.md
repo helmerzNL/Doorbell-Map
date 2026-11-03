@@ -37,7 +37,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 
 **Voor de beheerder**
 - Huizen tekenen en bewerken (kleur, straat, huisnummer, notitie, hoekpunten), kaartweergave instellen (midden, zoom, min/max).
-- Inloggen met **passkey** (optioneel ook met wachtwoord, bevestigd met een passkey).
+- Inloggen met **passkey** of **wachtwoord**; een wachtwoord werkt ook op een adres zonder https.
 - Wijzigingen van bewoners **goedkeuren of afwijzen**, met **pushmeldingen**; apparaten **blokkeren** (ook op IP); wijzigen **plannen** tot een datum en tijd.
 - **QR-codes** per huis: tonen, link kopiëren, vernieuwen en een **afdrukbare PDF** met een kaartje per huis om bij de bewoners te bezorgen.
 - **Edities**: de kaart van elke keer met naam en jaartal, aangemaakt als kopie van de live kaart of een andere editie en los te bewerken; wissel in het beheer tussen *Live* en edities en vergelijk welke huizen toen en nu meedoen, met de aantallen. De voorpagina verandert daar nooit door. Zie [Edities](#edities-eerdere-keren-vergelijken).
@@ -158,9 +158,9 @@ Wil je dat bewoners alleen hun **eigen huis** kunnen koppelen, dan zet je onder 
 <tr><td align="center" valign="top"><a href="docs/screenshots/beheer-tekenen.png"><img src="docs/screenshots/beheer-tekenen.png" width="400" alt="Huis tekenen"></a><br><sub>Huis tekenen</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer.png"><img src="docs/screenshots/beheer.png" width="400" alt="Huis bewerken"></a><br><sub>Huis bewerken</sub></td></tr>
 </table>
 
-**Onboarding** – de eerste keer maak je een passkey aan met de installatiecode (`SETUP_TOKEN`).
+**Onboarding** – de eerste keer stel je met de installatiecode (`SETUP_TOKEN`) een passkey of een wachtwoord in. Op een adres zonder https (bijvoorbeeld `http://192.168.1.10:9888`) werken passkeys niet en kies je een wachtwoord.
 
-**Inloggen** – met passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel), eventueel met wachtwoord dat je met een passkey bevestigt.
+**Inloggen** – met passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel) en/of met wachtwoord.
 
 **Weergave en bewerken** – het beheer opent in de **weergave**: alleen de kaart, zonder zijbalk. Dubbelklik (of druk lang op een touchscreen) op een huis voor een **popup** waarmee je het huis direct **groen, rood of niet gemarkeerd** maakt (het wordt meteen opgeslagen) en waarin het **QR-kaartje** voor de bewoners staat: met logo, adres, QR en uitleg. Daaronder staat de **directe link** met een kopieerknop, een knop **Delen via WhatsApp** (opent WhatsApp met een kant-en-klaar bericht en de link), op telefoons ook **Kaartje delen…** (het plaatje via het deelmenu), een **PNG** om te downloaden en *Vernieuwen*. Met **✏️ Bewerken** open je het bewerkscherm (huizen tekenen, selecteren, zoeken, kaartweergave); **✓ Weergave** brengt je terug (bij niet-opgeslagen wijzigingen vraagt het eerst).
 
@@ -199,7 +199,7 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-afbeeldingen.png"><img src="docs/screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, klein logo en favicon"></a><br><sub>Config: logo, klein logo en favicon</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-locatie.png"><img src="docs/screenshots/instellingen-config-locatie.png" width="270" alt="Config: Mijn locatie en Community"></a><br><sub>Config: Mijn locatie en Community</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-communityteksten.png"><img src="docs/screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: titel en tekst van het communityvenster"></a><br><sub>Config: titel en tekst van het communityvenster</sub></td></tr>
 </table>
 
-**Beveiliging** – passkeys toevoegen/verwijderen en een optioneel wachtwoord (bevestigen met passkey).
+**Beveiliging** – passkeys toevoegen/verwijderen en het wachtwoord instellen, wijzigen of verwijderen (zie [Inloggen met wachtwoord](#inloggen-met-wachtwoord)).
 
 **Edities** – een editie aanmaken met naam en jaartal (kopie van de live kaart of van een andere editie), de aantallen per editie, een editie bekijken of bewerken, naam of jaartal wijzigen en verwijderen. Zie [Edities](#edities-eerdere-keren-vergelijken).
 
@@ -229,16 +229,20 @@ Een nieuw getekend huis heeft standaard **geen status** (niet gemarkeerd; kies i
 ## Hoe werkt het
 - **Kaart**: OpenStreetMap (via Leaflet), geen API-sleutel nodig. Google Maps is bewust niet gebruikt: dat vereist een betaalde sleutel en de voorwaarden staan het overtekenen en exporteren naar PDF niet toe.
 - **Beheer instellen**: zoek je straat en zoom ver in; stel via *Kaartweergave instellen* het midden, de startzoom en de minimale/maximale zoom in (of neem de huidige weergave over). Bezoekers openen de kaart (ook in de app) met precies die weergave; met *Automatisch* toont de site alle huizen. In dezelfde dialoog bepaal je of de huisnummers voor bezoekers standaard aan staan. Onder *Kaartvlak in de PDF* zie je met een kader op de kaart welk gebied de PDF toont (standaard automatisch alle huizen) en kun je een eigen vlak vastleggen: zet de kaart op het gewenste gebied, kies *Huidige kaart als PDF-vlak* en sla op. *Automatisch* herstelt het standaardgedrag.
-- **Onboarding**: de allereerste keer vraagt `/beheer` om de `SETUP_TOKEN` en maakt dan een passkey aan. Daarna kun je via *Instellingen* (⚙) → *Beveiliging* extra apparaten toevoegen (doe dat zodat je niet buitengesloten raakt).
+- **Onboarding**: de allereerste keer vraagt `/beheer` om de `SETUP_TOKEN` en maakt dan een passkey of een wachtwoord aan. Daarna kun je via *Instellingen* (⚙) → *Beveiliging* extra apparaten toevoegen (doe dat zodat je niet buitengesloten raakt).
 
 > De PDF haalt kaarttegels rechtstreeks bij OpenStreetMap op; houd het gebruik bescheiden
 > ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)).
 
-## Inloggen met wachtwoord (optioneel)
-Standaard kun je alleen met een passkey inloggen. Wil je ook met een wachtwoord kunnen inloggen, stel dat dan in via *Instellingen* (⚙) → *Beveiliging* → *Wachtwoord*
-(minimaal 10 tekens). Het instellen, wijzigen of verwijderen moet je **bevestigen met een passkey**. Het wachtwoord wordt alleen als `scrypt`-hash opgeslagen.
-Een sessie die met een wachtwoord is gestart kan de kaart en teksten beheren, maar geen passkeys of wachtwoord wijzigen; daarvoor log je in met een passkey.
-Mislukte pogingen worden per IP-adres en globaal beperkt.
+## Inloggen met wachtwoord
+Een wachtwoord (minimaal 10 tekens) is er voor een adres zonder https, waar een browser geen passkey maakt, of voor wie liever geen passkey gebruikt.
+Het wachtwoord wordt alleen als `scrypt`-hash opgeslagen; mislukte pogingen worden per IP-adres en globaal beperkt.
+
+- **Alleen een wachtwoord** (gekozen bij de onboarding): je wijzigt het onder *Instellingen* (⚙) → *Beveiliging* → *Wachtwoord* met je huidige wachtwoord, en
+  het verwijderen van backups en edities bevestig je met het wachtwoord. Verwijderen kan niet, want dan kun je niet meer inloggen. Is het beheer later via https
+  bereikbaar, voeg dan onder *Beveiliging* een passkey toe.
+- **Passkey en wachtwoord**: zodra er een passkey is, bevestig je het instellen, wijzigen en verwijderen van het wachtwoord **met een passkey**. Een sessie die met
+  een wachtwoord is gestart kan dan de kaart en teksten beheren, maar geen passkeys of wachtwoord wijzigen; daarvoor log je in met een passkey.
 
 ## Na een update: oude pagina's of scripts
 Scripts en stijlen worden per build met `?v=<versie>-<commit>` opgevraagd en de HTML wordt nooit gecachet; zo krijg je nooit een oude `admin.js` bij nieuwe HTML (dat geeft fouten als
@@ -323,8 +327,8 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 
    | Variabele | Betekenis |
    | --- | --- |
-   | `ORIGIN` | De volledige URL waarmee je de site opent, bijvoorbeeld `https://sintmaarten.flux76.app`. Moet exact het adres in de browser zijn; passkeys werken alleen via **HTTPS** (of op `localhost`). |
-   | `SETUP_TOKEN` | Geheime code voor het aanmaken van de allereerste passkey (onboarding). Genereer er een met `openssl rand -hex 12`. |
+   | `ORIGIN` | Optioneel. De volledige URL waarmee je de site opent, bijvoorbeeld `https://sintmaarten.flux76.app`; moet dan exact het adres in de browser zijn. Leeg betekent: het adres waarop de site wordt geopend (achter een reverse proxy met `X-Forwarded-Proto` en `X-Forwarded-Host`); de links in de QR-codes krijgen dan het adres waarop je het beheer opent. Vul hem in als de site maar op één adres bereikbaar hoort te zijn. Passkeys werken alleen via **HTTPS** (of op `localhost`); zonder https log je in met een wachtwoord. |
+   | `SETUP_TOKEN` | Geheime code voor het instellen van de allereerste passkey of het eerste wachtwoord (onboarding). Genereer er een met `openssl rand -hex 12`. |
    | `SESSION_SECRET` | Sleutel voor het ondertekenen van sessies (minstens 16 tekens), bijvoorbeeld `openssl rand -hex 32`. Laat je hem leeg, dan vervallen sessies bij elke herstart. |
    | `SITE_TITLE` | Naam van de site (daarna aan te passen in het beheer). |
    | `PORT` | Poort van de webserver, standaard **9888**. |
@@ -332,8 +336,8 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
    | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/doorbell-map`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
    | `RP_ID`, `SESSION_HOURS` | Optioneel; zie de opmerkingen in [`.env.example`](.env.example). |
 3. Start de container: `docker compose up -d`. Je gegevens (huizen, passkeys, logo, uitleg, backups) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
-4. Zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy), zodat `ORIGIN` klopt.
-5. Open `ORIGIN/beheer` en maak je eerste passkey aan met de `SETUP_TOKEN` (zie [Onboarding](#het-beheer-beheer)).
+4. Voor passkeys, de app op het beginscherm en meldingen: zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy). Zonder https werkt de kaart ook, en log je in met een wachtwoord.
+5. Open `<adres>/beheer` en stel met de `SETUP_TOKEN` je eerste passkey of wachtwoord in (zie [Onboarding](#het-beheer-beheer)).
 
 **Bijwerken:** `docker compose pull && docker compose up -d`. **Back-up:** kopieer die map (of gebruik de backups in het beheer).
 
@@ -368,7 +372,7 @@ npm test
 De screenshots in deze README maak je opnieuw met `node tools/screenshots.js` (Playwright + Chromium en internet voor de kaarttegels; de voorbeeldgegevens staan in `tools/screenshots/`, de gebouwen komen uit OpenStreetMap © OpenStreetMap-bijdragers). Met een of meer woorden erachter maak je alleen de screenshots met die naam, bijvoorbeeld `node tools/screenshots.js qr`.
 
 ## Beveiliging
-Passkeys via WebAuthn (SimpleWebAuthn), sessiecookie `HttpOnly`/`SameSite=Strict`/`Secure`, origin-check op wijzigingen,
-beperking op mislukte pogingen.
-Back-up: kopieer de map `data/`. Passkey kwijt en geen ander apparaat? Zet in `data/db.json`
-`"passkeys": []` en doorloop de onboarding opnieuw.
+Passkeys via WebAuthn (SimpleWebAuthn), wachtwoord als `scrypt`-hash, sessiecookie `HttpOnly`/`SameSite=Strict` (via https ook `Secure`),
+origin-check op wijzigingen, beperking op mislukte pogingen.
+Back-up: kopieer de map `data/`. Passkey kwijt en geen ander apparaat? Zet in `data/db.json` `"passkeys": []`. Weet je het wachtwoord nog, log dan
+daarmee in en voeg een nieuwe passkey toe; anders zet je ook `"password": null` en doorloop je de onboarding opnieuw.

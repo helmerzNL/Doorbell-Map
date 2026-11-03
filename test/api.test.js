@@ -129,6 +129,7 @@ const sessionCookie = (method) => {
   return `sm_session=${e}.${method}.${crypto.createHmac('sha256', 'test-session-secret-123').update(`${e}.${method}`).digest('base64url')}`;
 };
 const jsonH = (c) => ({ 'Content-Type': 'application/json', ...(c ? { cookie: c } : {}) });
+const FAKE_PASSKEY = { id: 'test-passkey', publicKey: 'x', counter: 0, transports: [], name: 'Test', createdAt: new Date().toISOString() };
 
 test('appnaam komt in het manifest en wordt gevalideerd', async () => {
   const put = (body) => j('/api/admin/settings', { method: 'PUT', headers: jsonH(cookie), body: JSON.stringify(body) });
@@ -160,16 +161,25 @@ test('wachtwoord: inloggen, beperkingen en bevestiging met passkey', async () =>
   const st = await (await j('/api/auth/status', { headers: { cookie: set } })).json();
   assert.deepEqual([st.loggedIn, st.method, st.passwordEnabled], [true, 'pw', true]);
 
-  // met een wachtwoord-sessie mag je kaartgegevens beheren, maar geen passkeys/wachtwoord
-  assert.equal((await j('/api/admin/passkeys', { headers: { cookie: set } })).status, 200);
-  assert.equal((await j('/api/admin/password/options', { method: 'POST', headers: jsonH(set), body: '{}' })).status, 403);
-  assert.equal((await j('/api/admin/passkeys/x', { method: 'DELETE', headers: { cookie: set } })).status, 403);
-  assert.equal((await j('/api/auth/register/options', { method: 'POST', headers: jsonH(set), body: '{}' })).status, 403);
-  // met een passkey-sessie krijg je wel uitdaging voor bevestiging
-  const opts = await j('/api/admin/password/options', { method: 'POST', headers: jsonH(sessionCookie('pk')), body: '{}' });
-  assert.equal(opts.status, 200);
-  assert.ok((await opts.json()).options.challenge);
-  store.db().password = null;
+  // zodra er een passkey is, mag een wachtwoord-sessie kaartgegevens beheren, maar geen passkeys/wachtwoord
+  store.db().passkeys.push(FAKE_PASSKEY);
+  try {
+    assert.equal((await (await j('/api/auth/status', { headers: { cookie: set } })).json()).fullSession, false);
+    assert.equal((await j('/api/admin/passkeys', { headers: { cookie: set } })).status, 200);
+    assert.equal((await j('/api/admin/password/options', { method: 'POST', headers: jsonH(set), body: '{}' })).status, 403);
+    assert.equal((await j('/api/admin/passkeys/x', { method: 'DELETE', headers: { cookie: set } })).status, 403);
+    assert.equal((await j('/api/auth/register/options', { method: 'POST', headers: jsonH(set), body: '{}' })).status, 403);
+    // met passkeys bevestig je met een passkey, niet met het wachtwoord
+    const viaPw = await j('/api/admin/password', { method: 'PUT', headers: jsonH(sessionCookie('pk')), body: JSON.stringify({ password: 'nog-een-wachtwoord', currentPassword: 'een-lang-wachtwoord' }) });
+    assert.equal(viaPw.status, 400);
+    // met een passkey-sessie krijg je wel uitdaging voor bevestiging
+    const opts = await j('/api/admin/password/options', { method: 'POST', headers: jsonH(sessionCookie('pk')), body: '{}' });
+    assert.equal(opts.status, 200);
+    assert.ok((await opts.json()).options.challenge);
+  } finally {
+    store.db().passkeys = store.db().passkeys.filter((p) => p !== FAKE_PASSKEY);
+    store.db().password = null;
+  }
 });
 
 test('PDF-kaartvlak instellen, valideren, wissen en terugzetten uit backup', async () => {

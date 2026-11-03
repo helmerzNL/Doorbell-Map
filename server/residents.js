@@ -4,6 +4,7 @@
 const crypto = require('node:crypto');
 const express = require('express');
 const config = require('./config');
+const origin = require('./origin');
 const store = require('./store');
 const auth = require('./auth');
 const backups = require('./backups');
@@ -159,9 +160,9 @@ const codeOk = (req) => {
   return !!c && auth.safeEqual(c, codeToken());
 };
 
-function setCodeCookie(res) {
+function setCodeCookie(req, res) {
   const flags = ['Path=/', 'HttpOnly', 'SameSite=Lax', `Max-Age=${365 * 24 * 3600}`];
-  if (config.secureCookie) flags.push('Secure');
+  if (origin.secureCookie(req)) flags.push('Secure');
   res.append('Set-Cookie', `${CODE_COOKIE}=${codeToken()}; ${flags.join('; ')}`);
 }
 
@@ -195,9 +196,9 @@ function view(rec, req) {
   };
 }
 
-function setCookie(res, token) {
+function setCookie(req, res, token) {
   const flags = ['Path=/', 'HttpOnly', 'SameSite=Lax', `Max-Age=${365 * 24 * 3600}`];
-  if (config.secureCookie) flags.push('Secure');
+  if (origin.secureCookie(req)) flags.push('Secure');
   res.append('Set-Cookie', `${COOKIE}=${token}; ${flags.join('; ')}`);
 }
 
@@ -279,7 +280,7 @@ resident.post('/code', (req, res) => {
   const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
   if (!auth.safeEqual(code, codeSetting())) { auth.limiter.fail(key); return res.status(403).json({ error: 'Onjuiste code' }); }
   auth.limiter.reset(key);
-  setCodeCookie(res);
+  setCodeCookie(req, res);
   res.json({ ok: true });
 });
 
@@ -338,8 +339,8 @@ resident.post('/claim', (req, res) => {
   const rec = { rid: crypto.randomBytes(6).toString('hex'), tokenHash: sha(token), houseId: house.id, createdAt: new Date().toISOString(), lastActivity: new Date().toISOString(), ip: req.ip, notice: null };
   db().residents.push(rec);
   store.save();
-  setCookie(res, token);
-  if (viaQr && codeOn()) setCodeCookie(res); // een geldige QR vervangt de toegangscode
+  setCookie(req, res, token);
+  if (viaQr && codeOn()) setCodeCookie(req, res); // een geldige QR vervangt de toegangscode
   res.json({ ...view(rec, req), deviceToken: token }); // de app bewaart dit ook lokaal, zodat de koppeling een gewiste cookie overleeft
 });
 
@@ -350,7 +351,7 @@ resident.post('/restore', (req, res) => {
   const hash = sha(token);
   const rec = db().residents.find((r) => auth.safeEqual(r.tokenHash, hash));
   if (!rec || !houseOf(rec.houseId)) return res.status(404).json({ error: 'Koppeling niet gevonden' });
-  setCookie(res, token);
+  setCookie(req, res, token);
   res.json(view(rec, req));
 });
 
@@ -481,15 +482,15 @@ admin.delete('/blocks/:id', (req, res) => {
 });
 
 // ---- QR-codes (voor het afdrukken en per huis) ----
-const qrUrl = (id) => `${config.origin}/?q=${secretOf(id)}`;
-const qrItem = (h) => ({ houseId: h.id, title: titleOf(h), street: h.street || '', number: h.number || '', url: qrUrl(h.id), taken: houseTaken(h.id) });
-admin.get('/qr', (req, res) => { const items = db().houses.map(qrItem); store.save(); res.json(items); });
-admin.post('/qr/rotate-all', (req, res) => { db().houseSecrets = {}; const items = db().houses.map(qrItem); store.save(); res.json(items); });
+// De link in de QR-code gebruikt ORIGIN, of anders het adres waarop de beheerder het beheer opent.
+const qrItem = (req) => (h) => ({ houseId: h.id, title: titleOf(h), street: h.street || '', number: h.number || '', url: `${origin.pageOrigin(req)}/?q=${secretOf(h.id)}`, taken: houseTaken(h.id) });
+admin.get('/qr', (req, res) => { const items = db().houses.map(qrItem(req)); store.save(); res.json(items); });
+admin.post('/qr/rotate-all', (req, res) => { db().houseSecrets = {}; const items = db().houses.map(qrItem(req)); store.save(); res.json(items); });
 admin.post('/qr/:houseId/rotate', (req, res) => {
   const h = houseOf(req.params.houseId);
   if (!h) return res.status(404).json({ error: 'Huis niet gevonden' });
   delete secrets()[h.id];
-  const item = qrItem(h);
+  const item = qrItem(req)(h);
   store.save();
   res.json(item);
 });
@@ -498,7 +499,7 @@ admin.post('/qr/:houseId/rotate', (req, res) => {
 admin.get('/push/key', (req, res) => res.json({ publicKey: push.publicKey() }));
 admin.get('/push/devices', (req, res) => res.json(push.devices()));
 admin.post('/push/subscribe', (req, res) => {
-  try { res.json({ id: push.addDevice(req.body?.subscription, req.body?.label) }); }
+  try { res.json({ id: push.addDevice(req.body?.subscription, req.body?.label, origin.pageOrigin(req)) }); }
   catch (err) { res.status(400).json({ error: err.message }); }
 });
 admin.delete('/push/devices/:id', (req, res) => res.json({ removed: push.removeDevice(req.params.id) }));
