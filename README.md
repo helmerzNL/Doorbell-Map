@@ -241,6 +241,10 @@ Een nieuw getekend huis heeft standaard **geen status** (niet gemarkeerd; kies i
 > ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)).
 
 ## Inloggen: passkey, wachtwoord en MFA
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/onboarding-wachtwoord.png"><img src="docs/screenshots/onboarding-wachtwoord.png" width="420" alt="Installatie met gebruikersnaam en wachtwoord"></a><br><sub>Installatie met gebruikersnaam en wachtwoord</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-instellen.png"><img src="docs/screenshots/mfa-instellen.png" width="170" alt="MFA instellen: QR-code voor de app"></a><br><sub>MFA instellen: QR-code voor de app</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-herstelcodes.png"><img src="docs/screenshots/mfa-herstelcodes.png" width="170" alt="Herstelcodes, één keer getoond"></a><br><sub>Herstelcodes, één keer getoond</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-login-mfa.png"><img src="docs/screenshots/beheer-login-mfa.png" width="170" alt="Inloggen: de MFA-stap"></a><br><sub>Inloggen: de MFA-stap</sub></td></tr>
+</table>
+
 Elke gebruiker van het beheer logt in op een van deze manieren, of op allebei:
 - **Passkey** (aanbevolen): vingerafdruk, gezicht, pincode of beveiligingssleutel; geen wachtwoord nodig. Werkt alleen via **HTTPS** met een echte domeinnaam (of op `localhost`). Open je het beheer via een IP-adres, een naam zonder domein (`nas`) of een naam die alleen thuis bestaat (`.local`, `.lan`), dan legt de wizard uit waarom een passkey daar niet kan.
 - **Gebruikersnaam en wachtwoord**: werkt overal. Minimaal 10 tekens, minstens 4 verschillende tekens en zonder je gebruikersnaam; het wordt alleen als `scrypt`-hash opgeslagen. De gebruikersnaam is niet hoofdlettergevoelig.
@@ -250,6 +254,10 @@ Instellen en wijzigen doe je in *Instellingen* (⚙) → *Beveiliging*. Gevoelig
 Mislukte pogingen (wachtwoord, MFA-code, installatiecode) worden per IP-adres en globaal beperkt.
 
 ## Meer beheerders uitnodigen
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-gebruikers.png"><img src="docs/screenshots/instellingen-gebruikers.png" width="420" alt="Gebruikers: uitnodigen, nieuwe inloglink, verwijderen"></a><br><sub>Gebruikers: uitnodigen, nieuwe inloglink, verwijderen</sub></td><td align="center" valign="top"><a href="docs/screenshots/uitnodiging.png"><img src="docs/screenshots/uitnodiging.png" width="170" alt="De uitnodiging op de telefoon van de gast"></a><br><sub>De uitnodiging op de telefoon van de gast</sub></td></tr>
+</table>
+
 De eerste gebruiker is de **eigenaar**. Die nodigt anderen uit via *Instellingen* (⚙) → *Gebruikers* → *Iemand uitnodigen*, eventueel met een voorgestelde gebruikersnaam. Je krijgt een link (`…/beheer#invite=…`) die je **één keer te zien** krijgt, **één keer werkt** en na **7 dagen** verloopt; stuur hem zelf door (chat, mail of persoonlijk). Wie hem opent kiest zelf een gebruikersnaam en een passkey of wachtwoord (en eventueel MFA), dus de eigenaar kent niemands wachtwoord. Alleen de hash van de link wordt bewaard.
 - Iedereen beheert de kaart, de bewoners, de teksten, edities en backups; alleen de eigenaar beheert gebruikers (dat dwingt de server af).
 - **Nieuwe inloglink** maakt een link voor iemand die niet meer kan inloggen (telefoon kwijt, wachtwoord vergeten). De oude inlog blijft werken tot de nieuwe is ingesteld; dan vervallen de oude passkeys, het wachtwoord en MFA, en wordt die gebruiker op alle apparaten afgemeld.

@@ -17,6 +17,7 @@ const path = require('node:path');
 let playwright;
 try { playwright = require('playwright'); } catch { playwright = require(path.join(process.env.PLAYWRIGHT_MODULE || '/opt/node22/lib/node_modules', 'playwright')); }
 const { chromium, request } = playwright;
+const OTPAuth = require('otpauth');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'docs', 'screenshots');
@@ -41,6 +42,7 @@ Woon je zelf in de wijk? Dan kun je de status van je eigen huis aanpassen. De be
 Veel plezier!`;
 
 let server; let dataDir;
+let joostInvite = null; // open uitnodiging, gebruikt voor de screenshots van de gast
 
 async function startServer() {
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-shots-'));
@@ -98,6 +100,16 @@ async function main() {
   await ap.waitForSelector('#v-setup:not(.hidden)');
   await ap.fill('#s-token', TOKEN);
   await shot(ap, 'onboarding');
+  await ap.fill('#s-user', 'Helmer');
+  if (wanted('onboarding-wachtwoord')) {
+    // de andere route: gebruikersnaam en wachtwoord (alleen ingevuld; de installatie gaat hieronder met de passkey verder)
+    await ap.check('input[name="s-method"][value="password"]');
+    await ap.fill('#s-pw1', 'voorbeeld-wachtwoord-1');
+    await ap.fill('#s-pw2', 'voorbeeld-wachtwoord-1');
+    await ap.evaluate(() => document.querySelector('.s-methods').scrollIntoView({ block: 'start' }));
+    await shot(ap, 'onboarding-wachtwoord');
+    await ap.check('input[name="s-method"][value="passkey"]');
+  }
   await ap.click('#s-go');
   await ap.waitForSelector('#v-edit:not(.hidden)');
   await ap.request.post(`${BASE}/api/auth/logout`, { data: {} });
@@ -284,11 +296,47 @@ async function main() {
     const r = await guest.post('/api/invites/password', { data: { token: inv.token, username: 'Marieke', password: 'voorbeeld-wachtwoord-1' } });
     if (!r.ok()) throw new Error(`uitnodiging ${r.status()}`);
     await guest.dispose();
-    await post('/api/admin/users/invites', { username: 'Joost' });
+    joostInvite = await post('/api/admin/users/invites', { username: 'Joost' });
   }
   await openTab(a, 'users');
   await a.waitForSelector('#us-list .us-row');
   await shot(a, 'instellingen-gebruikers');
+
+  // de uitnodiging van Joost op een telefoon: wachtwoord kiezen, MFA aanzetten, en daarna inloggen met de MFA-stap
+  if (['uitnodiging', 'mfa-instellen', 'mfa-herstelcodes', 'beheer-login-mfa'].some(wanted)) {
+    const ctx = await browser.newContext(ctxOpts(MOBILE));
+    const g = await ctx.newPage();
+    const pw = 'voorbeeld-wachtwoord-2';
+    await g.goto(joostInvite.url);
+    await g.waitForFunction(() => document.querySelector('#s-invite-text')?.textContent);
+    await shot(g, 'uitnodiging');
+    await g.check('input[name="s-method"][value="password"]');
+    await g.fill('#s-pw1', pw);
+    await g.fill('#s-pw2', pw);
+    await g.click('#s-pw-go');
+    await g.waitForSelector('#s-step-mfa:not(.hidden)');
+    await g.click('#s-mfa-yes');
+    await g.waitForSelector('#mfa-code');
+    await g.waitForTimeout(300);
+    await shot(g, 'mfa-instellen');
+    const secret = (await g.textContent('.mfa-secret')).replace(/\s/g, '');
+    await g.fill('#mfa-code', new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret) }).generate());
+    await g.click('.mfa-flow button[type=submit]');
+    await g.waitForSelector('.rc-list');
+    await shot(g, 'mfa-herstelcodes');
+    await g.check('#rc-saved');
+    await g.click('#s-mfa-box button.primary');
+    await g.waitForSelector('#v-edit:not(.hidden)');
+    await g.evaluate(() => fetch('/api/auth/logout', { method: 'POST' }));
+    await g.goto(`${BASE}/beheer`);
+    await g.waitForSelector('#v-login:not(.hidden)');
+    await g.fill('#l-user', 'Joost');
+    await g.fill('#l-pw', pw);
+    await g.click('#l-pw-go');
+    await g.waitForSelector('#mfa-form');
+    await shot(g, 'beheer-login-mfa');
+    await ctx.close();
+  }
   await openTab(a, 'backups');
   await shot(a, 'instellingen-backups');
 

@@ -243,6 +243,10 @@ A newly drawn house has **no status** by default (not marked; in the admin area 
 > ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)).
 
 ## Logging in: passkey, password and MFA
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/onboarding-wachtwoord.png"><img src="docs/screenshots/onboarding-wachtwoord.png" width="420" alt="Setup with username and password"></a><br><sub>Setup with username and password</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-instellen.png"><img src="docs/screenshots/mfa-instellen.png" width="170" alt="Setting up MFA: QR code for the app"></a><br><sub>Setting up MFA: QR code for the app</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-herstelcodes.png"><img src="docs/screenshots/mfa-herstelcodes.png" width="170" alt="Recovery codes, shown once"></a><br><sub>Recovery codes, shown once</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-login-mfa.png"><img src="docs/screenshots/beheer-login-mfa.png" width="170" alt="Logging in: the MFA step"></a><br><sub>Logging in: the MFA step</sub></td></tr>
+</table>
+
 Every user of the admin area logs in in one of these ways, or both:
 - **Passkey** (recommended): fingerprint, face, PIN or security key; no password needed. Only works over **HTTPS** with a real domain name (or on `localhost`). If you open the admin area through an IP address, a name without a domain (`nas`) or a name that only exists at home (`.local`, `.lan`), the wizard explains why a passkey cannot work there.
 - **Username and password**: works everywhere. At least 10 characters, at least 4 different characters and without your username; it is only stored as a `scrypt` hash. The username is not case-sensitive.
@@ -252,6 +256,10 @@ You set this up and change it in *Settings* (⚙) → *Security*. Sensitive acti
 Failed attempts (password, MFA code, setup code) are limited per IP address and globally.
 
 ## Inviting more admins
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-gebruikers.png"><img src="docs/screenshots/instellingen-gebruikers.png" width="420" alt="Users: invite, new login link, remove"></a><br><sub>Users: invite, new login link, remove</sub></td><td align="center" valign="top"><a href="docs/screenshots/uitnodiging.png"><img src="docs/screenshots/uitnodiging.png" width="170" alt="The invitation on the guest's phone"></a><br><sub>The invitation on the guest's phone</sub></td></tr>
+</table>
+
 The first user is the **owner**. The owner invites others via *Settings* (⚙) → *Users* → *Invite someone*, optionally with a suggested username. You get a link (`…/beheer#invite=…`) that is **shown once**, **works once** and expires after **7 days**; send it yourself (chat, email or in person). Whoever opens it chooses their own username and passkey or password (and optionally MFA), so the owner never knows anyone's password. Only the hash of the link is stored.
 - Everyone manages the map, the residents, the texts, editions and backups; only the owner manages users (the server enforces this).
 - **New login link** creates a link for someone who can no longer log in (lost phone, forgotten password). The old login keeps working until the new one is set up; then the old passkeys, password and MFA stop working and that user is signed out on every device.
