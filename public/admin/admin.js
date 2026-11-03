@@ -33,11 +33,20 @@
   }
 
   const friendly = (err) =>
-    err && err.name === 'NotAllowedError' ? 'Geannuleerd of niet toegestaan door het apparaat.' : err.message;
+    err && err.cancelled ? '' : err && err.name === 'NotAllowedError' ? 'Geannuleerd of niet toegestaan door het apparaat.' : err.message;
 
-  // ---------- passkey flows ----------
-  async function registerPasskey({ setupToken, name }) {
-    const { challengeId, options } = await post('/api/auth/register/options', { setupToken, name });
+  // ---------- inloggen, installatie en uitnodigingen ----------
+  // De sessie zoals /api/auth/status hem geeft; user is de ingelogde gebruiker (met strong: mag de eigen inlog wijzigen).
+  let session = { method: null, passwordEnabled: false, passkeysEnabled: false, passkey: { available: false, reason: '' }, user: null };
+  const locked = () => !session.user?.strong;
+  const cancelled = () => Object.assign(new Error(''), { cancelled: true });
+  const passkeyHere = () => !!(session.passkey?.available && window.PublicKeyCredential && window.isSecureContext);
+  const passkeyWhy = () => (session.passkey?.available ? 'Deze browser ondersteunt geen passkeys (HTTPS is vereist).' : session.passkey?.reason || '');
+  const inviteToken = () => (location.hash.match(/^#invite=([A-Za-z0-9_-]{43})$/) || [])[1] || null;
+  const dropInviteHash = () => history.replaceState(null, '', location.pathname + location.search);
+
+  async function registerPasskey(body) {
+    const { challengeId, options } = await post('/api/auth/register/options', body);
     const response = await SimpleWebAuthnBrowser.startRegistration({ optionsJSON: options });
     await post('/api/auth/register/verify', { challengeId, response });
   }
@@ -48,31 +57,184 @@
     await post('/api/auth/login/verify', { challengeId, response });
   }
 
+  // Eén kaart voor de eerste installatie én voor een uitnodiging: naam, keuze passkey of wachtwoord, daarna optioneel MFA.
+  let wiz = { invite: null, kind: 'setup' };
+  let wizPassword = ''; // het zojuist gekozen wachtwoord: de bevestiging om MFA aan te zetten, daarna vergeten
+  const wizMethod = () => document.querySelector('input[name="s-method"]:checked')?.value || null;
+
+  function showWizard({ invite = null, info = null } = {}) {
+    wiz = { invite, kind: info ? info.kind : 'setup' };
+    show('v-setup');
+    $('s-step-account').classList.remove('hidden');
+    $('s-step-mfa').classList.add('hidden');
+    $('s-account').classList.remove('hidden');
+    $('s-invite-back').classList.add('hidden');
+    $('s-err').textContent = '';
+    document.querySelectorAll('#v-setup .s-setup').forEach((el) => el.classList.toggle('hidden', !!invite));
+    document.querySelectorAll('#v-setup .s-invite').forEach((el) => el.classList.toggle('hidden', !invite));
+    if ($('s-name').value === 'Mijn apparaat') $('s-name').value = I18n.tr('Mijn apparaat');
+    if (!invite) {
+      $('s-title').textContent = 'Eerste keer instellen';
+      if (!$('s-user').value) $('s-user').value = 'beheerder';
+      $('s-user').readOnly = false;
+    } else if (info.kind === 'reset') {
+      $('s-title').textContent = 'Nieuwe inlog instellen';
+      $('s-invite-text').textContent = `Stel een nieuwe inlog in voor ${info.username}. Je oude passkeys, wachtwoord en MFA vervallen zodra je klaar bent.`;
+      $('s-user').value = info.username;
+      $('s-user').readOnly = true;
+    } else {
+      $('s-title').textContent = 'Uitnodiging';
+      $('s-invite-text').textContent = info.invitedBy
+        ? `${info.invitedBy} nodigt je uit voor het beheer van deze kaart. Kies een gebruikersnaam en hoe je wilt inloggen.`
+        : 'Je bent uitgenodigd voor het beheer van deze kaart. Kies een gebruikersnaam en hoe je wilt inloggen.';
+      $('s-user').value = info.username || '';
+      $('s-user').readOnly = false;
+    }
+    // Een passkey kan alleen via een echte domeinnaam en HTTPS; anders uitleggen waarom niet en het wachtwoord kiezen.
+    const pkRadio = document.querySelector('input[name="s-method"][value="passkey"]');
+    pkRadio.disabled = !passkeyHere();
+    $('s-pk-why').textContent = passkeyHere() ? '' : passkeyWhy();
+    document.querySelector(`input[name="s-method"][value="${passkeyHere() ? 'passkey' : 'password'}"]`).checked = true;
+    chooseMethod();
+  }
+
+  function chooseMethod() {
+    const m = wizMethod();
+    $('s-pk').classList.toggle('hidden', m !== 'passkey');
+    const slot = $('s-pw-slot');
+    if (m !== 'password') { slot.replaceChildren(); return; }
+    if ($('s-pw')) return;
+    slot.append($('s-pw-tpl').content.cloneNode(true));
+    $('s-pw').onsubmit = async (e) => {
+      e.preventDefault();
+      $('s-err').textContent = '';
+      const pw = $('s-pw1').value;
+      if (pw.length < 10) { $('s-err').textContent = 'Kies een wachtwoord van minimaal 10 tekens.'; return; }
+      if (pw !== $('s-pw2').value) { $('s-err').textContent = 'De twee wachtwoorden zijn niet gelijk.'; return; }
+      $('s-pw-user').value = $('s-user').value.trim();
+      $('s-pw-go').disabled = true;
+      try {
+        if (wiz.invite) await post('/api/invites/password', { token: wiz.invite, username: $('s-user').value, password: pw });
+        else await post('/api/auth/setup/password', { setupToken: $('s-token').value, username: $('s-user').value, password: pw });
+        if (wiz.invite) dropInviteHash();
+        wizPassword = pw;
+        showMfaOffer();
+      } catch (err) { $('s-err').textContent = err.message; }
+      finally { if ($('s-pw-go')) $('s-pw-go').disabled = false; }
+    };
+  }
+  document.querySelectorAll('input[name="s-method"]').forEach((r) => { r.onchange = chooseMethod; });
+
   $('s-go').onclick = async () => {
     $('s-err').textContent = '';
     try {
       if (!window.PublicKeyCredential) throw new Error('Deze browser ondersteunt geen passkeys (HTTPS is vereist).');
-      await registerPasskey({ setupToken: $('s-token').value, name: $('s-name').value });
+      const body = { username: $('s-user').value, name: $('s-name').value };
+      if (wiz.invite) await registerPasskey({ ...body, invite: wiz.invite });
+      else await registerPasskey({ ...body, setupToken: $('s-token').value });
+      if (wiz.invite) dropInviteHash();
       boot();
     } catch (e) { $('s-err').textContent = friendly(e); }
   };
+
+  // Na een account met wachtwoord: tweestapsverificatie aanbieden, met een duidelijk "Niet nu".
+  function showMfaOffer() {
+    $('s-title').textContent = 'Tweestapsverificatie (MFA)';
+    $('s-step-account').classList.add('hidden');
+    $('s-step-mfa').classList.remove('hidden');
+    $('s-mfa-intro').classList.remove('hidden');
+    $('s-mfa-choice').classList.remove('hidden');
+    $('s-mfa-box').replaceChildren();
+    $('s-mfa-yes').focus();
+  }
+  $('s-mfa-no').onclick = () => { wizPassword = ''; boot(); };
+  $('s-mfa-yes').onclick = async () => {
+    $('s-mfa-choice').classList.add('hidden');
+    $('s-mfa-intro').classList.add('hidden');
+    try {
+      await mfaEnroll($('s-mfa-box'), { proof: { confirm: { password: wizPassword } }, onDone: () => { wizPassword = ''; boot(); }, onCancel: () => showMfaOffer() });
+    } catch (e) {
+      showMfaOffer();
+      $('s-mfa-box').append(Object.assign(document.createElement('p'), { className: 'error', textContent: e.message }));
+    }
+  };
+
+  async function showInvite(token) {
+    let info = null;
+    try {
+      const res = await fetch('/api/invites/info', { headers: { 'X-Invite-Token': token }, credentials: 'same-origin' });
+      if (res.ok) info = await res.json();
+    } catch { /* hieronder als ongeldig behandeld */ }
+    if (!info) {
+      show('v-setup');
+      $('s-title').textContent = 'Uitnodiging';
+      $('s-step-mfa').classList.add('hidden');
+      $('s-step-account').classList.remove('hidden');
+      document.querySelectorAll('#v-setup .s-setup').forEach((el) => el.classList.add('hidden'));
+      $('s-account').classList.add('hidden');
+      $('s-invite-text').classList.remove('hidden');
+      $('s-invite-text').textContent = 'Deze link is ongeldig of verlopen. Vraag de eigenaar van het beheer om een nieuwe link.';
+      $('s-err').textContent = '';
+      $('s-invite-back').classList.remove('hidden');
+      dropInviteHash();
+      return;
+    }
+    session = { ...session, passkey: info.passkey };
+    showWizard({ invite: token, info });
+  }
+
+  function showLogin(st) {
+    show('v-login');
+    const pk = st.passkeysEnabled;
+    $('l-err').textContent = '';
+    $('l-go').classList.toggle('hidden', !pk);
+    $('l-intro').textContent = pk ? 'Log in met je passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel).' : 'Log in met je gebruikersnaam en wachtwoord.';
+    $('l-intro').classList.remove('hidden');
+    mountPwLogin(st.passwordEnabled, !pk);
+  }
+
   $('l-go').onclick = async () => {
     $('l-err').textContent = '';
     try { await login(); boot(); } catch (e) { $('l-err').textContent = friendly(e); }
   };
   // Het inlogformulier met wachtwoordveld bestaat alleen op het inlogscherm (niet in de editor).
-  function mountPwLogin(enabled) {
+  function mountPwLogin(enabled, only = false) {
     const slot = $('pw-form-slot');
     slot.replaceChildren();
     if (!enabled) return;
     slot.append($('pw-form-tpl').content.cloneNode(true));
+    slot.querySelector('.l-or').classList.toggle('hidden', only);
+    $('l-pw-go').classList.toggle('primary', only);
     $('pw-form').onsubmit = async (e) => {
       e.preventDefault();
       $('l-pw-err').textContent = '';
-      try { await post('/api/auth/password-login', { password: $('l-pw').value }); boot(); }
-      catch (err) { $('l-pw-err').textContent = err.message; }
+      try {
+        const res = await post('/api/auth/password-login', { username: $('l-user').value, password: $('l-pw').value });
+        if (res.mfaRequired) mountMfaLogin(res.ticket); else boot();
+      } catch (err) { $('l-pw-err').textContent = err.message; }
     };
+    if (only) $('l-user').focus();
   }
+  // Tweede stap: de code uit de authenticator-app of een herstelcode.
+  function mountMfaLogin(ticket) {
+    const slot = $('pw-form-slot');
+    slot.replaceChildren($('mfa-form-tpl').content.cloneNode(true));
+    $('l-go').classList.add('hidden');
+    $('l-intro').classList.add('hidden');
+    $('mfa-form').onsubmit = async (e) => {
+      e.preventDefault();
+      $('l-code-err').textContent = '';
+      try { await post('/api/auth/mfa-login', { ticket, code: $('l-code').value }); boot(); }
+      catch (err) {
+        if (/Sessie verlopen/.test(err.message)) { showLogin(session); $('l-pw-err').textContent = err.message; return; }
+        $('l-code-err').textContent = err.message;
+        $('l-code').select();
+      }
+    };
+    $('l-code-back').onclick = () => showLogin(session);
+    $('l-code').focus();
+  }
+
   $('logout').onclick = async () => {
     if (dirty && !confirmT('Er zijn niet-opgeslagen wijzigingen. Toch uitloggen?')) return;
     dirty = false;
@@ -80,44 +242,176 @@
     location.reload();
   };
 
-  // ---------- passkeys dialoog ----------
-  let session = { method: null, passwordEnabled: false };
-  const locked = () => session.method === 'pw';
+  // ---------- bevestigen van gevoelige acties ----------
+  // Met een eigen passkey als je die hebt, anders met je huidige wachtwoord (en de MFA-code). Geeft het bewijs terug
+  // dat in de body van het verzoek mee moet.
+  const confirmWord = () => (session.user?.passkeys ? 'passkey' : 'wachtwoord');
+  function syncConfirmLabels() {
+    document.querySelectorAll('.confirm-label').forEach((b) => { b.textContent = `Geselecteerde verwijderen (bevestig met ${confirmWord()})`; });
+  }
+  async function confirmStep() {
+    const o = await post('/api/admin/confirm/options');
+    if (o.method === 'passkey') {
+      const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: o.options });
+      return { challengeId: o.challengeId, response };
+    }
+    return askPassword(o.mfa);
+  }
+  function askPassword(mfa) {
+    const dlg = $('cf-dialog');
+    const field = (id, label, type, ac) => {
+      const l = document.createElement('label'); l.htmlFor = id; l.textContent = label;
+      const i = document.createElement('input'); i.type = type; i.id = id; i.autocomplete = ac; i.maxLength = type === 'password' ? 200 : 24; i.spellcheck = false;
+      return [l, i];
+    };
+    const user = Object.assign(document.createElement('input'), { type: 'text', name: 'username', autocomplete: 'username', hidden: true, value: session.user?.username || '' });
+    $('cf-fields').replaceChildren(user, ...field('cf-pw', 'Huidig wachtwoord', 'password', 'current-password'), ...(mfa ? field('cf-code', 'Code uit je authenticator-app (of een herstelcode)', 'text', 'one-time-code') : []));
+    $('cf-text').textContent = mfa ? 'Voer ter bevestiging je huidige wachtwoord en een MFA-code in.' : 'Voer ter bevestiging je huidige wachtwoord in.';
+    $('cf-err').textContent = '';
+    return new Promise((resolve, reject) => {
+      const done = (fn) => { dlg.close(); $('cf-fields').replaceChildren(); fn(); };
+      $('cf-form').onsubmit = (e) => {
+        e.preventDefault();
+        if (!$('cf-pw').value) { $('cf-err').textContent = 'Vul je wachtwoord in.'; return; }
+        const proof = { confirm: { password: $('cf-pw').value, code: mfa ? $('cf-code').value : undefined } };
+        done(() => resolve(proof));
+      };
+      $('cf-cancel').onclick = () => done(() => reject(cancelled()));
+      dlg.oncancel = (e) => { e.preventDefault(); done(() => reject(cancelled())); };
+      dlg.showModal();
+      $('cf-pw').focus();
+    });
+  }
 
-  async function renderPasskeys() {
+  // ---------- MFA instellen (wizard én Instellingen → Beveiliging) ----------
+  // Stap 1: geheim + QR-code, stap 2: een code uit de app, stap 3: herstelcodes één keer tonen.
+  // proof: de bevestiging (passkey of wachtwoord) die de server vraagt voordat MFA aan mag.
+  async function mfaEnroll(box, { proof, onDone, onCancel }) {
+    const { challengeId, secret, uri } = await post('/api/admin/mfa/start', proof);
+    const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n; };
+    const steps = el('ol', { className: 'mfa-steps' },
+      el('li', { textContent: 'Open je authenticator-app en scan deze QR-code.' }),
+      el('li', { textContent: 'Voer de code van 6 cijfers in die de app toont.' }));
+    const qr = el('p', { className: 'mfa-qr' }, el('img', { src: Wijk.qrDataUrl(uri, 400), alt: 'QR-code voor je authenticator-app' }));
+    const manual = el('p', { className: 'muted', textContent: 'Lukt scannen niet? Voer deze sleutel in de app in:' });
+    const key = el('code', { className: 'mfa-secret', textContent: secret.match(/.{1,4}/g).join(' ') });
+    key.setAttribute('data-i18n-skip', '');
+    const code = el('input', { type: 'text', id: 'mfa-code', inputMode: 'numeric', autocomplete: 'one-time-code', maxLength: 6, spellcheck: false });
+    const err = el('p', { className: 'error' });
+    const ok = el('button', { type: 'submit', className: 'primary', textContent: 'MFA aanzetten' });
+    const cancel = el('button', { type: 'button', textContent: 'Annuleren', onclick: () => { box.replaceChildren(); onCancel && onCancel(); } });
+    const form = el('form', { className: 'mfa-flow', autocomplete: 'off' }, steps, qr, manual, key, el('label', { htmlFor: 'mfa-code', textContent: 'Code uit de app' }), code, err, el('div', { className: 'row' }, ok, cancel));
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+      ok.disabled = true;
+      try {
+        const res = await post('/api/admin/mfa/confirm', { challengeId, code: code.value });
+        showRecoveryCodes(box, res.recoveryCodes, onDone);
+      } catch (ex) { err.textContent = ex.message; code.select(); }
+      finally { ok.disabled = false; }
+    };
+    box.replaceChildren(form);
+    code.focus();
+  }
+
+  function showRecoveryCodes(box, codes, onDone) {
+    const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n; };
+    const text = codes.join('\n');
+    const list = el('ul', { className: 'rc-list' }, ...codes.map((c) => el('li', {}, el('code', { textContent: c }))));
+    list.setAttribute('data-i18n-skip', '');
+    const copy = el('button', { type: 'button', textContent: 'Kopiëren' });
+    copy.onclick = async () => {
+      try { await navigator.clipboard.writeText(text); toast('Herstelcodes gekopieerd ✔'); }
+      catch { const r = document.createRange(); r.selectNodeContents(list); getSelection().removeAllRanges(); getSelection().addRange(r); }
+    };
+    const download = el('button', { type: 'button', textContent: 'Downloaden' });
+    download.onclick = () => {
+      const a = el('a', { href: URL.createObjectURL(new Blob([`${text}\n`], { type: 'text/plain' })), download: 'herstelcodes.txt' });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    };
+    const saved = el('input', { type: 'checkbox', id: 'rc-saved' });
+    const next = el('button', { type: 'button', className: 'primary', textContent: 'Klaar', disabled: true });
+    saved.onchange = () => { next.disabled = !saved.checked; };
+    next.onclick = () => { box.replaceChildren(); onDone && onDone(); };
+    box.replaceChildren(
+      el('p', { className: 'muted', textContent: 'Tweestapsverificatie staat aan. Bewaar deze herstelcodes op een veilige plek: ben je je telefoon kwijt, dan log je met één van deze codes in. Elke code werkt één keer, en je ziet ze maar één keer.' }),
+      list,
+      el('div', { className: 'row' }, copy, download),
+      el('label', { className: 'rc-check', htmlFor: 'rc-saved' }, saved, el('span', { textContent: 'Ik heb de herstelcodes bewaard' })),
+      next,
+    );
+  }
+
+  // ---------- Instellingen → Beveiliging ----------
+  async function renderSecurity() {
     session = await api('/api/auth/status');
-    $('pw-status').textContent = session.passwordEnabled ? 'Er is een wachtwoord ingesteld.' : 'Er is nog geen wachtwoord ingesteld; inloggen kan alleen met een passkey.';
-    $('pw-start').textContent = session.passwordEnabled ? 'Wachtwoord wijzigen…' : 'Wachtwoord instellen…';
-    $('pw-remove').classList.toggle('hidden', !session.passwordEnabled);
-    $('pw-edit').classList.toggle('hidden', locked());
-    if (locked()) closePwForm();
-    $('pw-locked').classList.toggle('hidden', !locked());
-    $('pk-add').disabled = locked();
-    $('pk-name').disabled = locked();
+    const u = session.user;
+    if (!u) return boot();
+    syncConfirmLabels();
+    const isLocked = locked();
+    $('pw-locked').classList.toggle('hidden', !isLocked);
+    // account
+    $('acc-name').value = u.username;
+    $('acc-name').disabled = isLocked;
+    $('acc-save').disabled = isLocked;
+    $('acc-status').textContent = u.owner ? 'Je bent de eigenaar: jij kunt ook gebruikers uitnodigen en verwijderen.' : 'Je beheert de kaart; gebruikers uitnodigen en verwijderen doet de eigenaar.';
+    // wachtwoord
+    $('pw-status').textContent = u.password
+      ? 'Er is een wachtwoord ingesteld.'
+      : 'Er is nog geen wachtwoord ingesteld; inloggen kan alleen met een passkey.';
+    $('pw-hint').textContent = u.passkeys
+      ? 'Het instellen, wijzigen en verwijderen van het wachtwoord moet je bevestigen met een passkey.'
+      : 'Een nieuw wachtwoord bevestig je met je huidige wachtwoord.';
+    $('pw-start').textContent = u.password ? 'Wachtwoord wijzigen…' : 'Wachtwoord instellen…';
+    $('pw-remove').classList.toggle('hidden', !u.password || !u.passkeys);
+    $('pw-edit').classList.toggle('hidden', isLocked);
+    if (isLocked) closePwForm();
+    // MFA hoort bij het wachtwoord
+    $('mfa-card').classList.toggle('hidden', !u.password);
+    $('mfa-status').textContent = u.mfa
+      ? `Tweestapsverificatie staat aan. Nog ${u.recoveryLeft} herstelcode(s) over.`
+      : 'Tweestapsverificatie staat uit. Zet hem aan om bij inloggen met je wachtwoord ook een code uit een authenticator-app te vragen.';
+    $('mfa-edit').classList.toggle('hidden', isLocked);
+    $('mfa-start').classList.toggle('hidden', !!u.mfa);
+    $('mfa-codes').classList.toggle('hidden', !u.mfa);
+    $('mfa-off').classList.toggle('hidden', !u.mfa);
+    // passkeys
+    $('pk-add').disabled = isLocked || !passkeyHere();
+    $('pk-name').disabled = isLocked || !passkeyHere();
+    $('pk-why').textContent = passkeyHere() ? '' : passkeyWhy();
+    $('pk-why').classList.toggle('hidden', passkeyHere());
     const list = await api('/api/admin/passkeys');
     $('pk-list').innerHTML = '';
+    if (!list.length) $('pk-list').append(Object.assign(document.createElement('p'), { className: 'muted', textContent: 'Je hebt nog geen passkey.' }));
     for (const p of list) {
       const row = document.createElement('div');
       row.className = 'pk';
       const s = document.createElement('span');
       s.textContent = `${p.name} · ${new Date(p.createdAt).toLocaleDateString(I18n.locale)}`;
       const del = document.createElement('button');
-      del.className = 'danger'; del.textContent = 'Verwijder'; del.disabled = list.length < 2 || locked();
+      del.className = 'danger'; del.textContent = 'Verwijder'; del.disabled = (list.length < 2 && !u.password) || isLocked;
+      if (list.length < 2 && !u.password) del.title = 'Je kunt je laatste passkey alleen verwijderen als je een wachtwoord hebt ingesteld';
       del.onclick = async () => {
         if (!confirmT(`Passkey "${p.name}" verwijderen?`)) return;
-        try { await api(`/api/admin/passkeys/${encodeURIComponent(p.id)}`, { method: 'DELETE' }); renderPasskeys(); }
+        try { await api(`/api/admin/passkeys/${encodeURIComponent(p.id)}`, { method: 'DELETE' }); renderSecurity(); }
         catch (e) { $('pk-err').textContent = e.message; }
       };
       row.append(s, del);
       $('pk-list').append(row);
     }
   }
-  // Wachtwoord instellen/verwijderen: altijd bevestigen met een passkey (vingerafdruk/pincode).
-  async function confirmWithPasskey() {
-    const { challengeId, options } = await post('/api/admin/password/options');
-    const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
-    return { challengeId, response };
-  }
+
+  $('acc-save').onclick = async () => {
+    $('acc-err').textContent = '';
+    try {
+      await api('/api/admin/account/username', { method: 'PUT', body: JSON.stringify({ username: $('acc-name').value }) });
+      toast('Gebruikersnaam opgeslagen ✔');
+      renderSecurity();
+    } catch (e) { $('acc-err').textContent = e.message; }
+  };
+
   // De wachtwoordvelden worden pas aangemaakt als je op "Wachtwoord instellen" klikt en daarna weer verwijderd.
   function closePwForm() { $('pw-form-set').replaceChildren(); $('pw-form-set').classList.add('hidden'); $('pw-start').classList.remove('hidden'); }
   $('pw-start').onclick = () => {
@@ -130,13 +424,13 @@
       return [l, i];
     };
     const user = document.createElement('input');
-    user.type = 'text'; user.name = 'username'; user.value = 'beheerder'; user.autocomplete = 'username'; user.hidden = true;
+    user.type = 'text'; user.name = 'username'; user.value = session.user?.username || ''; user.autocomplete = 'username'; user.hidden = true;
     const err = document.createElement('p'); err.className = 'error'; err.id = 'pw-set-err';
     const row = document.createElement('div'); row.className = 'row';
-    const ok = document.createElement('button'); ok.type = 'submit'; ok.className = 'primary'; ok.textContent = 'Opslaan (bevestig met passkey)';
+    const ok = document.createElement('button'); ok.type = 'submit'; ok.className = 'primary'; ok.textContent = `Opslaan (bevestig met ${confirmWord()})`;
     const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Annuleren'; cancel.onclick = closePwForm;
     row.append(ok, cancel);
-    f.replaceChildren(user, ...field('pw-new', session.passwordEnabled ? 'Nieuw wachtwoord (minimaal 10 tekens)' : 'Wachtwoord (minimaal 10 tekens)'), ...field('pw-new2', 'Herhaal wachtwoord'), err, row);
+    f.replaceChildren(user, ...field('pw-new', session.user?.password ? 'Nieuw wachtwoord (minimaal 10 tekens)' : 'Wachtwoord (minimaal 10 tekens)'), ...field('pw-new2', 'Herhaal wachtwoord'), err, row);
     f.classList.remove('hidden');
     $('pw-start').classList.add('hidden');
     $('pw-new').focus();
@@ -149,29 +443,134 @@
     if (pw.length < 10) { err.textContent = 'Kies een wachtwoord van minimaal 10 tekens.'; return; }
     if (pw !== $('pw-new2').value) { err.textContent = 'De twee wachtwoorden zijn niet gelijk.'; return; }
     try {
-      const proof = await confirmWithPasskey();
+      const proof = await confirmStep();
       await api('/api/admin/password', { method: 'PUT', body: JSON.stringify({ ...proof, password: pw }) });
       closePwForm();
       toast('Wachtwoord opgeslagen ✔');
-      renderPasskeys();
+      renderSecurity();
     } catch (ex) { err.textContent = friendly(ex); }
   };
   $('pw-remove').onclick = async () => {
     $('pw-err').textContent = '';
     if (!confirmT('Het wachtwoord verwijderen? Inloggen kan dan alleen nog met een passkey.')) return;
     try {
-      const proof = await confirmWithPasskey();
+      const proof = await confirmStep();
       await post('/api/admin/password/remove', proof);
       toast('Wachtwoord verwijderd');
-      renderPasskeys();
+      renderSecurity();
     } catch (e) { $('pw-err').textContent = friendly(e); }
   };
 
   $('pk-add').onclick = async () => {
     $('pk-err').textContent = '';
-    try { await registerPasskey({ name: $('pk-name').value }); renderPasskeys(); toast('Passkey toegevoegd'); }
-    catch (e) { $('pk-err').textContent = friendly(e); }
+    try {
+      const proof = session.method === 'pw' ? await confirmStep() : {};
+      await registerPasskey({ name: $('pk-name').value, ...proof });
+      renderSecurity();
+      toast('Passkey toegevoegd');
+    } catch (e) { $('pk-err').textContent = friendly(e); }
   };
+
+  const mfaIdle = () => { $('mfa-actions').classList.remove('hidden'); };
+  $('mfa-start').onclick = async () => {
+    $('mfa-err').textContent = '';
+    $('mfa-actions').classList.add('hidden');
+    try {
+      const proof = await confirmStep();
+      await mfaEnroll($('mfa-box'), { proof, onDone: () => { mfaIdle(); renderSecurity(); }, onCancel: mfaIdle });
+    } catch (e) { mfaIdle(); $('mfa-err').textContent = friendly(e); }
+  };
+  $('mfa-codes').onclick = async () => {
+    $('mfa-err').textContent = '';
+    if (!confirmT('Nieuwe herstelcodes maken? De oude codes werken daarna niet meer.')) return;
+    try {
+      const proof = await confirmStep();
+      const res = await post('/api/admin/mfa/recovery', proof);
+      $('mfa-actions').classList.add('hidden');
+      showRecoveryCodes($('mfa-box'), res.recoveryCodes, () => { mfaIdle(); renderSecurity(); });
+    } catch (e) { $('mfa-err').textContent = friendly(e); }
+  };
+  $('mfa-off').onclick = async () => {
+    $('mfa-err').textContent = '';
+    if (!confirmT('Tweestapsverificatie uitzetten? Inloggen kan dan weer met alleen je wachtwoord.')) return;
+    try {
+      const proof = await confirmStep();
+      await post('/api/admin/mfa/disable', proof);
+      toast('Tweestapsverificatie staat uit');
+      renderSecurity();
+    } catch (e) { $('mfa-err').textContent = friendly(e); }
+  };
+
+  // ---------- Instellingen → Gebruikers (alleen de eigenaar) ----------
+  function showLink(text, url) {
+    $('us-link-text').textContent = text;
+    $('us-link-url').value = url;
+    $('us-link').classList.remove('hidden');
+    $('us-link-url').select();
+  }
+  $('us-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText($('us-link-url').value); toast('Link gekopieerd ✔'); }
+    catch { $('us-link-url').select(); document.execCommand?.('copy'); }
+  };
+  $('us-invite').onclick = async () => {
+    $('us-err').textContent = '';
+    try {
+      const inv = await post('/api/admin/users/invites', { username: $('us-name').value }, { expectAuth: true });
+      $('us-name').value = '';
+      showLink(`Uitnodigingslink, geldig tot ${fmtDay(inv.expiresAt)}:`, inv.url);
+      renderUsers();
+    } catch (e) { $('us-err').textContent = e.message; }
+  };
+
+  async function renderUsers() {
+    $('us-err').textContent = '';
+    let data;
+    try { data = await api('/api/admin/users', { expectAuth: true }); } catch (e) { $('us-err').textContent = e.message; return; }
+    const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n; };
+    $('us-list').replaceChildren(...data.users.map((u) => {
+      const name = el('span', { textContent: u.username });
+      name.setAttribute('data-i18n-skip', '');
+      const head = el('div', { className: 'us-name' }, name);
+      if (u.owner) head.append(el('span', { className: 'us-badge', textContent: 'Eigenaar' }));
+      if (u.id === session.user?.id) head.append(el('span', { className: 'us-badge', textContent: 'Jij' }));
+      const how = [];
+      if (u.passkeys) how.push(el('span', { textContent: `${u.passkeys} passkey(s)` }));
+      if (u.password) how.push(el('span', { textContent: 'Wachtwoord' }));
+      if (u.mfa) how.push(el('span', { textContent: 'MFA' }));
+      if (!how.length) how.push(el('span', { textContent: 'Nog geen inlog' }));
+      how.push(el('span', { textContent: `sinds ${fmtDay(u.createdAt)}` }));
+      const row = el('div', { className: 'bk-row us-row' }, el('div', { className: 'bk-info' }, head, el('div', { className: 'us-meta' }, ...how)));
+      if (!u.owner) {
+        const reset = el('button', { type: 'button', textContent: 'Nieuwe inloglink' });
+        reset.onclick = async () => {
+          try {
+            const inv = await post(`/api/admin/users/${encodeURIComponent(u.id)}/reset`, {}, { expectAuth: true });
+            showLink(`Inloglink voor ${u.username}, geldig tot ${fmtDay(inv.expiresAt)}. De oude inlog blijft werken tot de nieuwe is ingesteld:`, inv.url);
+            renderUsers();
+          } catch (e) { $('us-err').textContent = e.message; }
+        };
+        const del = el('button', { type: 'button', className: 'danger', textContent: 'Verwijderen' });
+        del.onclick = async () => {
+          if (!confirmT(`${u.username} verwijderen? Die kan daarna niet meer inloggen.`)) return;
+          try { await api(`/api/admin/users/${encodeURIComponent(u.id)}`, { method: 'DELETE', expectAuth: true }); toast('Gebruiker verwijderd'); renderUsers(); }
+          catch (e) { $('us-err').textContent = e.message; }
+        };
+        row.append(el('div', { className: 'us-actions' }, reset, del));
+      }
+      return row;
+    }));
+    $('us-invites').replaceChildren(...(data.invites.length ? data.invites.map((i) => {
+      const name = el('span', { textContent: i.username || '' });
+      name.setAttribute('data-i18n-skip', '');
+      const what = el('div', { className: 'us-name' }, el('span', { textContent: i.kind === 'reset' ? 'Nieuwe inlog' : 'Uitnodiging' }), name);
+      const revoke = el('button', { type: 'button', textContent: 'Intrekken' });
+      revoke.onclick = async () => {
+        try { await api(`/api/admin/users/invites/${encodeURIComponent(i.id)}`, { method: 'DELETE', expectAuth: true }); $('us-link').classList.add('hidden'); renderUsers(); }
+        catch (e) { $('us-err').textContent = e.message; }
+      };
+      return el('div', { className: 'bk-row us-row' }, el('div', { className: 'bk-info' }, what, el('div', { className: 'us-meta' }, el('span', { textContent: `geldig tot ${fmtDay(i.expiresAt)}` }))), revoke);
+    }) : [el('p', { className: 'muted', textContent: 'Geen open uitnodigingen.' })]));
+  }
 
   // ---------- logo & uitleg ----------
   let statsShow = { green: true, red: true, none: true }; // welke statusregels de overlay op de kaart toont (instelling)
@@ -410,7 +809,8 @@
       b.setAttribute('aria-selected', on);
     });
     document.querySelectorAll('#settings [data-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== name));
-    if (name === 'security') { $('pk-err').textContent = ''; renderPasskeys().catch((e) => ($('pk-err').textContent = e.message)); }
+    if (name === 'security') { $('pk-err').textContent = ''; renderSecurity().catch((e) => ($('pk-err').textContent = e.message)); }
+    if (name === 'users') renderUsers();
     if (name === 'backups') renderBackups();
     if (name === 'editions') renderEditions();
     if (name === 'changes') renderChanges();
@@ -550,12 +950,11 @@
   $('bk-delete').onclick = async () => {
     const ids = selectedBackups();
     if (!ids.length) return;
-    if (!confirmT(`${ids.length} backup(s) definitief verwijderen? Je moet dit bevestigen met je passkey.`)) return;
+    if (!confirmT(`${ids.length} backup(s) definitief verwijderen? Je moet dit bevestigen met je ${confirmWord()}.`)) return;
     $('bk-err').textContent = '';
     try {
-      const { challengeId, options } = await post('/api/admin/confirm/options');
-      const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
-      const res = await post('/api/admin/backups/delete', { ids, challengeId, response });
+      const proof = await confirmStep();
+      const res = await post('/api/admin/backups/delete', { ids, ...proof });
       toast(`${res.deleted} backup(s) verwijderd`);
       renderBackups();
     } catch (e) { $('bk-err').textContent = friendly(e); }
@@ -1813,12 +2212,11 @@
   $('ed-delete').onclick = async () => {
     const ids = selectedEditions();
     if (!ids.length) return;
-    if (!confirmT(`${ids.length} editie(s) definitief verwijderen? Je moet dit bevestigen met je passkey.`)) return;
+    if (!confirmT(`${ids.length} editie(s) definitief verwijderen? Je moet dit bevestigen met je ${confirmWord()}.`)) return;
     $('ed-list-err').textContent = '';
     try {
-      const { challengeId, options } = await post('/api/admin/confirm/options');
-      const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
-      const res = await post('/api/admin/editions/delete', { ids, challengeId, response });
+      const proof = await confirmStep();
+      const res = await post('/api/admin/editions/delete', { ids, ...proof });
       toast(`${res.deleted} editie(s) verwijderd`);
       renderEditions();
     } catch (e) { $('ed-list-err').textContent = friendly(e); }
@@ -1946,12 +2344,20 @@
     el.setAttribute('data-form-type', 'other');
   });
 
+  // Een open uitnodiging (#invite=…) gaat voor; anders de editor, de installatie-wizard of het inlogscherm.
   async function boot() {
     const st = await api('/api/auth/status');
     session = st;
-    if (st.loggedIn) { mountPwLogin(false); return openEditor(); }
-    mountPwLogin(st.passwordEnabled);
-    show(st.configured ? 'v-login' : 'v-setup');
+    if (inviteToken()) return showInvite(inviteToken());
+    if (st.loggedIn) {
+      mountPwLogin(false);
+      document.querySelector('#settings [data-tab="users"]').hidden = !st.user.owner;
+      syncConfirmLabels();
+      return openEditor();
+    }
+    if (!st.configured) return showWizard();
+    showLogin(st);
   }
+  window.addEventListener('hashchange', () => { if (inviteToken()) boot(); });
   boot().catch((e) => { document.body.textContent = e.message; });
 })();

@@ -30,6 +30,9 @@ body.admin #v-login #pw-form { border-top: 1px solid var(--line); margin-top: 18
 body.admin #v-login #pw-form > .muted { text-align: center; margin: 14px 0 0 !important; }
 body.admin { background-image: radial-gradient(1100px 520px at 50% -8%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 70%); background-repeat: no-repeat; }
 body.admin:has(#v-edit:not(.hidden)) { background-image: none; }
+/* buiten de editor (installatie, uitnodiging, inloggen) mag de pagina scrollen: de kaarten zijn hoger dan een telefoonscherm */
+body.admin:has(#v-edit.hidden) { overflow-y: auto; }
+body.admin #v-setup, body.admin #v-login { flex: none; }
 
 /* ---------- editor: zijbalk ---------- */
 body.admin .editor { background: var(--bg); }
@@ -256,3 +259,55 @@ body.admin .ed-pop .ed-pop-status .dot { margin: 0; }
 body.admin .ed-pop .ed-pop-status button:disabled { opacity: .55; }
 body.admin .bk-info .bk-editions { font-weight: 400; font-size: .8rem; }
 @media (max-width: 460px) { body.admin .ed-actions { flex-basis: 100%; } }
+
+/* ---------- installatie-wizard, uitnodiging en MFA ---------- */
+body.admin #settings .tabs button[hidden] { display: none; }
+body.admin #v-setup h3, body.admin #v-login h3 { margin: 0 0 6px; font-size: 1.1rem; }
+body.admin #v-setup .s-label { margin: 18px 0 8px; font-size: .85rem; font-weight: 650; color: var(--text); }
+body.admin .s-methods { display: grid; gap: 8px; }
+body.admin .s-method { display: flex; align-items: flex-start; gap: 10px; margin: 0 !important; padding: 12px 14px; border: 1px solid var(--line-strong, var(--line)); border-radius: var(--r-md); cursor: pointer; background: var(--panel); transition: border-color .12s var(--ease), background-color .12s var(--ease); }
+body.admin .s-method:hover { border-color: var(--accent); }
+body.admin .s-method:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--panel)); }
+body.admin .s-method:has(input:disabled) { cursor: default; opacity: .75; }
+body.admin .s-method:has(input:disabled):hover { border-color: var(--line-strong, var(--line)); }
+body.admin .s-method input { margin: 3px 0 0; accent-color: var(--accent); flex: none; width: 16px; height: 16px; }
+body.admin .s-method:has(input:focus-visible) { outline: 3px solid var(--ring); outline-offset: 1px; }
+body.admin .s-method-body { display: grid; gap: 3px; min-width: 0; }
+body.admin .s-method-title { font-weight: 650; font-size: .95rem; }
+body.admin .s-method-text { font-size: .84rem; color: var(--muted); line-height: 1.45; }
+body.admin .s-method-why { font-size: .82rem; line-height: 1.45; color: var(--warn-ink); }
+body.admin .s-method-why:empty { display: none; }
+body.admin #v-setup .s-invite-back { margin: 14px 0 0; }
+body.admin #v-setup #s-mfa-choice { margin-top: 4px; }
+body.admin #v-setup #s-mfa-choice button { min-height: 44px; margin-top: 0; }
+body.admin #v-login #mfa-form #l-code-back { width: 100%; margin-top: 8px; min-height: 40px; }
+body.admin .mfa-steps { margin: 0 0 10px; padding-left: 1.2em; font-size: .9rem; line-height: 1.55; }
+body.admin .mfa-qr { display: flex; justify-content: center; margin: 8px 0; }
+body.admin .mfa-qr img { width: 200px; height: 200px; image-rendering: pixelated; border-radius: var(--r-md); border: 1px solid var(--line); background: #fff; }
+body.admin .mfa-secret { display: block; font-size: .95rem; letter-spacing: .06em; word-break: break-all; padding: 8px 10px; border-radius: var(--r-md); background: var(--surface); user-select: all; }
+body.admin .rc-list { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 10px 0; padding: 0; }
+body.admin .rc-list code { display: block; text-align: center; font-size: .9rem; padding: 6px 4px; border-radius: 8px; background: var(--surface); user-select: all; }
+body.admin .rc-check { display: flex !important; align-items: center; gap: 8px; color: var(--text) !important; font-size: .9rem !important; }
+body.admin .rc-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+body.admin .mfa-flow .row { margin-top: 8px; }
+body.admin #mfa-box:empty { display: none; }
+body.admin #mfa-box { margin-top: 12px; }
+body.admin #settings .set-warn { margin: 14px 0 0; padding: 10px 12px; border-radius: var(--r-md); background: var(--warn-soft); color: var(--warn-ink); }
+@media (max-width: 400px) { body.admin .rc-list { grid-template-columns: 1fr; } }
+
+/* bevestigen met wachtwoord */
+body.admin #cf-dialog { width: min(400px, calc(100% - 32px)); }
+body.admin #cf-dialog h3 { margin: 0 0 6px; }
+body.admin #cf-dialog input[type=text], body.admin #cf-dialog input[type=password] { min-height: 40px; }
+body.admin #cf-dialog .error:empty { display: none; }
+
+/* gebruikers */
+body.admin .us-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+body.admin .us-row .bk-info { flex: 1 1 200px; min-width: 0; display: grid; gap: 2px; }
+body.admin .us-name { font-weight: 650; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+body.admin .us-badge { font-size: .72rem; font-weight: 650; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, var(--panel)); color: var(--accent); }
+body.admin .us-meta { font-size: .8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+body.admin .us-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+body.admin .us-link { margin-top: 12px; padding: 12px; border-radius: var(--r-md); background: var(--surface); }
+body.admin .us-link .set-hint { margin: 0 0 8px; }
+body.admin .us-link .set-hint:last-child { margin: 8px 0 0; }

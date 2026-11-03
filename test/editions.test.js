@@ -18,6 +18,8 @@ test.after(() => server.close());
 
 const exp = String(Date.now() + 3600e3);
 const cookie = `sm_session=${exp}.${crypto.createHmac('sha256', 'test-session-secret-123').update(exp).digest('base64url')}`;
+// Een sessie hoort bij een bestaande gebruiker: de eigenaar, hier zonder inlog (het beheer blijft dus "niet ingesteld").
+require('../server/store').db().users.push({ id: 'owner', username: 'beheerder', createdAt: new Date().toISOString(), epoch: 0, webauthnId: 'dGVzdA', password: null, mfa: null, recovery: [] });
 const H = (c = cookie) => ({ 'Content-Type': 'application/json', ...(c ? { cookie: c } : {}) });
 const j = (p, o) => fetch(base + p, o);
 const call = (method, p, body, c) => j(p, { method, headers: H(c), body: body === undefined ? undefined : JSON.stringify(body) });

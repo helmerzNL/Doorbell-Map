@@ -2,7 +2,7 @@
 
 🇬🇧 [English version of this README](README.en.md)
 
-Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet gemarkeerd** is (bijvoorbeeld voor Sint Maarten, Halloween of een andere deur-aan-deur-actie: welke huizen willen wel of niet dat er wordt aangebeld). Bezoekers bekijken de kaart in de browser of als app op hun telefoon; de beheerder tekent de huizen en beheert alles in `/beheer`, beveiligd met een **passkey**. Draait als één Docker-container op bijvoorbeeld een NAS: je deployt hem met [`docker-compose.yml`](docker-compose.yml) en een eigen `.env` (kopie van [`.env.example`](.env.example)); zie [Zelf deployen met Docker](#zelf-deployen-met-docker).
+Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet gemarkeerd** is (bijvoorbeeld voor Sint Maarten, Halloween of een andere deur-aan-deur-actie: welke huizen willen wel of niet dat er wordt aangebeld). Bezoekers bekijken de kaart in de browser of als app op hun telefoon; de beheerder tekent de huizen en beheert alles in `/beheer`, beveiligd met een **passkey** of **gebruikersnaam en wachtwoord** (optioneel met tweestapsverificatie), en kan anderen als beheerder uitnodigen. Draait als één Docker-container op bijvoorbeeld een NAS: je deployt hem met [`docker-compose.yml`](docker-compose.yml) en een eigen `.env` (kopie van [`.env.example`](.env.example)); zie [Zelf deployen met Docker](#zelf-deployen-met-docker).
 
 ## Inhoud
 - [Functies in het kort](#functies-in-het-kort)
@@ -12,6 +12,8 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - [Talen en donkere weergave](#talen-en-donkere-weergave)
 - [Het beheer](#het-beheer-beheer)
 - [Instellingen](#instellingen)
+- [Inloggen: passkey, wachtwoord en MFA](#inloggen-passkey-wachtwoord-en-mfa)
+- [Meer beheerders uitnodigen](#meer-beheerders-uitnodigen)
 - [Edities: eerdere keren vergelijken](#edities-eerdere-keren-vergelijken)
 - [Installeren als app en offline gebruik](#installeren-als-app-en-offline-gebruik)
 - [Zelf deployen met Docker](#zelf-deployen-met-docker)
@@ -37,11 +39,12 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 
 **Voor de beheerder**
 - Huizen tekenen en bewerken (kleur, straat, huisnummer, notitie, hoekpunten), kaartweergave instellen (midden, zoom, min/max).
-- Inloggen met **passkey** (optioneel ook met wachtwoord, bevestigd met een passkey).
+- Inloggen met **passkey** of met **gebruikersnaam en wachtwoord**, optioneel met **tweestapsverificatie (MFA)** en herstelcodes. Zie [Inloggen](#inloggen-passkey-wachtwoord-en-mfa).
+- **Meerdere beheerders**: de eigenaar nodigt anderen uit met een link; ieder kiest zelf een passkey of wachtwoord. Zie [Meer beheerders uitnodigen](#meer-beheerders-uitnodigen).
 - Wijzigingen van bewoners **goedkeuren of afwijzen**, met **pushmeldingen**; apparaten **blokkeren** (ook op IP); wijzigen **plannen** tot een datum en tijd.
 - **QR-codes** per huis: tonen, link kopiëren, vernieuwen en een **afdrukbare PDF** met een kaartje per huis om bij de bewoners te bezorgen.
 - **Edities**: de kaart van elke keer met naam en jaartal, aangemaakt als kopie van de live kaart of een andere editie en los te bewerken; wissel in het beheer tussen *Live* en edities en vergelijk welke huizen toen en nu meedoen, met de aantallen. De voorpagina verandert daar nooit door. Zie [Edities](#edities-eerdere-keren-vergelijken).
-- Instellingen in zes overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
+- Instellingen in zeven overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
 - Eigen **logo** (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (ook het icoon van de geïnstalleerde app; standaard de lantaarn), uitleg, infovlak, **site- en appnaam** en eigen namen voor de statussen.
 - Automatische **backups** na elke opslagpoging, met korte titels en handmatige backups.
 - Versienummer en commit zichtbaar in het instellingenmenu.
@@ -158,9 +161,9 @@ Wil je dat bewoners alleen hun **eigen huis** kunnen koppelen, dan zet je onder 
 <tr><td align="center" valign="top"><a href="docs/screenshots/beheer-tekenen.png"><img src="docs/screenshots/beheer-tekenen.png" width="400" alt="Huis tekenen"></a><br><sub>Huis tekenen</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer.png"><img src="docs/screenshots/beheer.png" width="400" alt="Huis bewerken"></a><br><sub>Huis bewerken</sub></td></tr>
 </table>
 
-**Onboarding** – de eerste keer maak je een passkey aan met de installatiecode (`SETUP_TOKEN`).
+**Onboarding** – de eerste keer kies je met de installatiecode (`SETUP_TOKEN`) een gebruikersnaam en hoe je inlogt: met een **passkey** of met een **wachtwoord** (daarna kun je meteen tweestapsverificatie aanzetten, of later). Kan een passkey hier niet (geen HTTPS of geen echte domeinnaam), dan legt de wizard uit waarom en kies je het wachtwoord.
 
-**Inloggen** – met passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel), eventueel met wachtwoord dat je met een passkey bevestigt.
+**Inloggen** – met passkey (vingerafdruk, gezicht, pincode of beveiligingssleutel) of met gebruikersnaam en wachtwoord, en zo nodig de code uit je authenticator-app. Zie [Inloggen](#inloggen-passkey-wachtwoord-en-mfa).
 
 **Weergave en bewerken** – het beheer opent in de **weergave**: alleen de kaart, zonder zijbalk. Dubbelklik (of druk lang op een touchscreen) op een huis voor een **popup** waarmee je het huis direct **groen, rood of niet gemarkeerd** maakt (het wordt meteen opgeslagen) en waarin het **QR-kaartje** voor de bewoners staat: met logo, adres, QR en uitleg. Daaronder staat de **directe link** met een kopieerknop, een knop **Delen via WhatsApp** (opent WhatsApp met een kant-en-klaar bericht en de link), op telefoons ook **Kaartje delen…** (het plaatje via het deelmenu), een **PNG** om te downloaden en *Vernieuwen*. Met **✏️ Bewerken** open je het bewerkscherm (huizen tekenen, selecteren, zoeken, kaartweergave); **✓ Weergave** brengt je terug (bij niet-opgeslagen wijzigingen vraagt het eerst).
 
@@ -175,11 +178,12 @@ Wil je dat bewoners alleen hun **eigen huis** kunnen koppelen, dan zet je onder 
 **Huis bewerken** (in het bewerkscherm) – selecteer een huis (klik, dubbelklik of lang indrukken) om de kleur, straat, huisnummer en notitie aan te passen, of sleep de hoekpunten. Sneltoetsen: **G** groen, **R** rood, **Delete** verwijderen, **Ctrl+S** opslaan. De lijst links heeft een filter per straat; de rest wordt op de kaart gedimd.
 
 ## Instellingen
-Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ingedeeld in zes tabs (*Goedkeuren*, *Bewoners*, *Config*, *Beveiliging*, *Edities* en *Backups*, met iconen uit [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); elke tab bestaat uit kaarten met duidelijke schakelaars en een korte uitleg (ook op een telefoon).
+Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ingedeeld in zeven tabs (*Goedkeuren*, *Bewoners*, *Config*, *Beveiliging*, *Gebruikers* (alleen voor de eigenaar), *Edities* en *Backups*, met iconen uit [Material Design Icons](https://pictogrammers.com/library/mdi/), Apache License 2.0); elke tab bestaat uit kaarten met duidelijke schakelaars en een korte uitleg (ook op een telefoon).
 
 <table>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-goedkeuren.png"><img src="docs/screenshots/instellingen-goedkeuren.png" width="270" alt="Goedkeuren"></a><br><sub>Goedkeuren</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners.png"><img src="docs/screenshots/instellingen-bewoners.png" width="270" alt="Bewoners"></a><br><sub>Bewoners</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-bewoners-apparaten.png"><img src="docs/screenshots/instellingen-bewoners-apparaten.png" width="270" alt="Bewoners: apparaten en meldingen"></a><br><sub>Bewoners: apparaten en meldingen</sub></td></tr>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config.png"><img src="docs/screenshots/instellingen-config.png" width="270" alt="Config"></a><br><sub>Config</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-beveiliging.png"><img src="docs/screenshots/instellingen-beveiliging.png" width="270" alt="Beveiliging"></a><br><sub>Beveiliging</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-backups.png"><img src="docs/screenshots/instellingen-backups.png" width="270" alt="Backups"></a><br><sub>Backups</sub></td></tr>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-gebruikers.png"><img src="docs/screenshots/instellingen-gebruikers.png" width="270" alt="Gebruikers"></a><br><sub>Gebruikers</sub></td></tr>
 </table>
 
 <p align="center"><a href="docs/screenshots/instellingen-mobiel.png"><img src="docs/screenshots/instellingen-mobiel.png" width="220" alt="Instellingen op een telefoon"></a><br><sub>Instellingen op een telefoon</sub></p>
@@ -199,11 +203,13 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-afbeeldingen.png"><img src="docs/screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, klein logo en favicon"></a><br><sub>Config: logo, klein logo en favicon</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-locatie.png"><img src="docs/screenshots/instellingen-config-locatie.png" width="270" alt="Config: Mijn locatie en Community"></a><br><sub>Config: Mijn locatie en Community</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-communityteksten.png"><img src="docs/screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: titel en tekst van het communityvenster"></a><br><sub>Config: titel en tekst van het communityvenster</sub></td></tr>
 </table>
 
-**Beveiliging** – passkeys toevoegen/verwijderen en een optioneel wachtwoord (bevestigen met passkey).
+**Beveiliging** – je eigen inlog: gebruikersnaam, passkeys, wachtwoord en tweestapsverificatie (MFA) met herstelcodes. Zie [Inloggen](#inloggen-passkey-wachtwoord-en-mfa).
+
+**Gebruikers** (alleen de eigenaar) – wie het beheer kan openen en hoe ieder inlogt, uitnodigingslinks maken en intrekken, een nieuwe inloglink voor wie buitengesloten is, en gebruikers verwijderen. Zie [Meer beheerders uitnodigen](#meer-beheerders-uitnodigen).
 
 **Edities** – een editie aanmaken met naam en jaartal (kopie van de live kaart of van een andere editie), de aantallen per editie, een editie bekijken of bewerken, naam of jaartal wijzigen en verwijderen. Zie [Edities](#edities-eerdere-keren-vergelijken).
 
-**Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout, de teksten en alle edities; bij elke backup staat welke edities erin zitten, en terugzetten zet ook de edities terug. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey.
+**Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout, de teksten en alle edities; bij elke backup staat welke edities erin zitten, en terugzetten zet ook de edities terug. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey (zonder passkey: met je wachtwoord en eventueel een MFA-code).
 
 **Versie** – onderin het menu staat de versie en commit van de draaiende build (zie [Versienummer](#versienummer)).
 
@@ -229,16 +235,45 @@ Een nieuw getekend huis heeft standaard **geen status** (niet gemarkeerd; kies i
 ## Hoe werkt het
 - **Kaart**: OpenStreetMap (via Leaflet), geen API-sleutel nodig. Google Maps is bewust niet gebruikt: dat vereist een betaalde sleutel en de voorwaarden staan het overtekenen en exporteren naar PDF niet toe.
 - **Beheer instellen**: zoek je straat en zoom ver in; stel via *Kaartweergave instellen* het midden, de startzoom en de minimale/maximale zoom in (of neem de huidige weergave over). Bezoekers openen de kaart (ook in de app) met precies die weergave; met *Automatisch* toont de site alle huizen. In dezelfde dialoog bepaal je of de huisnummers voor bezoekers standaard aan staan. Onder *Kaartvlak in de PDF* zie je met een kader op de kaart welk gebied de PDF toont (standaard automatisch alle huizen) en kun je een eigen vlak vastleggen: zet de kaart op het gewenste gebied, kies *Huidige kaart als PDF-vlak* en sla op. *Automatisch* herstelt het standaardgedrag.
-- **Onboarding**: de allereerste keer vraagt `/beheer` om de `SETUP_TOKEN` en maakt dan een passkey aan. Daarna kun je via *Instellingen* (⚙) → *Beveiliging* extra apparaten toevoegen (doe dat zodat je niet buitengesloten raakt).
+- **Onboarding**: de allereerste keer vraagt `/beheer` om de `SETUP_TOKEN`, een gebruikersnaam en een passkey of wachtwoord; die eerste gebruiker is de **eigenaar**. Daarna kun je via *Instellingen* (⚙) → *Beveiliging* een extra passkey toevoegen of MFA aanzetten (doe dat zodat je niet buitengesloten raakt) en via *Gebruikers* anderen uitnodigen.
 
 > De PDF haalt kaarttegels rechtstreeks bij OpenStreetMap op; houd het gebruik bescheiden
 > ([tile usage policy](https://operations.osmfoundation.org/policies/tiles/)).
 
-## Inloggen met wachtwoord (optioneel)
-Standaard kun je alleen met een passkey inloggen. Wil je ook met een wachtwoord kunnen inloggen, stel dat dan in via *Instellingen* (⚙) → *Beveiliging* → *Wachtwoord*
-(minimaal 10 tekens). Het instellen, wijzigen of verwijderen moet je **bevestigen met een passkey**. Het wachtwoord wordt alleen als `scrypt`-hash opgeslagen.
-Een sessie die met een wachtwoord is gestart kan de kaart en teksten beheren, maar geen passkeys of wachtwoord wijzigen; daarvoor log je in met een passkey.
-Mislukte pogingen worden per IP-adres en globaal beperkt.
+## Inloggen: passkey, wachtwoord en MFA
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/onboarding-wachtwoord.png"><img src="docs/screenshots/onboarding-wachtwoord.png" width="420" alt="Installatie met gebruikersnaam en wachtwoord"></a><br><sub>Installatie met gebruikersnaam en wachtwoord</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-instellen.png"><img src="docs/screenshots/mfa-instellen.png" width="170" alt="MFA instellen: QR-code voor de app"></a><br><sub>MFA instellen: QR-code voor de app</sub></td><td align="center" valign="top"><a href="docs/screenshots/mfa-herstelcodes.png"><img src="docs/screenshots/mfa-herstelcodes.png" width="170" alt="Herstelcodes, één keer getoond"></a><br><sub>Herstelcodes, één keer getoond</sub></td><td align="center" valign="top"><a href="docs/screenshots/beheer-login-mfa.png"><img src="docs/screenshots/beheer-login-mfa.png" width="170" alt="Inloggen: de MFA-stap"></a><br><sub>Inloggen: de MFA-stap</sub></td></tr>
+</table>
+
+Elke gebruiker van het beheer logt in op een van deze manieren, of op allebei:
+- **Passkey** (aanbevolen): vingerafdruk, gezicht, pincode of beveiligingssleutel; geen wachtwoord nodig. Werkt alleen via **HTTPS** met een echte domeinnaam (of op `localhost`). Open je het beheer via een IP-adres, een naam zonder domein (`nas`) of een naam die alleen thuis bestaat (`.local`, `.lan`), dan legt de wizard uit waarom een passkey daar niet kan.
+- **Gebruikersnaam en wachtwoord**: werkt overal. Minimaal 10 tekens, minstens 4 verschillende tekens en zonder je gebruikersnaam; het wordt alleen als `scrypt`-hash opgeslagen. De gebruikersnaam is niet hoofdlettergevoelig.
+- **Tweestapsverificatie (MFA)**, optioneel bij een wachtwoord: na het wachtwoord vraagt het beheer een code van 6 cijfers uit een authenticator-app (TOTP, bijvoorbeeld Microsoft Authenticator, Google Authenticator of 1Password); een code werkt één keer. Bij het aanzetten krijg je **8 herstelcodes** die je maar één keer ziet (kopiëren of downloaden); elke herstelcode werkt één keer in plaats van een code uit de app. Het MFA-geheim staat versleuteld in `db.json`; de sleutel staat in `secret.key` in dezelfde datamap, dus neem die map altijd in zijn geheel mee in je back-up.
+
+Instellen en wijzigen doe je in *Instellingen* (⚙) → *Beveiliging*. Gevoelige acties (wachtwoord, MFA, backups of edities verwijderen) bevestig je opnieuw: met je passkey als je die hebt, anders met je huidige wachtwoord en eventueel een MFA-code. Heb je zowel een passkey als een wachtwoord, dan kan een sessie die met het wachtwoord is gestart de kaart beheren, maar je inlog niet wijzigen; daarvoor log je in met de passkey. Je laatste passkey kun je alleen verwijderen als je een wachtwoord hebt, en het wachtwoord alleen als je een passkey hebt. Een nieuw wachtwoord of MFA aan- of uitzetten meldt je op je andere apparaten af.
+Mislukte pogingen (wachtwoord, MFA-code, installatiecode) worden per IP-adres en globaal beperkt.
+
+## Meer beheerders uitnodigen
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-gebruikers.png"><img src="docs/screenshots/instellingen-gebruikers.png" width="420" alt="Gebruikers: uitnodigen, nieuwe inloglink, verwijderen"></a><br><sub>Gebruikers: uitnodigen, nieuwe inloglink, verwijderen</sub></td><td align="center" valign="top"><a href="docs/screenshots/uitnodiging.png"><img src="docs/screenshots/uitnodiging.png" width="170" alt="De uitnodiging op de telefoon van de gast"></a><br><sub>De uitnodiging op de telefoon van de gast</sub></td></tr>
+</table>
+
+De eerste gebruiker is de **eigenaar**. Die nodigt anderen uit via *Instellingen* (⚙) → *Gebruikers* → *Iemand uitnodigen*, eventueel met een voorgestelde gebruikersnaam. Je krijgt een link (`…/beheer#invite=…`) die je **één keer te zien** krijgt, **één keer werkt** en na **7 dagen** verloopt; stuur hem zelf door (chat, mail of persoonlijk). Wie hem opent kiest zelf een gebruikersnaam en een passkey of wachtwoord (en eventueel MFA), dus de eigenaar kent niemands wachtwoord. Alleen de hash van de link wordt bewaard.
+- Iedereen beheert de kaart, de bewoners, de teksten, edities en backups; alleen de eigenaar beheert gebruikers (dat dwingt de server af).
+- **Nieuwe inloglink** maakt een link voor iemand die niet meer kan inloggen (telefoon kwijt, wachtwoord vergeten). De oude inlog blijft werken tot de nieuwe is ingesteld; dan vervallen de oude passkeys, het wachtwoord en MFA, en wordt die gebruiker op alle apparaten afgemeld.
+- **Verwijderen** haalt de gebruiker met alle passkeys weg en beëindigt de sessies van die gebruiker. De eigenaar kan niet worden gereset of verwijderd.
+- Maximaal 50 gebruikers (open uitnodigingen tellen mee). Gebruikers, uitnodigingen en inloggegevens zitten niet in de backups van het beheer.
+
+### Niemand kan meer inloggen?
+Heeft de eigenaar geen werkende passkey, wachtwoord of herstelcode meer, zet dan alle inloggegevens terug naar een nieuwe installatie. De kaart, edities, backups en instellingen blijven staan; alle gebruikers en uitnodigingen verdwijnen. Stop eerst de container, anders overschrijft de draaiende server het weer:
+
+```bash
+docker compose stop doorbell-map
+docker compose run --rm doorbell-map node server/reset-login.js
+docker compose up -d
+```
+
+Open daarna `/beheer`: de installatie-wizard vraagt weer om de installatiecode (`SETUP_TOKEN`). Nodig de anderen daarna opnieuw uit.
 
 ## Na een update: oude pagina's of scripts
 Scripts en stijlen worden per build met `?v=<versie>-<commit>` opgevraagd en de HTML wordt nooit gecachet; zo krijg je nooit een oude `admin.js` bij nieuwe HTML (dat geeft fouten als
@@ -259,7 +294,7 @@ Lokaal (zonder build) toont de app `dev` met de commit uit git. De workflow heef
 ## Backups
 Na **elke opslagpoging** (huizen/layout, teksten, kaartweergave, edities) maakt de server een JSON-backup in `data/backups/` van de layout (huizen + kaartweergave), de teksten (uitleg, appnaam) en **alle edities**.
 Identieke staten worden niet dubbel bewaard en de nieuwste 200 blijven staan (`MAX_BACKUPS` om dat aan te passen). Het logo valt buiten de backups. De bestanden zijn compact opgeslagen; met veel edities wordt een backup groter, reken op ongeveer de grootte van de live kaart per editie.
-Een gedownloade backup (.json, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen (maximaal 25 MB); hij komt als nieuwe backup in de lijst. Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); daarna staan er precies de edities uit die backup. Een backup van vóór de edities laat de edities met rust. In de lijst staat bij elke backup hoeveel en welke edities erin zitten. Verwijderen vraagt een bevestiging met je passkey.
+Een gedownloade backup (.json, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen (maximaal 25 MB); hij komt als nieuwe backup in de lijst. Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); daarna staan er precies de edities uit die backup. Een backup van vóór de edities laat de edities met rust. In de lijst staat bij elke backup hoeveel en welke edities erin zitten. Verwijderen vraagt een bevestiging met je passkey of wachtwoord.
 Elke backup kan een **korte titel** krijgen (max. 40 tekens, knop ✎), bijvoorbeeld "Alles" of "Alleen layout". Met *Backup maken* maak je handmatig een backup met een eigen titel, ook als er niets is veranderd.
 
 ## Edities: eerdere keren vergelijken
@@ -269,7 +304,7 @@ Een **editie** is de kaart van één keer (bijvoorbeeld *Sint Maarten 2025*), me
 - **Wisselen** – zodra er een editie is, staat in de overzichtskaart rechtsboven op de kaart een keuzelijst *Kaart*: **Live** of een editie. Tik bij een editie op een huis voor de status in die editie en op de live kaart, met knoppen om de status **in die editie** meteen te wijzigen.
 - **Bewerken** – *Bewerken* opent de kaart die bij *Kaart* gekozen is. Bij een editie staat bovenaan de zijbalk *Je bewerkt de editie …* en heet de knop *Editie opslaan*: alles (status, straat, huisnummer, vorm, huizen toevoegen of verwijderen) wordt alleen in die editie opgeslagen. Ook vanuit de lijst in *Instellingen → Edities* kun je een editie bekijken of bewerken. QR-codes en wijzigingen van bewoners horen altijd bij de live kaart.
 - **Vergelijken** – met *Vergelijk met* zet je twee kaarten naast elkaar (een editie met live, of twee edities). De huizen kleuren dan naar meedoen (groen): **groen in beide**, **alleen in de oudere** (oranje) of **alleen in de nieuwere** (blauw); de rest staat grijs gestippeld. De overzichtskaart toont de aantallen van beide kaarten met het verschil (totaal, groen, rood, niet gemarkeerd) en hoeveel huizen in elke groep vallen. Huizen worden gekoppeld op het huis zelf, en anders op straat en huisnummer.
-- **Overzicht** – de lijst in *Instellingen → Edities* toont per editie het aantal huizen en hoeveel groen (met percentage), rood en niet gemarkeerd, waarvan hij een kopie is en wanneer hij bewerkt is, met de live kaart bovenaan. Naam of jaartal wijzig je met het tekstveld-icoon; verwijderen bevestig je met je passkey.
+- **Overzicht** – de lijst in *Instellingen → Edities* toont per editie het aantal huizen en hoeveel groen (met percentage), rood en niet gemarkeerd, waarvan hij een kopie is en wanneer hij bewerkt is, met de live kaart bovenaan. Naam of jaartal wijzig je met het tekstveld-icoon; verwijderen bevestig je met je passkey of wachtwoord.
 - *Aantallen verbergen* klapt de overzichtskaart in tot alleen de keuzelijsten (handig op een telefoon).
 
 Edities staan als losse bestanden in `data/editions/` (maximaal 100) en zitten **in elke backup**; terugzetten zet ze ook terug (zie [Backups](#backups)).
@@ -323,17 +358,17 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 
    | Variabele | Betekenis |
    | --- | --- |
-   | `ORIGIN` | De volledige URL waarmee je de site opent, bijvoorbeeld `https://sintmaarten.flux76.app`. Moet exact het adres in de browser zijn; passkeys werken alleen via **HTTPS** (of op `localhost`). |
-   | `SETUP_TOKEN` | Geheime code voor het aanmaken van de allereerste passkey (onboarding). Genereer er een met `openssl rand -hex 12`. |
+   | `ORIGIN` | De volledige URL waarmee je de site opent, bijvoorbeeld `https://sintmaarten.flux76.app`. Moet exact het adres in de browser zijn; passkeys werken alleen via **HTTPS** (of op `localhost`); zonder HTTPS log je in met gebruikersnaam en wachtwoord. |
+   | `SETUP_TOKEN` | Geheime code voor de allereerste inlog (de installatie-wizard: passkey of wachtwoord). Genereer er een met `openssl rand -hex 12`. |
    | `SESSION_SECRET` | Sleutel voor het ondertekenen van sessies (minstens 16 tekens), bijvoorbeeld `openssl rand -hex 32`. Laat je hem leeg, dan vervallen sessies bij elke herstart. |
    | `SITE_TITLE` | Naam van de site (daarna aan te passen in het beheer). |
    | `PORT` | Poort van de webserver, standaard **9888**. |
    | `DOORBELL_MAP_TAG` | Welke versie draait: `latest` (stabiel, standaard), `beta` of een versienummer om vast te zetten (bijvoorbeeld `v1.0.21`). Bij `beta` staat er een **BETA**-label bij de naam, in de tabtitel en onder het app-icoon. Heette deze variabele bij jou nog `SINTMAARTEN_TAG`, dan blijft die werken; hernoem hem wanneer het uitkomt. |
    | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/doorbell-map`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
    | `RP_ID`, `SESSION_HOURS` | Optioneel; zie de opmerkingen in [`.env.example`](.env.example). |
-3. Start de container: `docker compose up -d`. Je gegevens (huizen, passkeys, logo, uitleg, backups) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
+3. Start de container: `docker compose up -d`. Je gegevens (huizen, gebruikers en inloggegevens, logo, uitleg, backups, en `secret.key` voor MFA) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
 4. Zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy), zodat `ORIGIN` klopt.
-5. Open `ORIGIN/beheer` en maak je eerste passkey aan met de `SETUP_TOKEN` (zie [Onboarding](#het-beheer-beheer)).
+5. Open `ORIGIN/beheer` en doorloop de installatie met de `SETUP_TOKEN`: kies een gebruikersnaam en een passkey of wachtwoord (zie [Onboarding](#het-beheer-beheer)).
 
 **Bijwerken:** `docker compose pull && docker compose up -d`. **Back-up:** kopieer die map (of gebruik de backups in het beheer).
 
@@ -368,7 +403,6 @@ npm test
 De screenshots in deze README maak je opnieuw met `node tools/screenshots.js` (Playwright + Chromium en internet voor de kaarttegels; de voorbeeldgegevens staan in `tools/screenshots/`, de gebouwen komen uit OpenStreetMap © OpenStreetMap-bijdragers). Met een of meer woorden erachter maak je alleen de screenshots met die naam, bijvoorbeeld `node tools/screenshots.js qr`.
 
 ## Beveiliging
-Passkeys via WebAuthn (SimpleWebAuthn), sessiecookie `HttpOnly`/`SameSite=Strict`/`Secure`, origin-check op wijzigingen,
-beperking op mislukte pogingen.
-Back-up: kopieer de map `data/`. Passkey kwijt en geen ander apparaat? Zet in `data/db.json`
-`"passkeys": []` en doorloop de onboarding opnieuw.
+Passkeys via WebAuthn ([SimpleWebAuthn](https://simplewebauthn.dev/)), wachtwoorden als `scrypt`-hash, tweestapsverificatie via TOTP ([otpauth](https://github.com/hectorm/otpauth)) met versleuteld geheim en gehashte herstelcodes, sessiecookie `HttpOnly`/`SameSite=Strict`/`Secure` met een sessie-epoch per gebruiker (een nieuw wachtwoord, MFA of reset meldt de andere sessies af), origin-check op wijzigingen en beperking op mislukte pogingen.
+Gebruikersbeheer volgt [App-Guidance: user management](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/user-management.md).
+Back-up: kopieer de map `data/` (met `db.json` én `secret.key`). Niemand kan meer inloggen? Zie [Niemand kan meer inloggen?](#niemand-kan-meer-inloggen).
