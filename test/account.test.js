@@ -11,6 +11,8 @@ const OTPAuth = require('otpauth');
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-acc-'));
 process.env.SETUP_TOKEN = 'test-setup-token-123';
 process.env.SESSION_SECRET = 'test-session-secret-123';
+// Een vast adres, zodat de nep-authenticator weet voor welk adres hij tekent. Zonder ORIGIN: zie origin-request.test.js.
+process.env.ORIGIN = 'https://sintmaarten.flux76.app';
 const app = require('../server/index.js');
 const store = require('../server/store');
 const users = require('../server/users');

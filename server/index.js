@@ -651,7 +651,8 @@ module.exports = app;
 
 if (require.main === module) {
   app.listen(config.port, () => {
-    console.log(`Doorbell Map draait op poort ${config.port} (${config.origin}, rpID ${config.rpID})`);
+    const where = config.origin ? `${config.origin}, rpID ${config.rpID}` : 'adres volgt de aanvraag; geen ORIGIN ingesteld';
+    console.log(`Doorbell Map draait op poort ${config.port} (${where})`);
     console.log(`Versie ${appVersion.label}`);
     console.log(store.startupReport());
     if (config.setupTokenGenerated && !users.configured()) {

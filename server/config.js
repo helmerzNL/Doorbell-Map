@@ -2,10 +2,11 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 
-const origin = (process.env.ORIGIN || 'https://sintmaarten.flux76.app').replace(/\/+$/, '');
-let rpID = process.env.RP_ID;
-if (!rpID) {
-  try { rpID = new URL(origin).hostname; } catch { rpID = 'localhost'; }
+// ORIGIN en RP_ID zijn optioneel. Leeg betekent: het adres waarop de app wordt geopend (zie origin.js).
+const origin = (process.env.ORIGIN || '').trim().replace(/\/+$/, '') || null;
+let rpID = (process.env.RP_ID || '').trim().toLowerCase() || null;
+if (!rpID && origin) {
+  try { rpID = new URL(origin).hostname; } catch { rpID = null; }
 }
 
 function secret(name, bytes) {
@@ -28,5 +29,4 @@ module.exports = {
   setupToken: setupToken.value,
   setupTokenGenerated: setupToken.generated,
   sessionHours: Number(process.env.SESSION_HOURS) || 12,
-  secureCookie: origin.startsWith('https://'),
 };

@@ -14,6 +14,7 @@ const {
 const config = require('./config');
 const store = require('./store');
 const auth = require('./auth');
+const origin = require('./origin');
 const users = require('./users');
 const lang = require('./lang');
 const { hashPassword, verifyPassword } = require('./password');
@@ -55,16 +56,20 @@ function takeChallenge(id) {
 // Een passkey heeft een echte domeinnaam en HTTPS nodig (localhost is de uitzondering voor ontwikkelen). De reden is
 // deel van het contract: de wizard toont hem letterlijk, zodat de beheerder weet wat er aan ORIGIN moet veranderen.
 const LOCAL_SUFFIXES = ['.local', '.lan', '.home', '.home.arpa', '.internal', '.localdomain', '.intranet', '.private'];
-function passkeySupport(origin = config.origin, rpID = config.rpID) {
+function passkeySupport(pageOrigin, rpID) {
   const host = String(rpID || '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
   const localhost = host === 'localhost' || host.endsWith('.localhost');
   const no = (reason) => ({ available: false, reason });
   if (net.isIP(host)) return no('Je opent de app via een IP-adres; een passkey heeft een echte domeinnaam nodig.');
   if (!localhost && !host.includes('.')) return no('Het adres van de app heeft geen domeinnaam (zoals "nas"); een passkey heeft een echte domeinnaam nodig.');
   if (LOCAL_SUFFIXES.some((s) => host.endsWith(s))) return no('Het adres van de app bestaat alleen op je eigen netwerk (zoals .local of .lan); een passkey heeft een echte domeinnaam nodig.');
-  if (!String(origin).startsWith('https://') && !localhost) return no('De app draait niet via HTTPS; een passkey werkt alleen via HTTPS.');
+  if (!String(pageOrigin).startsWith('https://') && !localhost) return no('De app draait niet via HTTPS; een passkey werkt alleen via HTTPS.');
   return { available: true, reason: '' };
 }
+// Voor deze aanvraag: met ORIGIN het vaste adres, anders het adres waarop de app is geopend (zie origin.js).
+const passkeySupportFor = (req) => passkeySupport(origin.pageOrigin(req), origin.rpID(req));
+// Een passkey-uitdaging onthoudt het adres en domein waarop ze is uitgegeven; het antwoord wordt daartegen gecontroleerd.
+const ceremony = (req) => ({ origin: origin.pageOrigin(req), rpID: origin.rpID(req) });
 
 // ---------- installatiecode ----------
 function checkSetupToken(req) {
@@ -86,8 +91,8 @@ async function verifyAssertion(req, kind, user = null) {
   const v = await verifyAuthenticationResponse({
     response: req.body.response,
     expectedChallenge: c.challenge,
-    expectedOrigin: config.origin,
-    expectedRPID: config.rpID,
+    expectedOrigin: c.origin,
+    expectedRPID: c.rpID,
     requireUserVerification: true,
     credential: { id: pk.id, publicKey: Buffer.from(pk.publicKey, 'base64url'), counter: pk.counter, transports: pk.transports },
   });
@@ -140,7 +145,7 @@ pub.get('/status', (req, res) => {
     method: s?.method || null,
     passwordEnabled: db.users.some((u) => u.password), // het wachtwoordformulier tonen op het inlogscherm
     passkeysEnabled: db.passkeys.length > 0,
-    passkey: passkeySupport(),
+    passkey: passkeySupportFor(req),
     user: s ? { ...users.summary(s.user), strong: auth.strong(s) } : null,
   });
 });
@@ -175,9 +180,10 @@ pub.post('/register/options', asyncRoute(async (req, res) => {
     webauthnId = crypto.randomBytes(32).toString('base64url');
     c = { mode: 'setup' };
   }
+  const at = ceremony(req);
   const options = await generateRegistrationOptions({
     rpName: siteTitle(),
-    rpID: config.rpID,
+    rpID: at.rpID,
     userName,
     userDisplayName: userName,
     userID: Buffer.from(webauthnId, 'base64url'),
@@ -185,7 +191,7 @@ pub.post('/register/options', asyncRoute(async (req, res) => {
     excludeCredentials: pkOptions(exclude),
     authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
   });
-  const challengeId = putChallenge({ ...c, kind: 'register', challenge: options.challenge, name, username: userName, webauthnId });
+  const challengeId = putChallenge({ ...c, ...at, kind: 'register', challenge: options.challenge, name, username: userName, webauthnId });
   res.json({ challengeId, options });
 }));
 
@@ -200,8 +206,8 @@ pub.post('/register/verify', asyncRoute(async (req, res) => {
   const v = await verifyRegistrationResponse({
     response: req.body.response,
     expectedChallenge: c.challenge,
-    expectedOrigin: config.origin,
-    expectedRPID: config.rpID,
+    expectedOrigin: c.origin,
+    expectedRPID: c.rpID,
   });
   if (!v.verified) throw fail('Passkey kon niet worden geverifieerd');
   if (c.mode === 'add' && !sessionOk()) throw fail('Sessie verlopen, log opnieuw in', 401); // intussen gereset of afgemeld
@@ -224,7 +230,7 @@ pub.post('/register/verify', asyncRoute(async (req, res) => {
   });
   store.save();
   auth.limiter.reset(req.ip);
-  if (c.mode !== 'add') auth.startSession(res, 'pk', user);
+  if (c.mode !== 'add') auth.startSession(req, res, 'pk', user);
   res.json({ ok: true });
 }));
 
@@ -239,7 +245,7 @@ pub.post('/setup/password', asyncRoute(async (req, res) => {
   owner.password = hash;
   store.save();
   auth.limiter.reset(req.ip);
-  auth.startSession(res, 'pw', owner);
+  auth.startSession(req, res, 'pw', owner);
   res.json({ ok: true });
 }));
 
@@ -248,8 +254,9 @@ pub.post('/login/options', asyncRoute(async (req, res) => {
   if (!db.passkeys.length) throw fail('Nog geen passkey ingesteld', 409);
   if (auth.limiter.blocked(req.ip)) throw fail(TOO_MANY, 429);
   // Alle passkeys van alle gebruikers: de gekozen passkey bepaalt wie er inlogt (geen gebruikersnaam nodig).
-  const options = await generateAuthenticationOptions({ rpID: config.rpID, userVerification: 'preferred', allowCredentials: pkOptions(db.passkeys) });
-  res.json({ challengeId: putChallenge({ challenge: options.challenge, kind: 'login' }), options });
+  const at = ceremony(req);
+  const options = await generateAuthenticationOptions({ rpID: at.rpID, userVerification: 'preferred', allowCredentials: pkOptions(db.passkeys) });
+  res.json({ challengeId: putChallenge({ ...at, challenge: options.challenge, kind: 'login' }), options });
 }));
 
 pub.post('/login/verify', asyncRoute(async (req, res) => {
@@ -264,7 +271,7 @@ pub.post('/login/verify', asyncRoute(async (req, res) => {
   const user = users.byId(pk.userId);
   if (!user) throw fail('Onbekende passkey');
   auth.limiter.reset(req.ip);
-  auth.startSession(res, 'pk', user);
+  auth.startSession(req, res, 'pk', user);
   res.json({ ok: true });
 }));
 
@@ -285,7 +292,7 @@ pub.post('/password-login', asyncRoute(async (req, res) => {
     return res.json({ mfaRequired: true, ticket });
   }
   auth.limiter.reset(req.ip);
-  auth.startSession(res, 'pw', user);
+  auth.startSession(req, res, 'pw', user);
   res.json({ ok: true });
 }));
 
@@ -305,7 +312,7 @@ pub.post('/mfa-login', asyncRoute(async (req, res) => {
   }
   challenges.delete(req.body.ticket);
   auth.limiter.reset(req.ip);
-  auth.startSession(res, 'pw', user);
+  auth.startSession(req, res, 'pw', user);
   res.json({ ok: true });
 }));
 
@@ -319,7 +326,7 @@ const invites = express.Router();
 invites.get('/info', (req, res) => {
   const i = users.findInvite(req.get('X-Invite-Token'));
   if (!i) return res.status(404).json({ error: users.INVALID_INVITE });
-  res.set('Cache-Control', 'no-store').json({ ...users.inviteInfo(i), passkey: passkeySupport() });
+  res.set('Cache-Control', 'no-store').json({ ...users.inviteInfo(i), passkey: passkeySupportFor(req) });
 });
 
 invites.post('/password', asyncRoute(async (req, res) => {
@@ -331,7 +338,7 @@ invites.post('/password', asyncRoute(async (req, res) => {
   const user = users.acceptInvite(i.id, username); // controleert opnieuw: een tweede tabblad of een intrekking
   user.password = hash;
   store.save();
-  auth.startSession(res, 'pw', user);
+  auth.startSession(req, res, 'pw', user);
   res.json({ ok: true });
 }));
 
@@ -341,7 +348,7 @@ invites.post('/password', asyncRoute(async (req, res) => {
 const admin = express.Router();
 const strongOnly = auth.requireStrongSession;
 // Na een nieuwe epoch krijgt dit apparaat meteen een nieuw cookie; de andere sessies van deze gebruiker vervallen.
-const renew = (req, res) => auth.startSession(res, req.authMethod, req.user);
+const renew = (req, res) => auth.startSession(req, res, req.authMethod, req.user);
 
 admin.get('/account', (req, res) => res.json({ ...users.summary(req.user), strong: auth.strong({ user: req.user, method: req.authMethod }) }));
 
@@ -357,8 +364,9 @@ admin.put('/account/username', strongOnly, asyncRoute(async (req, res) => {
 admin.post('/confirm/options', asyncRoute(async (req, res) => {
   const own = users.passkeysOf(req.user.id);
   if (!own.length) return res.json({ method: 'password', mfa: !!req.user.mfa });
-  const options = await generateAuthenticationOptions({ rpID: config.rpID, userVerification: 'required', allowCredentials: pkOptions(own) });
-  res.json({ method: 'passkey', challengeId: putChallenge({ challenge: options.challenge, kind: 'confirm', userId: req.user.id }), options });
+  const at = ceremony(req);
+  const options = await generateAuthenticationOptions({ rpID: at.rpID, userVerification: 'required', allowCredentials: pkOptions(own) });
+  res.json({ method: 'passkey', challengeId: putChallenge({ ...at, challenge: options.challenge, kind: 'confirm', userId: req.user.id }), options });
 }));
 
 admin.put('/password', strongOnly, asyncRoute(async (req, res) => {
@@ -456,7 +464,7 @@ owner.get('/', (req, res) => {
 });
 
 owner.post('/invites', asyncRoute(async (req, res) => {
-  res.json(users.createInvite({ kind: 'new', username: req.body.username, createdBy: req.user.id }));
+  res.json(users.createInvite({ kind: 'new', username: req.body.username, createdBy: req.user.id, base: origin.pageOrigin(req) }));
 }));
 
 owner.delete('/invites/:id', asyncRoute(async (req, res) => {
@@ -466,7 +474,7 @@ owner.delete('/invites/:id', asyncRoute(async (req, res) => {
 
 // Een nieuwe inloglink voor iemand die niet meer kan inloggen. De oude inlog blijft werken tot de nieuwe is ingesteld.
 owner.post('/:id/reset', asyncRoute(async (req, res) => {
-  res.json(users.createInvite({ kind: 'reset', userId: req.params.id, createdBy: req.user.id }));
+  res.json(users.createInvite({ kind: 'reset', userId: req.params.id, createdBy: req.user.id, base: origin.pageOrigin(req) }));
 }));
 
 owner.delete('/:id', asyncRoute(async (req, res) => {

@@ -212,9 +212,10 @@ function setupOwner(username, webauthnId) {
 // ---------- uitnodigingen ----------
 const sha256 = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');
 const purgeInvites = () => { db().invites = db().invites.filter(live); };
-const inviteUrl = (token) => `${config.origin}/beheer#invite=${token}`;
+// De link gebruikt ORIGIN, of anders het adres waarop de eigenaar het beheer opent (base, zie origin.js).
+const inviteUrl = (token, base) => `${config.origin || base}/beheer#invite=${token}`;
 
-function createInvite({ kind = 'new', userId = null, username = '', createdBy }) {
+function createInvite({ kind = 'new', userId = null, username = '', createdBy, base = '' }) {
   purgeInvites();
   let name = '';
   if (kind === 'new') {
@@ -239,7 +240,7 @@ function createInvite({ kind = 'new', userId = null, username = '', createdBy })
   };
   db().invites.push(row);
   store.save();
-  return { id: row.id, kind, username: name, token, url: inviteUrl(token), expiresAt: row.expiresAt };
+  return { id: row.id, kind, username: name, token, url: inviteUrl(token, base), expiresAt: row.expiresAt };
 }
 
 // Onbekend, verlopen, gebruikt of misvormd: allemaal null (de route antwoordt overal hetzelfde).
