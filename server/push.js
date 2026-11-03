@@ -18,7 +18,14 @@ function state() {
   return db.push;
 }
 
-const subject = () => (config.origin.startsWith('https://') ? config.origin : `mailto:beheer@${config.rpID}`);
+// De afzender (VAPID-subject) moet een https-adres of mailto zijn. Zonder ORIGIN nemen we het https-adres waarop het laatste apparaat
+// zich aanmeldde: meldingen werken in de browser alleen via https (of op localhost), dus dat adres is er bijna altijd.
+const subject = () => {
+  if (config.origin?.startsWith('https://')) return config.origin;
+  const seen = store.db().push?.origin;
+  if (seen) return seen;
+  return `mailto:beheer@${config.rpID || 'localhost'}`;
+};
 const publicKey = () => state().publicKey;
 const devices = () => state().devices.map(({ id, label, createdAt }) => ({ id, label, createdAt }));
 
@@ -30,9 +37,10 @@ function validSubscription(s) {
   } catch { return false; }
 }
 
-function addDevice(subscription, label) {
+function addDevice(subscription, label, pageOrigin) {
   if (!validSubscription(subscription)) throw new Error('Ongeldige pushregistratie');
   const p = state();
+  if (typeof pageOrigin === 'string' && pageOrigin.startsWith('https://')) p.origin = pageOrigin;
   const existing = p.devices.find((d) => d.subscription.endpoint === subscription.endpoint);
   if (existing) { existing.subscription = subscription; if (label) existing.label = String(label).slice(0, 80); store.save(); return existing.id; }
   if (p.devices.length >= 20) throw new Error('Maximaal 20 apparaten voor meldingen');

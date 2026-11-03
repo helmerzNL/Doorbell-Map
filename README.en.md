@@ -360,7 +360,7 @@ You do not have to build the code: the image is built and published automaticall
 
    | Variable | Meaning |
    | --- | --- |
-   | `ORIGIN` | The full URL with which you open the site, for example `https://sintmaarten.flux76.app`. Must be exactly the address in the browser; passkeys only work over **HTTPS** (or on `localhost`); without HTTPS you log in with a username and password. |
+   | `ORIGIN` | Optional. The full URL with which you open the site, for example `https://sintmaarten.flux76.app`; it must then be exactly the address in the browser. Empty means: the address the site is opened on (behind a reverse proxy via `X-Forwarded-Proto` and `X-Forwarded-Host`); the links in QR codes and invitations then get the address you open the admin on. Fill it in when the site should only be reachable on one address. Passkeys only work over **HTTPS** (or on `localhost`); without HTTPS you log in with a username and password. |
    | `SETUP_TOKEN` | Secret code for the very first login (the setup wizard: passkey or password). Generate one with `openssl rand -hex 12`. |
    | `SESSION_SECRET` | Key for signing sessions (at least 16 characters), for example `openssl rand -hex 32`. If you leave it empty, sessions expire at every restart. |
    | `SITE_TITLE` | Name of the site (can be changed later in the admin area). |
@@ -369,8 +369,8 @@ You do not have to build the code: the image is built and published automaticall
    | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/doorbell-map`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
 3. Start the container: `docker compose up -d`. Your data (houses, users and login details, logo, explanation, backups, and `secret.key` for MFA) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
-4. Put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy), so that `ORIGIN` is correct.
-5. Open `ORIGIN/beheer` and complete the setup with the `SETUP_TOKEN`: choose a username and a passkey or password (see [Onboarding](#the-admin-area-beheer)).
+4. For passkeys, the home-screen app and notifications: put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy). Without HTTPS the map works too, and you log in with a username and password.
+5. Open `<address>/beheer` and complete the setup with the `SETUP_TOKEN`: choose a username and a passkey or password (see [Onboarding](#the-admin-area-beheer)).
 
 **Updating:** `docker compose pull && docker compose up -d`. **Back-up:** copy the data folder (`DATA_PATH`) (or use the backups in the admin area).
 
@@ -405,6 +405,6 @@ npm test
 You regenerate the screenshots in this README with `node tools/screenshots.js` (Playwright + Chromium and internet for the map tiles; the example data is in `tools/screenshots/`, the buildings come from OpenStreetMap © OpenStreetMap contributors). With one or more words after it you only make the screenshots with that name, for example `node tools/screenshots.js qr`.
 
 ## Security
-Passkeys via WebAuthn ([SimpleWebAuthn](https://simplewebauthn.dev/)), passwords as a `scrypt` hash, two-step verification via TOTP ([otpauth](https://github.com/hectorm/otpauth)) with an encrypted secret and hashed recovery codes, session cookie `HttpOnly`/`SameSite=Strict`/`Secure` with a session epoch per user (a new password, MFA change or reset signs out the other sessions), origin check on changes and limiting of failed attempts.
+Passkeys via WebAuthn ([SimpleWebAuthn](https://simplewebauthn.dev/)), passwords as a `scrypt` hash, two-step verification via TOTP ([otpauth](https://github.com/hectorm/otpauth)) with an encrypted secret and hashed recovery codes, session cookie `HttpOnly`/`SameSite=Strict` (over HTTPS also `Secure`) with a session epoch per user (a new password, MFA change or reset signs out the other sessions), origin check on changes and limiting of failed attempts.
 User management follows [App-Guidance: user management](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/user-management.md).
 Back-up: copy the `data/` folder (with `db.json` and `secret.key`). Nobody can log in any more? See [Nobody can log in any more?](#nobody-can-log-in-any-more).

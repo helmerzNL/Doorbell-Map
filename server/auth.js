@@ -2,6 +2,7 @@
 const crypto = require('node:crypto');
 const config = require('./config');
 const users = require('./users');
+const origin = require('./origin');
 
 const COOKIE = 'sm_session';
 
@@ -57,11 +58,11 @@ const isLoggedIn = (req) => session(req) !== null;
 // (dan is het wachtwoord de sterkste inlog die er is). Wie ook een passkey heeft, logt daarvoor met de passkey in.
 const strong = (s) => !!s && (s.method === 'pk' || !users.hasPasskeys(s.user.id));
 
-function startSession(res, method, user) {
+function startSession(req, res, method, user) {
   const exp = String(Date.now() + config.sessionHours * 3600 * 1000);
   const payload = `${exp}.${method}.${user.id}.${user.epoch || 0}`;
   const flags = ['Path=/', 'HttpOnly', 'SameSite=Strict', `Max-Age=${config.sessionHours * 3600}`];
-  if (config.secureCookie) flags.push('Secure');
+  if (origin.secureCookie(req)) flags.push('Secure');
   res.append('Set-Cookie', `${COOKIE}=${payload}.${sign(payload)}; ${flags.join('; ')}`);
 }
 
@@ -97,7 +98,7 @@ function requireOwner(req, res, next) {
 function sameOrigin(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
   const o = req.headers.origin;
-  if (o && o !== config.origin) return res.status(403).json({ error: 'Ongeldige origin' });
+  if (o && !origin.isOwnOrigin(req, o)) return res.status(403).json({ error: 'Ongeldige origin' });
   next();
 }
 

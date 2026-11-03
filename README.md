@@ -358,7 +358,7 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
 
    | Variabele | Betekenis |
    | --- | --- |
-   | `ORIGIN` | De volledige URL waarmee je de site opent, bijvoorbeeld `https://sintmaarten.flux76.app`. Moet exact het adres in de browser zijn; passkeys werken alleen via **HTTPS** (of op `localhost`); zonder HTTPS log je in met gebruikersnaam en wachtwoord. |
+   | `ORIGIN` | Optioneel. De volledige URL waarmee je de site opent, bijvoorbeeld `https://sintmaarten.flux76.app`; moet dan exact het adres in de browser zijn. Leeg betekent: het adres waarop de site wordt geopend (achter een reverse proxy via `X-Forwarded-Proto` en `X-Forwarded-Host`); de links in QR-codes en uitnodigingen krijgen dan het adres waarop je het beheer opent. Vul hem in als de site maar op één adres bereikbaar hoort te zijn. Passkeys werken alleen via **HTTPS** (of op `localhost`); zonder HTTPS log je in met gebruikersnaam en wachtwoord. |
    | `SETUP_TOKEN` | Geheime code voor de allereerste inlog (de installatie-wizard: passkey of wachtwoord). Genereer er een met `openssl rand -hex 12`. |
    | `SESSION_SECRET` | Sleutel voor het ondertekenen van sessies (minstens 16 tekens), bijvoorbeeld `openssl rand -hex 32`. Laat je hem leeg, dan vervallen sessies bij elke herstart. |
    | `SITE_TITLE` | Naam van de site (daarna aan te passen in het beheer). |
@@ -367,8 +367,8 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
    | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/doorbell-map`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
    | `RP_ID`, `SESSION_HOURS` | Optioneel; zie de opmerkingen in [`.env.example`](.env.example). |
 3. Start de container: `docker compose up -d`. Je gegevens (huizen, gebruikers en inloggegevens, logo, uitleg, backups, en `secret.key` voor MFA) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
-4. Zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy), zodat `ORIGIN` klopt.
-5. Open `ORIGIN/beheer` en doorloop de installatie met de `SETUP_TOKEN`: kies een gebruikersnaam en een passkey of wachtwoord (zie [Onboarding](#het-beheer-beheer)).
+4. Voor passkeys, de app op het beginscherm en meldingen: zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy). Zonder HTTPS werkt de kaart ook, en log je in met gebruikersnaam en wachtwoord.
+5. Open `<adres>/beheer` en doorloop de installatie met de `SETUP_TOKEN`: kies een gebruikersnaam en een passkey of wachtwoord (zie [Onboarding](#het-beheer-beheer)).
 
 **Bijwerken:** `docker compose pull && docker compose up -d`. **Back-up:** kopieer die map (of gebruik de backups in het beheer).
 
@@ -403,6 +403,6 @@ npm test
 De screenshots in deze README maak je opnieuw met `node tools/screenshots.js` (Playwright + Chromium en internet voor de kaarttegels; de voorbeeldgegevens staan in `tools/screenshots/`, de gebouwen komen uit OpenStreetMap © OpenStreetMap-bijdragers). Met een of meer woorden erachter maak je alleen de screenshots met die naam, bijvoorbeeld `node tools/screenshots.js qr`.
 
 ## Beveiliging
-Passkeys via WebAuthn ([SimpleWebAuthn](https://simplewebauthn.dev/)), wachtwoorden als `scrypt`-hash, tweestapsverificatie via TOTP ([otpauth](https://github.com/hectorm/otpauth)) met versleuteld geheim en gehashte herstelcodes, sessiecookie `HttpOnly`/`SameSite=Strict`/`Secure` met een sessie-epoch per gebruiker (een nieuw wachtwoord, MFA of reset meldt de andere sessies af), origin-check op wijzigingen en beperking op mislukte pogingen.
+Passkeys via WebAuthn ([SimpleWebAuthn](https://simplewebauthn.dev/)), wachtwoorden als `scrypt`-hash, tweestapsverificatie via TOTP ([otpauth](https://github.com/hectorm/otpauth)) met versleuteld geheim en gehashte herstelcodes, sessiecookie `HttpOnly`/`SameSite=Strict` (via HTTPS ook `Secure`) met een sessie-epoch per gebruiker (een nieuw wachtwoord, MFA of reset meldt de andere sessies af), origin-check op wijzigingen en beperking op mislukte pogingen.
 Gebruikersbeheer volgt [App-Guidance: user management](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/user-management.md).
 Back-up: kopieer de map `data/` (met `db.json` én `secret.key`). Niemand kan meer inloggen? Zie [Niemand kan meer inloggen?](#niemand-kan-meer-inloggen).
