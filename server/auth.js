@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const config = require('./config');
+const users = require('./users');
 
 const COOKIE = 'sm_session';
 
@@ -22,29 +23,46 @@ function parseCookies(header = '') {
   return out;
 }
 
-// Sessietoken: "<verloop>.<methode>.<handtekening>"; methode is "pk" (passkey) of "pw" (wachtwoord).
-// Oudere tokens zonder methode ("<verloop>.<handtekening>") gelden als passkey-sessie.
-function sessionMethod(req) {
+// Sessietoken: "<verloop>.<methode>.<gebruiker>.<epoch>.<handtekening>"; methode is "pk" (passkey) of "pw" (wachtwoord).
+// De epoch van de gebruiker staat erin: een nieuw wachtwoord, MFA aan/uit of een reset verhoogt hem en meldt zo alle
+// sessies van die gebruiker af. Oudere tokens ("<verloop>.<methode>.<handtekening>" en "<verloop>.<handtekening>") zijn
+// van vóór de gebruikers en gelden als sessie van de eigenaar met epoch 0 (zonder methode: passkey).
+function readToken(req) {
   const token = parseCookies(req.headers.cookie)[COOKIE];
   if (!token) return null;
   const parts = token.split('.');
-  let exp, method, sig;
-  if (parts.length === 3) [exp, method, sig] = parts;
-  else if (parts.length === 2) { [exp, sig] = parts; method = 'pk'; }
+  let exp, method = 'pk', uid = users.OWNER_ID, epoch = '0', sig;
+  if (parts.length === 5) [exp, method, uid, epoch, sig] = parts;
+  else if (parts.length === 3) [exp, method, sig] = parts;
+  else if (parts.length === 2) [exp, sig] = parts;
   else return null;
-  if (!exp || !sig || !['pk', 'pw'].includes(method)) return null;
-  const payload = parts.length === 3 ? `${exp}.${method}` : exp;
-  if (!safeEqual(sig, sign(payload))) return null;
-  return Number(exp) > Date.now() ? method : null;
+  if (!exp || !sig || !uid || !['pk', 'pw'].includes(method) || !/^\d+$/.test(epoch)) return null;
+  if (!safeEqual(sig, sign(parts.slice(0, -1).join('.')))) return null;
+  return Number(exp) > Date.now() ? { method, uid, epoch: Number(epoch) } : null;
 }
 
-const isLoggedIn = (req) => sessionMethod(req) !== null;
+// De ingelogde gebruiker en hoe die is ingelogd, of null. Een verwijderde gebruiker of een oude epoch is niet ingelogd.
+function session(req) {
+  const t = readToken(req);
+  if (!t) return null;
+  const user = users.byId(t.uid);
+  if (!user || (user.epoch || 0) !== t.epoch) return null;
+  return { user, method: t.method };
+}
 
-function startSession(res, method = 'pk') {
+const sessionMethod = (req) => session(req)?.method || null;
+const isLoggedIn = (req) => session(req) !== null;
+
+// Een sterke sessie mag de eigen inlog wijzigen: met een passkey gestart, of met een wachtwoord door iemand zonder passkey
+// (dan is het wachtwoord de sterkste inlog die er is). Wie ook een passkey heeft, logt daarvoor met de passkey in.
+const strong = (s) => !!s && (s.method === 'pk' || !users.hasPasskeys(s.user.id));
+
+function startSession(res, method, user) {
   const exp = String(Date.now() + config.sessionHours * 3600 * 1000);
+  const payload = `${exp}.${method}.${user.id}.${user.epoch || 0}`;
   const flags = ['Path=/', 'HttpOnly', 'SameSite=Strict', `Max-Age=${config.sessionHours * 3600}`];
   if (config.secureCookie) flags.push('Secure');
-  res.append('Set-Cookie', `${COOKIE}=${exp}.${method}.${sign(`${exp}.${method}`)}; ${flags.join('; ')}`);
+  res.append('Set-Cookie', `${COOKIE}=${payload}.${sign(payload)}; ${flags.join('; ')}`);
 }
 
 function endSession(res) {
@@ -52,15 +70,26 @@ function endSession(res) {
 }
 
 function requireAdmin(req, res, next) {
-  if (!isLoggedIn(req)) return res.status(401).json({ error: 'Niet ingelogd' });
+  const s = session(req);
+  if (!s) return res.status(401).json({ error: 'Niet ingelogd' });
+  req.user = s.user;
+  req.authMethod = s.method;
   next();
 }
 
-// Gevoelige acties (passkeys en wachtwoord beheren) vragen een sessie die met een passkey is gestart.
-function requirePasskeySession(req, res, next) {
-  const m = sessionMethod(req);
-  if (!m) return res.status(401).json({ error: 'Niet ingelogd' });
-  if (m !== 'pk') return res.status(403).json({ error: 'Log in met een passkey om dit te wijzigen' });
+// Passkeys, wachtwoord en MFA wijzigen vraagt een sterke sessie (zie strong()).
+function requireStrongSession(req, res, next) {
+  const s = session(req);
+  if (!s) return res.status(401).json({ error: 'Niet ingelogd' });
+  if (!strong(s)) return res.status(403).json({ error: 'Log in met een passkey om dit te wijzigen' });
+  req.user = s.user;
+  req.authMethod = s.method;
+  next();
+}
+
+// Gebruikersbeheer is alleen voor de eigenaar; de server dwingt dat af, het verbergen van de tab is alleen gemak.
+function requireOwner(req, res, next) {
+  if (req.user?.id !== users.OWNER_ID) return res.status(403).json({ error: 'Alleen de eigenaar kan gebruikers beheren' });
   next();
 }
 
@@ -86,4 +115,4 @@ const limiter = {
   reset(ip) { fails.delete(ip); },
 };
 
-module.exports = { parseCookies, sessionMethod, requirePasskeySession, isLoggedIn, startSession, endSession, requireAdmin, sameOrigin, safeEqual, limiter };
+module.exports = { parseCookies, session, sessionMethod, strong, requireStrongSession, requireOwner, isLoggedIn, startSession, endSession, requireAdmin, sameOrigin, safeEqual, limiter };
