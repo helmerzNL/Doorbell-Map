@@ -1,0 +1,26 @@
+# Dependabot werkt op beta, net als iedereen: elke ingang heeft `target-branch: beta`, zodat versie-updates als PR naar beta
+# gaan en via een promotie in productie komen (App-Guidance, project-baseline §20).
+# Beveiligingsupdates negeren `target-branch` en gaan altijd naar de Default branch van de repository; die hoort daarom ook
+# `beta` te zijn (Settings → General → Default branch).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    target-branch: "beta"
+    schedule:
+      interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    target-branch: "beta"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "beta"
+    schedule:
+      interval: "weekly"
