@@ -363,7 +363,7 @@
     "Het instellen, wijzigen en verwijderen van het wachtwoord moet je bevestigen met een passkey.": "Setting, changing and removing the password must be confirmed with a passkey.",
     "Wachtwoord instellen…": "Set password…",
     "Wachtwoord verwijderen": "Remove password",
-    "Na elke opslagpoging wordt automatisch een backup gemaakt van de layout (huizen en kaartweergave), de teksten, de app-instellingen, de logo's, de apparaten van bewoners (ook de geblokkeerde) én alle edities. Terugzetten zet dat allemaal terug. Elke backup is een ZIP-bestand in de map <em>backups</em> van de datamap; de nieuwste 200 blijven bewaard. Inloggegevens en de toegangscode voor bewoners gaan niet mee.": "After every save attempt a backup is made automatically of the layout (houses and map view), the texts, the app settings, the logos, the residents' devices (including blocked ones) and all editions. Restoring brings all of that back. Every backup is a ZIP file in the <em>backups</em> folder of the data folder; the newest 200 are kept. Login details and the access code for residents are not included.",
+    "Na elke opslagpoging wordt automatisch een backup gemaakt van de layout (huizen en kaartweergave), de teksten, de app-instellingen, de logo's, de apparaten van bewoners (ook de geblokkeerde) én alle edities. Terugzetten zet dat allemaal terug. Elke backup is een ZIP-bestand in de map <em>backups</em> van de datamap; de nieuwste 50 blijven bewaard en oudere worden opgeruimd. Inloggegevens en de toegangscode voor bewoners gaan niet mee.": "After every save attempt a backup is made automatically of the layout (houses and map view), the texts, the app settings, the logos, the residents' devices (including blocked ones) and all editions. Restoring brings all of that back. Every backup is a ZIP file in the <em>backups</em> folder of the data folder; the newest 50 are kept and older ones are removed. Login details and the access code for residents are not included.",
     "Nieuwe backup met titel": "New backup with title",
     "Bijvoorbeeld: Alles, voor de actie": "For example: Everything, before the event",
     "Titel voor een nieuwe backup": "Title for a new backup",
@@ -826,6 +826,10 @@
     "De apparaten in de backup zijn ongeldig": "The devices in the backup are invalid",
     "De geblokkeerde apparaten in de backup zijn ongeldig": "The blocked devices in the backup are invalid",
     "Deze backup is gemaakt met een nieuwere versie van de app ({versie}). Werk de app eerst bij.": "This backup was made with a newer version of the app ({versie}). Update the app first.",
+    "Naam bij een passkey": "Name for a passkey",
+    "Standaard: de naam van de app": "Default: the name of the app",
+    "Zo heet een passkey voor het beheer in je wachtwoordbeheerder (bijvoorbeeld iCloud-sleutelhanger of Google Wachtwoordmanager), met de gebruikersnaam erachter: <em>Naam (gebruikersnaam)</em>. Het domein staat er altijd ook bij; dat kan een site niet veranderen. Een nieuwe passkey krijgt de naam meteen, een bestaande in browsers die dat kunnen (zoals Chrome) zodra je het beheer opent.": "This is what a passkey for the admin area is called in your password manager (for example iCloud Keychain or Google Password Manager), followed by the username: <em>Name (username)</em>. The domain is always shown as well; a site cannot change that. A new passkey gets the name straight away, an existing one in browsers that support it (such as Chrome) as soon as you open the admin area.",
+    "De naam bij een passkey mag maximaal 40 tekens zijn": "The name for a passkey can be at most 40 characters",
     "@words": [["Sint Maarten", "Halloween"], ["Sint-Maarten", "Halloween"], ["Sintmaarten", "Halloween"]],
   };
   return { en };

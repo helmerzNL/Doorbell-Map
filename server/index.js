@@ -208,7 +208,7 @@ function sanitizeBackup(b) {
     return out;
   };
   const texts = { labels: labelsOf(t.labels), siteTitle: txt(t, 'siteTitle'), intro: txt(t, 'intro'), appName: txt(t, 'appName'), appShortName: txt(t, 'appShortName'), translations: {} };
-  // infovlak, deeltekst en communityvlak (backups van vóór de ZIP hebben ze niet; terugzetten laat ze dan staan)
+  // infovlak, deeltekst, communityvlak en naam bij een passkey (backups van vóór de ZIP hebben ze niet; terugzetten laat ze dan staan)
   for (const f of backups.EXTRA_TEXTS) {
     if (!(f in t)) continue;
     texts[f] = f === 'residentInfo' && t[f] === null ? null : txt(t, f); // null: de standaardtekst van het infovlak
@@ -374,7 +374,7 @@ admin.get('/settings', (req, res) => {
     const t = lang.translations(l);
     tx[l] = Object.fromEntries([...lang.TEXT_FIELDS.map((f) => [f, t[f] || '']), ['labels', { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' }]]);
   }
-  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, communityLooks: community.looksEnabled(), communityTitle: s.communityTitle || '', communityText: s.communityText || '', defaultCommunity: community.defaults(), statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
+  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, communityLooks: community.looksEnabled(), communityTitle: s.communityTitle || '', communityText: s.communityText || '', defaultCommunity: community.defaults(), statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', passkeyName: s.passkeyName || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
 });
 
 // Tekstvelden met hun maximale lengte; gelden voor het Nederlands (gewone instellingen) en voor elke vertaling.
@@ -387,6 +387,7 @@ const TEXT_RULES = {
   qrShareText: { max: 500, multiline: true, error: 'De deeltekst mag maximaal 500 tekens zijn' },
   communityTitle: { max: 80, error: 'De titel van het communityvlak mag maximaal 80 tekens zijn' },
   communityText: { max: 1000, multiline: true, error: 'De tekst van het communityvlak mag maximaal 1000 tekens zijn' },
+  passkeyName: { max: 40, error: 'De naam bij een passkey mag maximaal 40 tekens zijn' },
 };
 // { value } of { error }
 function cleanText(field, raw) {
@@ -470,7 +471,7 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     }
     db.settings.labels = next;
   }
-  for (const f of ['siteTitle', 'appName', 'appShortName']) {
+  for (const f of ['siteTitle', 'appName', 'appShortName', 'passkeyName']) { // passkeyName: leeg = de naam van de app
     if (!(f in body)) continue;
     const r = cleanText(f, body[f]);
     if (r.error) return res.status(400).json({ error: r.error });

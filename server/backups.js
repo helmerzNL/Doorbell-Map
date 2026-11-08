@@ -20,7 +20,7 @@ const editions = require('./editions');
 
 const dir = path.join(config.dataDir, 'backups');
 fs.mkdirSync(dir, { recursive: true });
-const MAX_BACKUPS = Number(process.env.MAX_BACKUPS) || 200;
+const MAX_BACKUPS = Number(process.env.MAX_BACKUPS) || 50; // de nieuwste 50; oudere worden opgeruimd
 
 const FORMAT = 'doorbell-map-backup';
 const FORMAT_VERSION = 2; // 1: zonder app-instellingen, logo's en apparaten (de .json-backups van vóór de ZIP)
@@ -115,9 +115,10 @@ function writeZip(id, doc, files = {}) {
 
 // ---------- inhoud ----------
 
-// Teksten die naast uitleg, namen en statusnamen in de backup staan (Nederlands; de vertalingen staan in translations).
-// Leeg betekent bij deze velden "de standaardtekst"; bij residentInfo staat null voor de standaardtekst.
-const EXTRA_TEXTS = ['residentInfo', 'qrShareText', 'communityTitle', 'communityText'];
+// Teksten die naast uitleg, namen en statusnamen in de backup staan (Nederlands; de vertalingen staan in translations),
+// en de naam bij een passkey. Leeg betekent bij deze velden "de standaardtekst" (bij passkeyName: de naam van de app);
+// bij residentInfo staat null voor de standaardtekst.
+const EXTRA_TEXTS = ['residentInfo', 'qrShareText', 'communityTitle', 'communityText', 'passkeyName'];
 
 // App-instellingen die meegaan: de schakelaars en keuzes uit het beheer, zoals ze werken (een standaard die aan staat
 // wordt true). De toegangscode voor bewoners gaat niet mee: een backup bevat niets waarmee je ergens binnenkomt, net
@@ -297,9 +298,12 @@ function write(id, { reason, title, ok, hash, data, files }) {
   writeZip(id, doc, files);
 }
 
-// Houdt de nieuwste MAX_BACKUPS (inclusief de zojuist geschreven backup); all is de lijst van vóór het schrijven.
-function prune(all) {
-  for (const old of all.slice(0, Math.max(0, all.length + 1 - MAX_BACKUPS))) fs.rmSync(file(old), { force: true });
+// Houdt de nieuwste MAX_BACKUPS en ruimt de oudere op. all is de lijst van vóór het schrijven; added telt de zojuist
+// geschreven backup mee (0 bij het opruimen bij het starten). Geeft het aantal opgeruimde backups.
+function prune(all, added = 1) {
+  const old = all.slice(0, Math.max(0, all.length + added - MAX_BACKUPS));
+  for (const id of old) fs.rmSync(file(id), { force: true });
+  return old.length;
 }
 
 // Een onleesbare nieuwste backup mag het maken van nieuwe backups niet blokkeren.
@@ -494,5 +498,8 @@ function migrate() {
   }
 }
 migrate();
+// Bij het starten ook al opruimen (bijvoorbeeld na het verlagen van MAX_BACKUPS), niet pas bij de volgende backup.
+const removed = prune(ids(), 0);
+if (removed) console.log(`Backups: ${removed} oudere opgeruimd, de nieuwste ${MAX_BACKUPS} blijven bewaard`);
 
-module.exports = { create, importData, parseUpload, list, read, zipFile, remove, setTitle, MAX_TITLE, restore, afterSave, ID, cleanSections, EXTRA_TEXTS };
+module.exports = { MAX_BACKUPS, create, importData, parseUpload, list, read, zipFile, remove, setTitle, MAX_TITLE, restore, afterSave, ID, cleanSections, EXTRA_TEXTS };

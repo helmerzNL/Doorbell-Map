@@ -227,10 +227,26 @@ test('een extra passkey toevoegen voor jezelf (vanuit een wachtwoordsessie met b
   assert.equal((await post('/api/auth/register/options', { name: 'Laptop' }, cookie)).status, 400); // zonder wachtwoord
   const o = await post('/api/auth/register/options', { name: 'Laptop', confirm: { password: PW } }, cookie);
   assert.equal(o.status, 200);
-  assert.equal(o.body.options.user.name, 'Helmer');
-  const v = await post('/api/auth/register/verify', { challengeId: o.body.challengeId, response: fa.register(o.body.options) }, cookie);
+  // de wachtwoordbeheerder toont de naam van de site/app met de gebruikersnaam; de gebruikersnaam zelf verandert niet
+  assert.equal(o.body.options.rp.name, 'Onze wijk');
+  assert.equal(o.body.options.user.name, 'Onze wijk (Helmer)');
+  assert.equal(o.body.options.user.displayName, 'Onze wijk (Helmer)');
+  // met een naam van de app, en daarboven een eigen naam bij een passkey
+  store.db().settings.appName = 'Wijkapp';
+  const withApp = await post('/api/auth/register/options', { name: 'Laptop', confirm: { password: PW } }, cookie);
+  assert.deepEqual([withApp.body.options.rp.name, withApp.body.options.user.name], ['Wijkapp', 'Wijkapp (Helmer)']);
+  store.db().settings.passkeyName = 'Sint Maarten Hoogland';
+  const custom = await post('/api/auth/register/options', { name: 'Laptop', confirm: { password: PW } }, cookie);
+  assert.deepEqual([custom.body.options.rp.name, custom.body.options.user.name], ['Sint Maarten Hoogland', 'Sint Maarten Hoogland (Helmer)']);
+  assert.equal((await status(cookie)).passkeyDetails, null); // nog geen passkey: niets bij te werken
+  const v = await post('/api/auth/register/verify', { challengeId: custom.body.challengeId, response: fa.register(custom.body.options) }, cookie);
   assert.equal(v.status, 200, JSON.stringify(v.body));
   assert.deepEqual(store.db().passkeys.map((p) => [p.name, p.userId]), [['Laptop', 'owner']]);
+  assert.equal(users.byId('owner').username, 'Helmer');
+  // voor de Signal API: zo werkt de browser ook een bestaande passkey bij met de huidige naam
+  assert.deepEqual((await status(cookie)).passkeyDetails, { rpId: config.rpID, userId: users.byId('owner').webauthnId, name: 'Sint Maarten Hoogland (Helmer)', displayName: 'Sint Maarten Hoogland (Helmer)' });
+  assert.equal((await status()).passkeyDetails, null);
+  delete store.db().settings.passkeyName; store.db().settings.appName = '';
   // een vreemde passkey (andere gebruiker) bij een bevestiging
   store.db().users.push({ ...users.byId('owner'), id: 'ander', username: 'Ander', password: null, webauthnId: 'YQ' });
   const other = new FakeAuthenticator({ origin: config.origin, rpID: config.rpID });
