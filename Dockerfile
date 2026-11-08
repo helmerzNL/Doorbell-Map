@@ -1,12 +1,12 @@
 # Dependencies installeren op het build-platform (native, snel en stabiel): alle productiepakketten zijn
 # pure JavaScript, dus node_modules kan zo in elke doelarchitectuur worden gekopieerd. Zo draait npm niet
 # onder QEMU-emulatie voor arm64, waar het sporadisch crashte ("Illegal instruction").
-FROM --platform=$BUILDPLATFORM node:22-alpine AS deps
+FROM --platform=$BUILDPLATFORM node:25-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-FROM node:22-alpine
+FROM node:25-alpine
 ENV NODE_ENV=production DATA_DIR=/data PORT=9888
 RUN apk add --no-cache su-exec
 WORKDIR /app
