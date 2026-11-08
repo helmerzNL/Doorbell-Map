@@ -56,3 +56,7 @@ de tooling; de app heeft Nederlandse bron-teksten en een Engelse vertaling (`pub
 - Nooit `.env` of geheimen committen; alleen `.env.example` staat in git.
 - De gegevens staan in één host-map, `DATA_PATH` (zie `docker-compose.yml` en README), niet in een Docker-volume.
 - Wijzigingen aan `docker-compose.yml` of `.env.example` beschrijf je in de PR onder *Deployment files* als instructie voor de beheerder.
+- Backups (`server/backups.js`) zijn ZIP-bestanden in `DATA_PATH/backups`, in het formaat van
+  [`backup-restore.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/backup-restore.md). Nieuwe gegevens die
+  de beheerder invoert (een instelling, een upload, een lijst) horen in de backup én in `test/backups.test.js`, in dezelfde wijziging;
+  iets waarmee je ergens binnenkomt (inloggegevens, de toegangscode voor bewoners, QR-geheimen, pushsleutels) nooit.

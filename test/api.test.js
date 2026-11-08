@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const os = require('node:os');
 const fs = require('node:fs');
 const path = require('node:path');
+const { unzipSync } = require('fflate');
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'sm-'));
 process.env.SETUP_TOKEN = 'test-setup-token-123';
@@ -165,7 +166,21 @@ test('backup downloaden, uploaden en terugzetten', async () => {
   await put('/api/admin/pdf-view', { center: [52.02, 5.16], zoom: 16 });
   await put('/api/admin/houses', { houses: [{ id: 'up1', street: 'Uploadstraat', number: '1', status: 'green', points: sq }] });
   const id = backups.create('test upload', true, { force: true });
-  const file = await (await j(`/api/admin/backups/${id}`, { headers: { cookie } })).json();
+  // downloaden: de ZIP zoals hij in DATA_PATH/backups staat, met backup.json erin
+  const dl = await j(`/api/admin/backups/${id}`, { headers: { cookie } });
+  assert.equal(dl.status, 200);
+  assert.equal(dl.headers.get('content-type'), 'application/zip');
+  assert.match(dl.headers.get('content-disposition'), new RegExp(`filename="sint_maarten-backup-${id}\\.zip"`));
+  const zip = Buffer.from(await dl.arrayBuffer());
+  const file = JSON.parse(Buffer.from(unzipSync(zip)['backup.json']).toString());
+  assert.equal(file.id, id);
+  assert.equal((await j(`/api/admin/backups/${id}`)).status, 401);
+  assert.equal((await j('/api/admin/backups/1234567890123-abcdef', { headers: { cookie } })).status, 404);
+  // de ZIP weer uploaden zoals hij is
+  const upZip = await j('/api/admin/backups/import', { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', cookie }, body: zip });
+  assert.equal(upZip.status, 200);
+  assert.notEqual((await upZip.json()).id, id);
+  // een .json-backup (van vóór de ZIP) kan ook nog; het id komt nooit uit het bestand
   const up = await j('/api/admin/backups/import', { method: 'POST', headers: h, body: JSON.stringify({ ...file, id: '../../evil' }) });
   assert.equal(up.status, 200);
   const { id: newId } = await up.json();

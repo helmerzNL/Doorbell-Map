@@ -889,14 +889,20 @@
       info.className = 'bk-info';
       const t = document.createElement('strong'); t.textContent = b.title || fmtDate(b.createdAt);
       const d = document.createElement('span');
-      d.textContent = `${b.title ? `${fmtDate(b.createdAt)} · ` : ''}${b.reason}${b.ok ? '' : ' (mislukt)'} · ${b.houses} huizen${b.textLength ? ` · uitleg ${b.textLength} tekens` : ''}`;
+      const parts = [`${b.reason}${b.ok ? '' : ' (mislukt)'}`, `${b.houses} huizen`];
+      if (b.textLength) parts.push(`uitleg ${b.textLength} tekens`);
+      if (b.settings) parts.push('instellingen'); // backups van vóór de ZIP hebben geen instellingen, logo's en apparaten
+      if (b.logos) parts.push(b.logos === 1 ? '1 logo' : `${b.logos} logo's`);
+      if (b.devices) parts.push(b.devices === 1 ? '1 apparaat' : `${b.devices} apparaten`);
+      if (b.blocked) parts.push(`${b.blocked} geblokkeerd`);
+      d.textContent = `${b.title ? `${fmtDate(b.createdAt)} · ` : ''}${parts.join(' · ')}`;
       info.append(t, d);
       if (Array.isArray(b.editions)) info.append(backupEditions(b.editions)); // backups van vóór de edities: niets tonen
       const restore = document.createElement('button');
       restore.textContent = 'Terugzetten';
       restore.onclick = () => restoreBackup(b);
       const dl = document.createElement('a');
-      dl.className = 'btn'; dl.append(MDI.svg('download')); dl.title = 'Downloaden'; dl.href = `/api/admin/backups/${b.id}`; dl.download = `backup-${b.id}.json`;
+      dl.className = 'btn'; dl.append(MDI.svg('download')); dl.title = 'Downloaden'; dl.href = `/api/admin/backups/${b.id}`; dl.download = `sint_maarten-backup-${b.id}.zip`;
       const ed = document.createElement('button');
       ed.append(MDI.svg('pencil')); ed.title = 'Titel wijzigen'; ed.setAttribute('aria-label', 'Titel wijzigen');
       ed.onclick = async () => {
@@ -925,17 +931,20 @@
     $('bk-err').textContent = '';
     try {
       if (f.size > 25 * 1024 * 1024) throw new Error('Het bestand is te groot (maximaal 25 MB)');
-      let data;
-      try { data = JSON.parse(await f.text()); } catch { throw new Error('Dit is geen geldig backupbestand (JSON)'); }
-      await post('/api/admin/backups/import', data, { expectAuth: true });
+      // het bestand gaat zoals het is naar de server (.zip, of .json van een oudere versie); die controleert alles
+      await api('/api/admin/backups/import', { method: 'POST', body: f, headers: { 'Content-Type': 'application/octet-stream' }, expectAuth: true });
       toast('Backup geüpload ✔ Kies nu Terugzetten');
       renderBackups();
     } catch (e) { $('bk-err').textContent = e.message; }
   };
 
   async function restoreBackup(b) {
-    const eds = Array.isArray(b.editions) ? '\nDe edities worden ook teruggezet naar de stand van deze backup.' : '';
-    if (!confirmT(`Backup van ${fmtDate(b.createdAt)} terugzetten?\nDe huidige staat wordt eerst zelf als backup bewaard.${eds}${dirty ? '\n\nLet op: niet-opgeslagen wijzigingen gaan verloren.' : ''}`)) return;
+    // per regel vertaald: welke regels er staan, hangt af van wat de backup bevat
+    const lines = [`Backup van ${fmtDate(b.createdAt)} terugzetten?`, 'De huidige staat wordt eerst zelf als backup bewaard.'];
+    if (Array.isArray(b.editions)) lines.push('De edities worden ook teruggezet naar de stand van deze backup.');
+    if (b.settings) lines.push("Ook de app-instellingen, de logo's en de apparaten van bewoners worden teruggezet.");
+    if (dirty) lines.push('', 'Let op: niet-opgeslagen wijzigingen gaan verloren.');
+    if (!confirm(lines.map((l) => I18n.tr(l)).join('\n'))) return;
     try {
       if (editing) leaveEditing(); // ook een editie in bewerking kan door het terugzetten veranderen
       await post(`/api/admin/backups/${b.id}/restore`, {}, { expectAuth: true });
