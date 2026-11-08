@@ -450,7 +450,8 @@ const decideRoute = (approve) => (req, res) => {
 admin.post('/changes/:id/approve', backups.afterSave('Wijziging van bewoner goedgekeurd'), decideRoute(true));
 admin.post('/changes/:id/reject', backups.afterSave('Wijziging van bewoner afgewezen'), decideRoute(false));
 
-admin.delete('/residents/:rid', (req, res) => {
+// Apparaten en blokkades gaan mee in de backups, dus na een wijziging komt er een backup.
+admin.delete('/residents/:rid', backups.afterSave('Apparaat ontkoppeld'), (req, res) => {
   const d = db();
   const before = d.residents.length;
   d.residents = d.residents.filter((r) => r.rid !== req.params.rid);
@@ -460,7 +461,7 @@ admin.delete('/residents/:rid', (req, res) => {
 });
 
 // Een apparaat blokkeren (en optioneel ook het IP-adres); de koppeling en openstaande wijzigingen verdwijnen.
-admin.post('/residents/:rid/block', (req, res) => {
+admin.post('/residents/:rid/block', backups.afterSave('Apparaat geblokkeerd'), (req, res) => {
   const d = db();
   const rec = d.residents.find((r) => r.rid === req.params.rid);
   if (!rec) return res.status(404).json({ error: 'Apparaat niet gevonden' });
@@ -473,7 +474,7 @@ admin.post('/residents/:rid/block', (req, res) => {
   res.json({ blocked: true, withIp });
 });
 
-admin.delete('/blocks/:id', (req, res) => {
+admin.delete('/blocks/:id', backups.afterSave('Blokkade opgeheven'), (req, res) => {
   const d = db();
   const before = (d.blocked || []).length;
   d.blocked = (d.blocked || []).filter((b) => b.id !== req.params.id);
@@ -508,4 +509,4 @@ admin.post('/push/test', async (req, res) => {
   res.json(r);
 });
 
-module.exports = { resident, admin, prune, reconcile, enabled, mode, geofence, codeOn, qrOnly, GEO_MAX_ACC, GEO_MIN, GEO_MAX, GEO_DEFAULT_RADIUS, appOnly, info, untilMs, DEFAULT_INFO, DEFAULT_SHARE_TEXT, shareText, defaultShareTexts };
+module.exports = { resident, admin, prune, reconcile, enabled, mode, geofence, codeOn, qrOnly, MAX_RESIDENTS, GEO_MAX_ACC, GEO_MIN, GEO_MAX, GEO_DEFAULT_RADIUS, appOnly, info, untilMs, DEFAULT_INFO, DEFAULT_SHARE_TEXT, shareText, defaultShareTexts };

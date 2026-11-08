@@ -134,7 +134,7 @@ test('backups: nemen alle edities mee, tonen welke, en zetten ze terug', async (
 
 test('backups: uploaden met edities controleert die edities', async () => {
   const id = backupsH.list().find((x) => Array.isArray(x.editions) && x.editions.length).id;
-  const file = await (await call('GET', `/api/admin/backups/${id}`)).json();
+  const file = backupsH.read(id); // backup.json, als .json-backup te uploaden
   const ok = await call('POST', '/api/admin/backups/import', file);
   assert.equal(ok.status, 200);
   assert.notEqual((await ok.json()).id, file.id); // het id komt nooit uit het bestand

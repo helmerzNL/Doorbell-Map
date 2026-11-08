@@ -414,6 +414,7 @@
         <header class="set-card-head"><h4>App</h4><p>Zo komt de site op het beginscherm van een telefoon te staan.</p></header>
         <div class="field" data-perlang><label for="org-appname">Naam van de app</label><input type="text" id="org-appname" maxlength="45" placeholder="Standaard: de sitenaam"></div>
         <div class="field" data-perlang><label for="org-short">Korte naam onder het icoon (max. 12 tekens)</label><input type="text" id="org-short" maxlength="12" placeholder="Standaard: de eerste 12 tekens van de naam"><div class="set-hint">Een al geïnstalleerde app neemt een nieuwe naam pas over na een tijdje (of na opnieuw installeren).</div></div>
+        <div class="field"><label for="org-passkey">Naam bij een passkey</label><input type="text" id="org-passkey" maxlength="40" placeholder="Standaard: de naam van de app"><div class="set-hint">Zo heet een passkey voor het beheer in je wachtwoordbeheerder (bijvoorbeeld iCloud-sleutelhanger of Google Wachtwoordmanager), met de gebruikersnaam erachter: <em>Naam (gebruikersnaam)</em>. Het domein staat er altijd ook bij; dat kan een site niet veranderen. Een nieuwe passkey krijgt de naam meteen, een bestaande in browsers die dat kunnen (zoals Chrome) zodra je het beheer opent.</div></div>
       </div>
 
       <div class="set-card">
@@ -568,14 +569,14 @@
     <!-- ===== Backups ===== -->
     <section data-panel="backups" class="hidden">
       <div class="set-card">
-        <header class="set-card-head"><h4>Backups</h4><p>Na elke opslagpoging wordt automatisch een backup gemaakt van de layout (huizen en kaartweergave), de teksten (uitleg, namen, statusnamen) én alle edities. Terugzetten zet ook de edities terug. Het logo valt erbuiten; de nieuwste 200 blijven bewaard.</p></header>
+        <header class="set-card-head"><h4>Backups</h4><p>Na elke opslagpoging wordt automatisch een backup gemaakt van de layout (huizen en kaartweergave), de teksten, de app-instellingen, de logo's, de apparaten van bewoners (ook de geblokkeerde) én alle edities. Terugzetten zet dat allemaal terug. Elke backup is een ZIP-bestand in de map <em>backups</em> van de datamap; de nieuwste 50 blijven bewaard en oudere worden opgeruimd. Inloggegevens en de toegangscode voor bewoners gaan niet mee.</p></header>
         <div class="field"><label for="bk-title">Nieuwe backup met titel</label>
           <div class="row row-tight"><input type="text" id="bk-title" maxlength="40" placeholder="Bijvoorbeeld: Alles, voor de actie" aria-label="Titel voor een nieuwe backup"><button id="bk-make">Backup maken</button></div>
           <div class="set-hint">Met een korte titel (ook later via de potloodknop) herken je een backup makkelijk.</div>
         </div>
         <div class="field"><label for="bk-file">Gedownloade backup uploaden</label>
-          <div class="row row-tight"><input type="file" id="bk-file" accept="application/json,.json" hidden><button id="bk-upload" type="button"><i data-mdi="upload"></i> Backup uploaden</button></div>
-          <div class="set-hint">Kies een eerder gedownload backupbestand (.json). Het komt als nieuwe backup in de lijst; daarna kies je <em>Terugzetten</em>.</div>
+          <div class="row row-tight"><input type="file" id="bk-file" accept=".zip,application/zip,.json,application/json" hidden><button id="bk-upload" type="button"><i data-mdi="upload"></i> Backup uploaden</button></div>
+          <div class="set-hint">Kies een eerder gedownload backupbestand (.zip, of .json van een oudere versie). Het komt als nieuwe backup in de lijst; daarna kies je <em>Terugzetten</em>.</div>
         </div>
         <div id="bk-list" class="bk-list"></div>
         <p class="error" id="bk-err"></p>

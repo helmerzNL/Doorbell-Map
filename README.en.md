@@ -48,7 +48,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - **Editions**: the map of every occasion with a name and year, created as a copy of the live map or of another edition and edited separately; switch in the admin area between *Live* and editions and compare which houses took part then and now, with the numbers. The front page never changes because of them. See [Editions](#editions-comparing-earlier-occasions).
 - Settings in seven clear tabs; the admin area can also be installed as its own **app**.
 - Your own **logo** (with an optional small logo for the header), an optional **favicon** (also the icon of the installed app; the lantern by default), explanation, info box, **site and app name** and your own names for the statuses.
-- Automatic **backups** after every save attempt, with short titles and manual backups.
+- Automatic **backups** after every save attempt (ZIP, with app settings, logos and devices), with short titles and manual backups.
 - Version number and commit visible in the settings menu.
 
 ## The website for visitors
@@ -211,7 +211,7 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 
 **Editions** – create an edition with a name and year (a copy of the live map or of another edition), the numbers per edition, view or edit an edition, change the name or year, and delete. See [Editions](#editions-comparing-earlier-occasions).
 
-**Backups** – after every save attempt a backup of the layout, the texts and all editions is made automatically; each backup shows which editions it contains, and restoring also restores the editions. Give a backup a **short title** (✎, max. 40 characters, for example "Everything" or "Layout only") or make one yourself with *Make backup*. Restoring or downloading is always possible; deleting (one or several at once) must be confirmed with your passkey (without a passkey: with your password and, if on, an MFA code).
+**Backups** – after every save attempt a backup of the layout, the texts, the app settings, the logos, the residents' devices (including blocked ones) and all editions is made automatically; each backup shows what it contains, and restoring brings all of that back. Give a backup a **short title** (✎, max. 40 characters, for example "Everything" or "Layout only") or make one yourself with *Make backup*. Restoring or downloading is always possible; deleting (one or several at once) must be confirmed with your passkey (without a passkey: with your password and, if on, an MFA code).
 
 **Version** – at the bottom of the menu is the version and commit of the running build (see [Version number](#version-number)).
 
@@ -294,9 +294,16 @@ also published under that tag (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). The `1.
 Locally (without a build) the app shows `dev` with the commit from git. The workflow needs write access to the repo to set the tag (it is in `docker.yml`).
 
 ## Backups
-After **every save attempt** (houses/layout, texts, map view, editions) the server makes a JSON backup in `data/backups/` of the layout (houses + map view), the texts (explanation, app name) and **all editions**.
-Identical states are not stored twice and the newest 200 are kept (`MAX_BACKUPS` to change that). The logo is not part of the backups. The files are stored compactly; with many editions a backup gets bigger, count on roughly the size of the live map per edition.
-A downloaded backup (.json, download button in the list) can be added again with **Upload backup** (25 MB at most); it appears as a new backup in the list. Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); afterwards exactly the editions from that backup are there. A backup from before editions existed leaves the editions alone. The list shows for each backup how many and which editions it contains. Deleting asks for confirmation with your passkey or password.
+After **every save attempt** (houses/layout, texts and settings, map view, logos, editions, unlinking or (un)blocking a device) the server makes a backup in the `backups` folder of the data folder: `DATA_PATH/backups` (in the container `/data/backups`). Every backup is one ZIP file, `sint_maarten-backup-<id>.zip`, containing:
+- `backup.json`: the layout (houses + map view), the texts (explanation, names, status names, info panel, share text, community panel and the translations), the **app settings** (the switches and choices in the admin area), the **residents' devices** and the **blocked devices**, and **all editions**;
+- `files/`: the **logos** (logo, small logo and favicon) as separate images, so you can also take one out of the ZIP without the app.
+
+Not in the backup: users, login details and invitations, the access code for residents, the QR secrets, the push keys, and pending changes and messages from residents. A device is only stored with the hash of its key, as in the database: that gets nobody in anywhere, but a device that still has its key is linked (or blocked) again after restoring. The IP addresses of devices are included, so keep a downloaded backup safe.
+
+Identical states are not stored twice (the last use of a device does not count) and the **newest 50** are kept; older ones are removed, on every new backup and when the server starts (`MAX_BACKUPS` to change the number). `backup.json` is compressed in the ZIP; every backup holds the logos again, so count on roughly 50 × (the logos + the size of the live map per edition) of disk space.
+A downloaded backup (.zip, download button in the list) can be added again with **Upload backup** (25 MB at most); it appears as a new backup in the list. The server first checks the whole file: every logo must match its sha256 in `backup.json` and be a PNG, JPEG or WebP of at most 5 MB, and a refused file changes nothing. A `.json` backup from an older version still works; it has no settings, logos or devices and leaves those alone when restored. A backup from a newer version of the app is refused: update the app first.
+Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); afterwards exactly the editions, settings, logos and devices from that backup are there. The access code for residents stays the current one (without a code the switch is off afterwards). A backup from before editions existed leaves the editions alone. The list shows for each backup what it contains (houses, settings, logos, devices and which editions). Deleting asks for confirmation with your passkey or password.
+**Updating from a version with .json backups:** on the first start the server converts the existing backups (`<id>.json`) to `sint_maarten-backup-<id>.zip`, with the same content, and removes all but the newest 50 (200 were kept before). To keep more, set `MAX_BACKUPS` in `.env` before updating. An older version of the app no longer sees the ZIP backups (they do stay in the folder).
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
 
 ## Editions: comparing earlier occasions
@@ -318,6 +325,8 @@ Editions are stored as separate files in `data/editions/` (at most 100) and are 
 
 ## Name of the app
 Under *Settings* (⚙) → *Config* you also set the **name of the site** (next to the logo and in the PDF; default `SITE_TITLE`) and the **name of the app** and a short name (max. 12 characters, under the icon). Those are used when the site is installed on a phone or computer.
+
+Below them you set the **name for a passkey** (max. 40 characters; empty = the name of the app, otherwise the site name). A passkey for the admin area is saved in your password manager under that name, followed by the username, for example *Halloween Hoogland (beheerder)*. That way you recognise it even when several apps run on the same domain (a beta next to the stable version on another port shares the domain). The domain is always shown as well: a site cannot change that. A new passkey gets the name straight away. An existing passkey is updated in browsers that support it (the WebAuthn Signal API, for example Chrome) as soon as you open the admin area; elsewhere add a new passkey and remove the old one. The name is part of the backups.
 Without input the site name (`SITE_TITLE`) applies. An already installed app only adopts a new name after a while.
 
 ## Admin area as an app
