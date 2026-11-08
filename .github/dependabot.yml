@@ -18,6 +18,11 @@ updates:
     target-branch: "beta"
     schedule:
       interval: "weekly"
+    ignore:
+      # Het image draait de Node-versie waarop CI de tests draait (node-version in .github/workflows/), een LTS-versie.
+      # Een nieuwe major (en zeker een oneven versie zonder LTS) kies je bewust, op beide plekken tegelijk.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

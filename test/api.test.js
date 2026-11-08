@@ -170,7 +170,8 @@ test('backup downloaden, uploaden en terugzetten', async () => {
   const dl = await j(`/api/admin/backups/${id}`, { headers: { cookie } });
   assert.equal(dl.status, 200);
   assert.equal(dl.headers.get('content-type'), 'application/zip');
-  assert.match(dl.headers.get('content-disposition'), new RegExp(`filename="sint_maarten-backup-${id}\\.zip"`));
+  // met of zonder aanhalingstekens (allebei geldig; Express 5.3 laat ze weg als het kan)
+  assert.match(dl.headers.get('content-disposition'), new RegExp(`^attachment; filename="?sint_maarten-backup-${id}\\.zip"?$`));
   const zip = Buffer.from(await dl.arrayBuffer());
   const file = JSON.parse(Buffer.from(unzipSync(zip)['backup.json']).toString());
   assert.equal(file.id, id);
