@@ -169,26 +169,25 @@ function cleanSettings(raw) {
 
 // Apparaten van bewoners (elk aan één huis gekoppeld) en geblokkeerde apparaten. Van de sleutel van een apparaat staat
 // alleen de sha256 erin, zoals in de database: daarmee kom je nergens binnen, maar een apparaat dat zijn sleutel nog
-// heeft, blijft na terugzetten gekoppeld (of geblokkeerd). Openstaande wijzigingen en berichten gaan niet mee.
+// heeft, blijft na terugzetten gekoppeld (of geblokkeerd). IP-adressen van bewoners gaan nooit mee: terugzetten laat
+// het IP-adres staan dat de app nu heeft, en een apparaat krijgt het weer bij het volgende gebruik. Openstaande
+// wijzigingen en berichten gaan ook niet mee.
 const MAX_BLOCKED = 10000;
 const HEX12 = /^[0-9a-f]{12}$/, HEX64 = /^[0-9a-f]{64}$/;
 
 function devicesData(d) {
-  return (d.residents || []).map((r) => ({ rid: r.rid, tokenHash: r.tokenHash, houseId: r.houseId, createdAt: r.createdAt, lastActivity: r.lastActivity || r.createdAt, ip: r.ip || null, notice: r.notice || null }));
+  return (d.residents || []).map((r) => ({ rid: r.rid, tokenHash: r.tokenHash, houseId: r.houseId, createdAt: r.createdAt, lastActivity: r.lastActivity || r.createdAt, notice: r.notice || null }));
 }
+// Een blokkade hoort altijd bij een apparaat (de hash van zijn sleutel); een blokkade zonder die hash zou in de backup
+// alleen nog een IP-adres zijn en gaat dus niet mee.
 function blockedData(d) {
-  return (d.blocked || []).map((b) => ({ id: b.id, tokenHash: b.tokenHash || null, ip: b.ip || null, title: b.title || '', at: b.at }));
+  return (d.blocked || []).filter((b) => b.tokenHash).map((b) => ({ id: b.id, tokenHash: b.tokenHash, title: b.title || '', at: b.at }));
 }
 
 const iso = (v, bad) => {
   const t = typeof v === 'string' ? Date.parse(v) : NaN;
   if (!Number.isFinite(t)) throw bad;
   return new Date(t).toISOString();
-};
-const ipOf = (v, bad) => {
-  if (v == null || v === '') return null;
-  if (typeof v !== 'string' || v.length > 64) throw bad;
-  return v;
 };
 
 function cleanDevices(raw) {
@@ -208,7 +207,8 @@ function cleanDevices(raw) {
       if (typeof n !== 'object' || !['approved', 'rejected'].includes(n.decision) || !STATUSES.includes(n.status)) throw bad;
       notice = { decision: n.decision, status: n.status, at: iso(n.at, bad) };
     }
-    return { rid: r.rid, tokenHash: r.tokenHash, houseId: r.houseId, createdAt: iso(r.createdAt, bad), lastActivity: iso(r.lastActivity ?? r.createdAt, bad), ip: ipOf(r.ip, bad), notice };
+    // een IP-adres in het bestand (backups van v2.0.0) wordt genegeerd
+    return { rid: r.rid, tokenHash: r.tokenHash, houseId: r.houseId, createdAt: iso(r.createdAt, bad), lastActivity: iso(r.lastActivity ?? r.createdAt, bad), notice };
   });
 }
 
@@ -216,14 +216,14 @@ function cleanBlocked(raw) {
   if (raw === undefined) return undefined;
   const bad = new Error('De geblokkeerde apparaten in de backup zijn ongeldig');
   if (!Array.isArray(raw) || raw.length > MAX_BLOCKED) throw bad;
-  return raw.map((b) => {
+  const out = [];
+  for (const b of raw) {
     if (!b || typeof b !== 'object' || !HEX12.test(b.id)) throw bad;
-    const tokenHash = b.tokenHash ?? null;
-    if (tokenHash !== null && !HEX64.test(tokenHash)) throw bad;
-    const ip = ipOf(b.ip, bad);
-    if (!tokenHash && !ip) throw bad; // een blokkade zonder apparaat en zonder IP-adres blokkeert niets
-    return { id: b.id, tokenHash, ip, title: String(b.title ?? '').slice(0, 200), at: iso(b.at, bad) };
-  });
+    if (b.tokenHash == null) continue; // zonder apparaat blijft alleen een IP-adres over, en dat gaat niet mee
+    if (!HEX64.test(b.tokenHash)) throw bad;
+    out.push({ id: b.id, tokenHash: b.tokenHash, title: String(b.title ?? '').slice(0, 200), at: iso(b.at, bad) }); // zonder IP-adres
+  }
+  return out;
 }
 
 // De delen die een backup van vóór de ZIP niet heeft, gecontroleerd; een deel dat ontbreekt, ontbreekt ook hier
@@ -457,9 +457,14 @@ function restore(id) {
     if (communityWasOn && db.settings.communityEnabled !== true) community.clear(); // net als bij uitzetten in het beheer
   }
   Object.assign(db.settings, staged.next);
-  if (blocked) db.blocked = blocked;
+  // IP-adressen staan niet in een backup: wat de app nu van een apparaat of blokkade weet, blijft staan.
+  if (blocked) {
+    const liveIp = new Map((db.blocked || []).map((b) => [b.id, b.ip]));
+    db.blocked = blocked.map((b) => ({ ...b, ip: liveIp.get(b.id) || null }));
+  }
   if (devices) {
-    db.residents = devices;
+    const liveIp = new Map((db.residents || []).map((r) => [r.rid, r.ip]));
+    db.residents = devices.map((r) => ({ ...r, ip: liveIp.get(r.rid) || null }));
     require('./residents').prune(); // koppelingen met huizen die er niet meer zijn, en wijzigingen van apparaten die er niet meer zijn
   }
   store.save();
@@ -497,9 +502,40 @@ function migrate() {
     }
   }
 }
+// Eenmalig: de IP-adressen van bewoners uit bestaande backups wissen (v2.0.0 nam ze nog mee). De rest van de backup,
+// de logo's ook, blijft zoals hij was. Daarna staat er een merkbestand in de map, zodat dit niet bij elke start alle
+// backups hoeft te lezen; nieuwe en geüploade backups krijgen nooit IP-adressen.
+const IP_MARKER = path.join(dir, '.zonder-ip-adressen');
+function wipeIps() {
+  if (fs.existsSync(IP_MARKER)) return;
+  const hasIp = (list) => Array.isArray(list) && list.some((x) => x && typeof x === 'object' && 'ip' in x);
+  let n = 0;
+  for (const id of ids()) {
+    try {
+      const zip = fs.readFileSync(file(id));
+      const doc = docOf(zip);
+      if (!hasIp(doc.devices) && !hasIp(doc.blocked)) continue;
+      if (Array.isArray(doc.devices)) doc.devices = doc.devices.map(({ ip, ...r }) => r);
+      if (Array.isArray(doc.blocked)) doc.blocked = doc.blocked.filter((b) => b && b.tokenHash).map(({ ip, ...b }) => b);
+      // alle andere onderdelen (de logo's) gaan ongewijzigd mee; die zijn ooit door deze app geschreven
+      const entries = { [DOC]: [strToU8(JSON.stringify(doc)), { level: 6 }] };
+      for (const [name, data] of Object.entries(unzipSync(zip))) if (name !== DOC) entries[name] = [data, { level: 0 }];
+      const tmp = `${file(id)}.tmp`;
+      fs.writeFileSync(tmp, zipSync(entries));
+      fs.renameSync(tmp, file(id));
+      n++;
+    } catch (err) {
+      console.error(`Backup ${fileName(id)}: IP-adressen niet gewist: ${err.message}`);
+    }
+  }
+  fs.writeFileSync(IP_MARKER, 'De IP-adressen van bewoners zijn uit de backups in deze map gewist.\n');
+  if (n) console.log(`Backups: IP-adressen van bewoners gewist uit ${n} backup(s)`);
+}
+
 migrate();
 // Bij het starten ook al opruimen (bijvoorbeeld na het verlagen van MAX_BACKUPS), niet pas bij de volgende backup.
 const removed = prune(ids(), 0);
 if (removed) console.log(`Backups: ${removed} oudere opgeruimd, de nieuwste ${MAX_BACKUPS} blijven bewaard`);
+wipeIps();
 
 module.exports = { MAX_BACKUPS, create, importData, parseUpload, list, read, zipFile, remove, setTitle, MAX_TITLE, restore, afterSave, ID, cleanSections, EXTRA_TEXTS };
