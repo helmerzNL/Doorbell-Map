@@ -51,6 +51,14 @@
     await post('/api/auth/register/verify', { challengeId, response });
   }
 
+  // Werkt de naam van de eigen bestaande passkeys bij in de wachtwoordbeheerder (WebAuthn Signal API). Alleen browsers die
+  // dat kunnen (bijvoorbeeld Chrome); stil, zonder melding als het niet lukt.
+  function signalPasskeyName(details) {
+    const pkc = window.PublicKeyCredential;
+    if (!details || typeof pkc?.signalCurrentUserDetails !== 'function') return;
+    pkc.signalCurrentUserDetails(details).catch(() => {});
+  }
+
   async function login() {
     const { challengeId, options } = await post('/api/auth/login/options');
     const response = await SimpleWebAuthnBrowser.startAuthentication({ optionsJSON: options });
@@ -669,6 +677,7 @@
       $('stats-public').checked = st.statsPublic;
       statsShow = st.statsShow; for (const k of ['green', 'red', 'none']) $(`stats-${k}`).checked = statsShow[k];
       $('org-multi').checked = st.multilingual;
+      $('org-passkey').value = st.passkeyName || '';
       langPicker.setValue(st.defaultLang);
       const def = { shareText: st.defaultShareTexts, community: st.defaultCommunity };
       const nl = draftFrom({ siteTitle: org.siteTitle, appName: org.appName, appShortName: org.appShortName, intro: org.intro, residentInfo: st.residentInfo, qrShareText: st.qrShareText, communityTitle: st.communityTitle, communityText: st.communityText, labels: customLabels(org.labels) }, 'nl', def);
@@ -788,7 +797,8 @@
       }); // gelijk aan de standaardtekst = leeg
       const nl = norm('nl', cfg.drafts.nl);
       const translations = Object.fromEntries(Object.entries(cfg.drafts).filter(([l]) => l !== 'nl').map(([l, d]) => [l, norm(l, d)]));
-      const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ ...nl, translations }), expectAuth: true });
+      const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ ...nl, translations, passkeyName: $('org-passkey').value }), expectAuth: true });
+      api('/api/auth/status').then((s) => signalPasskeyName(s.passkeyDetails)).catch(() => {}); // de nieuwe naam ook in de wachtwoordbeheerder
       const data = I18n.localize(await api('/api/map'));
       Wijk.setLabels(data.labels); org.labels = res.labels;
       if (typeof render === 'function' && map) { render(); renderChangesIfOpen(); }
@@ -2359,6 +2369,7 @@
     session = st;
     if (inviteToken()) return showInvite(inviteToken());
     if (st.loggedIn) {
+      signalPasskeyName(st.passkeyDetails);
       mountPwLogin(false);
       document.querySelector('#settings [data-tab="users"]').hidden = !st.user.owner;
       syncConfirmLabels();

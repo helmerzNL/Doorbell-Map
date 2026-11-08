@@ -84,7 +84,8 @@ test('oude .json-backups worden bij het starten omgezet naar sint_maarten-backup
 
 test("een backup bevat de app-instellingen en de logo's, als ZIP met backup.json en files/", async () => {
   assert.equal((await put('/api/admin/houses', { houses: [{ id: 'n1', street: 'Nieuwstraat', number: '1', status: 'red', points: sq }] })).status, 200);
-  const settings = { simpleUi: true, statsPublic: true, statsShow: { red: false }, residentsCode: CODE, residentsCodeOn: true, communityEnabled: true, multilingual: true, defaultLang: 'en', residentsGeofenceRadius: 800, residentInfo: 'Info voor bewoners', qrShareText: 'Deel dit', communityTitle: 'Doe mee' };
+  const settings = { simpleUi: true, statsPublic: true, statsShow: { red: false }, residentsCode: CODE, residentsCodeOn: true, communityEnabled: true, multilingual: true, defaultLang: 'en', residentsGeofenceRadius: 800, residentInfo: 'Info voor bewoners', qrShareText: 'Deel dit', communityTitle: 'Doe mee', passkeyName: 'Sint Maarten Hoogland' };
+  assert.equal((await put('/api/admin/settings', { passkeyName: 'x'.repeat(41) })).status, 400); // max. 40 tekens
   assert.equal((await put('/api/admin/settings', settings)).status, 200);
   // een logo opslaan of verwijderen maakt een backup, net als andere instellingen
   const before = backups.list().length;
@@ -131,10 +132,11 @@ test("een backup bevat de app-instellingen en de logo's, als ZIP met backup.json
   assert.equal(doc.texts.residentInfo, 'Info voor bewoners');
   assert.equal(doc.texts.qrShareText, 'Deel dit');
   assert.equal(doc.texts.communityTitle, 'Doe mee');
+  assert.equal(doc.texts.passkeyName, 'Sint Maarten Hoogland');
   // niets waarmee je ergens binnenkomt: geen toegangscode, inloggegevens, QR-geheimen of pushsleutels
   const text = files['backup.json'].toString();
   assert.ok(!text.includes(CODE));
-  for (const w of ['"residentsCode"', 'houseSecrets', 'passkey', 'webauthn', 'password', 'recovery', 'vapid', 'subscription']) assert.ok(!text.toLowerCase().includes(w.toLowerCase()), w);
+  for (const w of ['"residentsCode"', 'houseSecrets', '"passkeys"', 'publicKey', 'webauthn', 'password', 'recovery', 'vapid', 'subscription']) assert.ok(!text.toLowerCase().includes(w.toLowerCase()), w);
 
   // een titel wijzigen laat de logo's in de ZIP staan
   assert.equal((await put(`/api/admin/backups/${id}/title`, { title: 'Alles, ook logo' })).status, 200);
@@ -147,7 +149,7 @@ test("terugzetten zet de instellingen en logo's terug; de toegangscode blijft di
   const id = backups.list().find((x) => x.reason === 'Handmatig').id;
   const LOGO2 = png(300, 100, 9);
   const SMALL = png(64, 64, 7);
-  await put('/api/admin/settings', { simpleUi: false, communityEnabled: false, defaultLang: 'nl', residentsCode: '555555', residentInfo: 'Anders', statsShow: { red: true } });
+  await put('/api/admin/settings', { simpleUi: false, communityEnabled: false, defaultLang: 'nl', residentsCode: '555555', residentInfo: 'Anders', statsShow: { red: true }, passkeyName: '' });
   assert.equal((await upload('/api/admin/logo', LOGO2)).status, 200);
   assert.equal((await upload('/api/admin/logo-small', SMALL)).status, 200);
   assert.equal((await j('/api/admin/favicon', { method: 'DELETE', headers: { cookie } })).status, 200);
@@ -168,6 +170,7 @@ test("terugzetten zet de instellingen en logo's terug; de toegangscode blijft di
   assert.equal(m.defaultLang, 'en');
   const s = await adminSettings();
   assert.equal(s.residentInfo, 'Info voor bewoners');
+  assert.equal(s.passkeyName, 'Sint Maarten Hoogland');
   assert.equal(s.residentsCode, '555555'); // de code ging niet mee in de backup
   assert.equal(s.residentsCodeOn, true);
   assert.equal(s.statsShow.red, false);

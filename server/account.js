@@ -20,6 +20,18 @@ const lang = require('./lang');
 const { hashPassword, verifyPassword } = require('./password');
 
 const siteTitle = () => lang.text('siteTitle') || config.siteTitle;
+// De naam van een passkey in de wachtwoordbeheerder: de eigen naam uit het beheer (Config → App), anders de naam van de
+// app, anders de sitenaam. Het domein dat er ook bij staat, kan een site niet veranderen. iCloud-sleutelhanger, Google
+// Wachtwoordmanager en de meeste andere tonen naast het domein de accountnaam en niet de naam van de site (rp.name);
+// daarom staat de naam ook in de accountnaam: "Sint Maarten Hoogland (beheerder)". Inloggen gebruikt die naam niet.
+const passkeyLabel = () => store.db().settings?.passkeyName || lang.text('appName') || siteTitle();
+const passkeyAccount = (username) => `${passkeyLabel()} (${username})`;
+// Voor de WebAuthn Signal API in de browser: zo krijgt ook een bestaande passkey van deze gebruiker de huidige naam.
+const passkeyDetails = (req, user) => {
+  if (!user || !store.db().passkeys.some((p) => p.userId === user.id)) return null;
+  const name = passkeyAccount(user.username);
+  return { rpId: origin.rpID(req), userId: user.webauthnId, name, displayName: name };
+};
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const asyncRoute = (fn) => (req, res) =>
   Promise.resolve(fn(req, res)).catch((err) => {
@@ -147,6 +159,7 @@ pub.get('/status', (req, res) => {
     passkeysEnabled: db.passkeys.length > 0,
     passkey: passkeySupportFor(req),
     user: s ? { ...users.summary(s.user), strong: auth.strong(s) } : null,
+    passkeyDetails: s ? passkeyDetails(req, s.user) : null,
   });
 });
 
@@ -182,10 +195,10 @@ pub.post('/register/options', asyncRoute(async (req, res) => {
   }
   const at = ceremony(req);
   const options = await generateRegistrationOptions({
-    rpName: siteTitle(),
+    rpName: passkeyLabel(),
     rpID: at.rpID,
-    userName,
-    userDisplayName: userName,
+    userName: passkeyAccount(userName), // alleen wat de wachtwoordbeheerder toont; de gebruikersnaam zelf blijft userName
+    userDisplayName: passkeyAccount(userName),
     userID: Buffer.from(webauthnId, 'base64url'),
     attestationType: 'none',
     excludeCredentials: pkOptions(exclude),
