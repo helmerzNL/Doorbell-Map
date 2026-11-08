@@ -16,6 +16,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - [Settings](#settings)
 - [Logging in: passkey, password and MFA](#logging-in-passkey-password-and-mfa)
 - [Inviting more admins](#inviting-more-admins)
+- [Audit log](#audit-log)
 - [Editions: comparing earlier occasions](#editions-comparing-earlier-occasions)
 - [Installing as an app and offline use](#installing-as-an-app-and-offline-use)
 - [Deploy it yourself with Docker](#deploy-it-yourself-with-docker)
@@ -49,6 +50,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - Settings in seven clear tabs; the admin area can also be installed as its own **app**.
 - Your own **logo** (with an optional small logo for the header), an optional **favicon** (also the icon of the installed app; the lantern by default), explanation, info box, **site and app name** and your own names for the statuses.
 - Automatic **backups** after every save attempt (ZIP, with app settings, logos and devices), with short titles and manual backups.
+- An **audit log** in the data folder with every change and who made it: an administrator or a resident's device, and per house what changed. See [Audit log](#audit-log).
 - Version number and commit visible in the settings menu.
 
 ## The website for visitors
@@ -306,6 +308,28 @@ Restoring is possible in *Settings → Backups* (the current state is first save
 **Updating from a version with .json backups:** on the first start the server converts the existing backups (`<id>.json`) to `sint_maarten-backup-<id>.zip`, with the same content, and removes all but the newest 50 (200 were kept before). To keep more, set `MAX_BACKUPS` in `.env` before updating. An older version of the app no longer sees the ZIP backups (they do stay in the folder).
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
 
+## Audit log
+Every change is written straight to **`DATA_PATH/audit-log.jsonl`** (in the container `/data/audit-log.jsonl`). The file has one JSON object per line (*JSON Lines*), so a change is added immediately without rewriting the whole file. You can read it with a text editor, or with for example `jq` (`jq -c 'select(.category == "house")' audit-log.jsonl`).
+
+Every line has:
+- `at`: when;
+- `category`: **`house`** for a house, or **`site`** for everything else;
+  - `house` covers: status, address, shape or note in the layout or in an edition, residents' proposals and approving or rejecting them, linking, unlinking or (un)blocking a device, and renewing a QR code;
+  - `site` covers: settings and texts, map view, logos, editions, backups, users and login details, and messages;
+- `action`: what happened, for example `proposed`, `approved`, `changed` or `settings`;
+- `actor`: who did it:
+  - an administrator: `{ "type": "admin", "id", "name" }`;
+  - a resident's device: `{ "type": "device", "id" }`, with a fixed, random id per device;
+  - or `system`;
+- `summary`: the same change in a short Dutch sentence;
+- and where it applies: the house (`house`: id and address), `from`/`to`, `changes` (for settings: old and new value), `device` (the device an approval is about) and `edition`.
+
+Because a device always has the same id, you can see for example that one device changed its house three times: three `proposed` lines with the same `actor.id`.
+
+Never in the log: IP addresses, passwords, codes (including the residents' access code: only that it changed), keys and coordinates (only that the shape of a house changed). A failed attempt, or saving without a difference, adds no line.
+
+The audit log is not part of the backups (restoring does not change history), and the app never shortens it. Each change adds a few hundred bytes. You can archive or empty it whenever you like: the app creates the file again on the next change.
+
 ## Editions: comparing earlier occasions
 An **edition** is the map of one occasion (for example *Sint Maarten 2025*), with its own **name and year** and its own statuses. The **live map** is what the front page shows. Creating or editing an edition **never** changes the live map: the server writes editions only to their own files, through their own API addresses.
 
@@ -377,7 +401,7 @@ You do not have to build the code: the image is built and published automaticall
    | `DOORBELL_MAP_TAG` | Which version runs: `latest` (stable, default), `beta` or a version number to pin (for example `v1.0.21`). With `beta` a **BETA** label appears next to the name, in the tab title and under the app icon. If this variable is still called `SINTMAARTEN_TAG` on your setup, it keeps working; rename it when convenient. |
    | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/doorbell-map`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
-3. Start the container: `docker compose up -d`. Your data (houses, users and login details, logo, explanation, backups, and `secret.key` for MFA) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
+3. Start the container: `docker compose up -d`. Your data (houses, users and login details, logo, explanation, backups, the audit log `audit-log.jsonl`, and `secret.key` for MFA) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
 4. For passkeys, the home-screen app and notifications: put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy). Without HTTPS the map works too, and you log in with a username and password.
 5. Open `<address>/beheer` and complete the setup with the `SETUP_TOKEN`: choose a username and a passkey or password (see [Onboarding](#the-admin-area-beheer)).
 

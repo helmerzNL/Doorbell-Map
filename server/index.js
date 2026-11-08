@@ -11,6 +11,7 @@ const users = require('./users');
 const account = require('./account');
 const backups = require('./backups');
 const images = require('./images');
+const audit = require('./audit');
 const editions = require('./editions');
 const residents = require('./residents');
 const community = require('./community');
@@ -156,6 +157,7 @@ app.use('/api/invites', account.invites);
 // ---------- beheer ----------
 const admin = express.Router();
 admin.use(auth.requireAdmin);
+admin.use(audit.adminMiddleware); // auditlog: elke geslaagde wijziging in het beheer, met wie hem deed
 admin.use(account.admin); // eigen inlog (passkeys, wachtwoord, MFA), bevestigen en gebruikersbeheer
 
 const pwError = (res, err) => res.status(err.status || 400).json({ error: err.message });
@@ -308,8 +310,10 @@ admin.post('/editions', backups.afterSave('Editie aangemaakt'), (req, res) => {
 // De huizen van één editie opslaan (vanuit het bewerkscherm of de popup). Schrijft alleen in die editie, nooit in de live kaart.
 admin.put('/editions/:id/houses', backups.afterSave('Editie opgeslagen'), (req, res) => {
   try {
+    const before = audit.snap(editions.read(req.params.id)?.houses);
     const e = editions.setHouses(req.params.id, validateHouses(req.body?.houses));
     if (!e) return res.status(404).json({ error: 'Editie niet gevonden' });
+    audit.logHouseDiff(req.audit.actor, before, e.houses, { edition: { id: e.id, label: editions.label(e) } });
     res.json({ id: e.id, counts: e.counts, houses: e.houses });
   } catch (err) {
     res.status(400).json({ error: err.message });

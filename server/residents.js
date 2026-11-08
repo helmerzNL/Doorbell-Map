@@ -8,6 +8,7 @@ const origin = require('./origin');
 const store = require('./store');
 const auth = require('./auth');
 const backups = require('./backups');
+const audit = require('./audit');
 const push = require('./push');
 const { tr, trIn, t, defaultLang, translations, LANGS } = require('./lang');
 const { STATUSES, statusLabels } = require('./houses');
@@ -339,6 +340,7 @@ resident.post('/claim', (req, res) => {
   const rec = { rid: crypto.randomBytes(6).toString('hex'), tokenHash: sha(token), houseId: house.id, createdAt: new Date().toISOString(), lastActivity: new Date().toISOString(), ip: req.ip, notice: null };
   db().residents.push(rec);
   store.save();
+  audit.house(audit.device(rec.rid), 'device-linked', house, { via: viaQr ? 'qr' : 'list' });
   setCookie(req, res, token);
   if (viaQr && codeOn()) setCodeCookie(req, res); // een geldige QR vervangt de toegangscode
   res.json({ ...view(rec, req), deviceToken: token }); // de app bewaart dit ook lokaal, zodat de koppeling een gewiste cookie overleeft
@@ -382,6 +384,8 @@ resident.post('/set', (req, res) => {
   rec.ip = req.ip;
   rec.notice = null;
   store.save();
+  // elke wijziging van een bewoner, ook als die zijn voorstel weer intrekt: zo is te zien hoe vaak een apparaat iets aanpast
+  if (changed) audit.house(audit.device(rec.rid), status === house.status ? 'proposal-withdrawn' : 'proposed', house, { from: house.status, to: status });
   if (changed && status !== house.status) notifyAdmin();
   res.json(view(rec, req));
 });
@@ -422,10 +426,14 @@ admin.delete('/messages/:id', (req, res) => {
   res.json({ removed: before - d.messages.length });
 });
 
-function decide(prop, approve) {
+function decide(prop, approve, req) {
   const d = db();
   const rec = d.residents.find((r) => r.rid === prop.residentId);
   const house = houseOf(prop.houseId);
+  if (house) {
+    audit.house(req.audit.actor, approve ? 'approved' : 'rejected', house, { from: house.status, to: prop.to, device: prop.residentId });
+    req.audit.houseDone.add(house.id); // de statuswijziging staat hier al, met het apparaat erbij
+  }
   if (approve && house) house.status = prop.to;
   if (rec) rec.notice = { decision: approve ? 'approved' : 'rejected', status: prop.to, at: new Date().toISOString() };
   d.proposals = d.proposals.filter((p) => p !== prop);
@@ -435,7 +443,7 @@ function decide(prop, approve) {
 admin.post('/changes/approve-all', backups.afterSave('Wijzigingen van bewoners goedgekeurd'), (req, res) => {
   prune();
   const changes = [];
-  for (const prop of [...db().proposals]) { const c = decide(prop, true); if (c) changes.push(c); }
+  for (const prop of [...db().proposals]) { const c = decide(prop, true, req); if (c) changes.push(c); }
   store.save();
   res.json({ changes });
 });
@@ -443,7 +451,7 @@ admin.post('/changes/approve-all', backups.afterSave('Wijzigingen van bewoners g
 const decideRoute = (approve) => (req, res) => {
   const prop = db().proposals.find((p) => p.id === req.params.id);
   if (!prop) return res.status(404).json({ error: 'Wijziging niet gevonden (misschien al behandeld)' });
-  const change = decide(prop, approve);
+  const change = decide(prop, approve, req);
   store.save();
   res.json({ change });
 };
@@ -454,9 +462,11 @@ admin.post('/changes/:id/reject', backups.afterSave('Wijziging van bewoner afgew
 admin.delete('/residents/:rid', backups.afterSave('Apparaat ontkoppeld'), (req, res) => {
   const d = db();
   const before = d.residents.length;
+  const rec = d.residents.find((r) => r.rid === req.params.rid);
   d.residents = d.residents.filter((r) => r.rid !== req.params.rid);
   d.proposals = d.proposals.filter((p) => p.residentId !== req.params.rid);
   store.save();
+  if (rec) audit.house(req.audit.actor, 'device-unlinked', houseOf(rec.houseId) || { id: rec.houseId }, { device: rec.rid });
   res.json({ removed: before - d.residents.length });
 });
 
@@ -471,14 +481,18 @@ admin.post('/residents/:rid/block', backups.afterSave('Apparaat geblokkeerd'), (
   d.residents = d.residents.filter((r) => r !== rec);
   d.proposals = d.proposals.filter((p) => p.residentId !== rec.rid);
   store.save();
+  audit.house(req.audit.actor, 'device-blocked', houseOf(rec.houseId) || { id: rec.houseId }, { device: rec.rid, withIp }); // zonder het IP-adres zelf
   res.json({ blocked: true, withIp });
 });
 
 admin.delete('/blocks/:id', backups.afterSave('Blokkade opgeheven'), (req, res) => {
   const d = db();
   const before = (d.blocked || []).length;
+  const block = (d.blocked || []).find((b) => b.id === req.params.id);
   d.blocked = (d.blocked || []).filter((b) => b.id !== req.params.id);
   store.save();
+  // een blokkade kent alleen het adres van toen (als titel), niet het huis
+  if (block) audit.house(req.audit.actor, 'device-unblocked', { id: null, street: block.title }, { block: block.id });
   res.json({ removed: before - d.blocked.length });
 });
 
@@ -493,6 +507,7 @@ admin.post('/qr/:houseId/rotate', (req, res) => {
   delete secrets()[h.id];
   const item = qrItem(req)(h);
   store.save();
+  audit.house(req.audit.actor, 'qr-renewed', h);
   res.json(item);
 });
 
