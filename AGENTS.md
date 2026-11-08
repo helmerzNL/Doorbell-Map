@@ -44,7 +44,8 @@ de tooling; de app heeft Nederlandse bron-teksten en een Engelse vertaling (`pub
     `docs/releases/<tag>.md` (met "Sinds de vorige stabiele versie" en "Goed om te weten bij het bijwerken") en merge die als gewone
     PR naar `beta` **vóór** de promotie. `tools/publish-release.sh` gebruikt dat bestand als het bestaat.
   - Het volledige testcommando is `npm test`. Een falende test hoort met naam in de PR, niet weggelaten.
-  - Versiemodel: de pipeline zet de versie (tag via `tools/next-version.sh`); PR's wijzigen `VERSION` niet en `main` hoeft niet terug
+  - Versiemodel: de pipeline zet de versie (tag via `tools/next-version.sh`); PR's wijzigen `VERSION` niet (behalve voor een nieuwe minor- of
+    major-versie, op verzoek van de eigenaar: dan begint de patch weer bij 0) en `main` hoeft niet terug
     in `beta` gemerged te worden.
   - Controleer na het mergen dat release `vX.Y.Z` bestaat (geen prerelease, *latest*) en dat de images `latest` en `X.Y.Z` gebouwd zijn.
     Meld daarna wat er live staat en wat de beheerder moet doen (`docker compose pull && docker compose up -d`, pagina verversen).
