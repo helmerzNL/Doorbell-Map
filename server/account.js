@@ -17,6 +17,7 @@ const auth = require('./auth');
 const origin = require('./origin');
 const users = require('./users');
 const lang = require('./lang');
+const audit = require('./audit');
 const { hashPassword, verifyPassword } = require('./password');
 
 const siteTitle = () => lang.text('siteTitle') || config.siteTitle;
@@ -227,10 +228,12 @@ pub.post('/register/verify', asyncRoute(async (req, res) => {
   // Vanaf hier synchroon: niets kan er meer tussen komen.
   const { credential } = v.registrationInfo;
   if (db.passkeys.some((p) => p.id === credential.id)) throw fail('Deze passkey is al geregistreerd', 409);
-  let user;
+  let user, isReset = false;
   if (c.mode === 'setup') user = users.setupOwner(c.username, c.webauthnId);
-  else if (c.mode === 'invite') user = users.acceptInvite(c.inviteId, c.username, c.webauthnId);
-  else user = users.byId(c.userId);
+  else if (c.mode === 'invite') {
+    isReset = db.invites.some((i) => i.id === c.inviteId && i.kind === 'reset'); // vóór het accepteren: daarna is de uitnodiging weg
+    user = users.acceptInvite(c.inviteId, c.username, c.webauthnId);
+  } else user = users.byId(c.userId);
   if (!user) throw fail('Niet ingelogd', 401);
   db.passkeys.push({
     id: credential.id,
@@ -242,6 +245,9 @@ pub.post('/register/verify', asyncRoute(async (req, res) => {
     userId: user.id,
   });
   store.save();
+  if (c.mode === 'setup') audit.site(audit.admin(user), 'install', 'Beheer ingesteld met een passkey (eigenaar)');
+  else if (c.mode === 'invite') audit.site(audit.admin(user), 'users', isReset ? 'Nieuwe inlog ingesteld met een passkey (inloglink)' : 'Uitnodiging geaccepteerd met een passkey');
+  else audit.site(audit.admin(user), 'account', 'Eigen passkey toegevoegd');
   auth.limiter.reset(req.ip);
   if (c.mode !== 'add') auth.startSession(req, res, 'pk', user);
   res.json({ ok: true });
@@ -257,6 +263,7 @@ pub.post('/setup/password', asyncRoute(async (req, res) => {
   const owner = users.setupOwner(username); // gooit als iemand anders intussen klaar was
   owner.password = hash;
   store.save();
+  audit.site(audit.admin(owner), 'install', 'Beheer ingesteld met gebruikersnaam en wachtwoord (eigenaar)');
   auth.limiter.reset(req.ip);
   auth.startSession(req, res, 'pw', owner);
   res.json({ ok: true });
@@ -348,9 +355,11 @@ invites.post('/password', asyncRoute(async (req, res) => {
   const username = users.inviteName(i, req.body.username);
   users.checkPassword(req.body.password, username);
   const hash = await hashPassword(req.body.password);
+  const isReset = i.kind === 'reset';
   const user = users.acceptInvite(i.id, username); // controleert opnieuw: een tweede tabblad of een intrekking
   user.password = hash;
   store.save();
+  audit.site(audit.admin(user), 'users', isReset ? 'Nieuwe inlog ingesteld met een wachtwoord (inloglink)' : 'Uitnodiging geaccepteerd met een wachtwoord');
   auth.startSession(req, res, 'pw', user);
   res.json({ ok: true });
 }));

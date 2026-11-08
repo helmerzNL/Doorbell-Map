@@ -14,6 +14,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - [Instellingen](#instellingen)
 - [Inloggen: passkey, wachtwoord en MFA](#inloggen-passkey-wachtwoord-en-mfa)
 - [Meer beheerders uitnodigen](#meer-beheerders-uitnodigen)
+- [Auditlog](#auditlog)
 - [Edities: eerdere keren vergelijken](#edities-eerdere-keren-vergelijken)
 - [Installeren als app en offline gebruik](#installeren-als-app-en-offline-gebruik)
 - [Zelf deployen met Docker](#zelf-deployen-met-docker)
@@ -47,6 +48,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - Instellingen in zeven overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
 - Eigen **logo** (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (ook het icoon van de geïnstalleerde app; standaard de lantaarn), uitleg, infovlak, **site- en appnaam** en eigen namen voor de statussen.
 - Automatische **backups** na elke opslagpoging (ZIP, met app-instellingen, logo's en apparaten), met korte titels en handmatige backups.
+- Een **auditlog** in de datamap met elke wijziging en wie hem deed: een beheerder of het apparaat van een bewoner, en per huis wat er veranderde. Zie [Auditlog](#auditlog).
 - Versienummer en commit zichtbaar in het instellingenmenu.
 
 ## De website voor bezoekers
@@ -304,6 +306,28 @@ Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf
 **Bijwerken vanaf een versie met .json-backups:** bij de eerste start zet de server de bestaande backups (`<id>.json`) om naar `sint_maarten-backup-<id>.zip`, met dezelfde inhoud, en ruimt hij alles op behalve de nieuwste 50 (eerder werden er 200 bewaard). Wil je meer houden, zet dan vóór het bijwerken `MAX_BACKUPS` in `.env`. Een oudere versie van de app ziet de ZIP-backups niet meer (ze blijven wel in de map staan).
 Elke backup kan een **korte titel** krijgen (max. 40 tekens, knop ✎), bijvoorbeeld "Alles" of "Alleen layout". Met *Backup maken* maak je handmatig een backup met een eigen titel, ook als er niets is veranderd.
 
+## Auditlog
+Elke wijziging komt direct in **`DATA_PATH/audit-log.jsonl`** (in de container `/data/audit-log.jsonl`). Het bestand heeft één JSON-object per regel (*JSON Lines*). Zo komt een wijziging er meteen bij zonder het hele bestand te herschrijven. Lezen kan met een teksteditor, of met bijvoorbeeld `jq` (`jq -c 'select(.category == "house")' audit-log.jsonl`).
+
+Elke regel heeft:
+- `at`: wanneer;
+- `category`: **`house`** voor een huis, of **`site`** voor de rest;
+  - onder `house` vallen: status, adres, vorm of notitie in de layout of in een editie, voorstellen van bewoners en het goedkeuren of afwijzen daarvan, een apparaat koppelen, ontkoppelen of (de)blokkeren, en een QR-code vernieuwen;
+  - onder `site` vallen: instellingen en teksten, kaartweergave, logo's, edities, backups, gebruikers en inloggegevens, en berichten;
+- `action`: wat er gebeurde, bijvoorbeeld `proposed`, `approved`, `changed` of `settings`;
+- `actor`: wie het deed:
+  - een beheerder: `{ "type": "admin", "id", "name" }`;
+  - het apparaat van een bewoner: `{ "type": "device", "id" }`, met een vast, willekeurig id per apparaat;
+  - of `system`;
+- `summary`: dezelfde wijziging in een korte Nederlandse zin;
+- en waar het past: het huis (`house`: id en adres), `from`/`to`, `changes` (bij instellingen: oude en nieuwe waarde), `device` (het apparaat waar een goedkeuring over gaat) en `edition`.
+
+Omdat een apparaat steeds hetzelfde id heeft, zie je bijvoorbeeld dat één apparaat zijn huis drie keer aanpaste: drie regels `proposed` met dezelfde `actor.id`.
+
+Nooit in de log: IP-adressen, wachtwoorden, codes (ook de toegangscode voor bewoners: alleen dát die veranderde), sleutels en coördinaten (alleen dát de vorm van een huis veranderde). Een mislukte poging, of opslaan zonder verschil, geeft geen regel.
+
+De auditlog zit niet in de backups (terugzetten verandert de geschiedenis niet), en de app kort hem nooit in. Per wijziging komt er een paar honderd bytes bij. Wil je hem archiveren of legen, dan kan dat gewoon: de app maakt het bestand bij de volgende wijziging opnieuw aan.
+
 ## Edities: eerdere keren vergelijken
 Een **editie** is de kaart van één keer (bijvoorbeeld *Sint Maarten 2025*), met een eigen **naam en jaartal** en eigen statussen. De **live kaart** is wat de voorpagina toont. Een editie aanmaken of bewerken verandert de live kaart **nooit**: de server schrijft edities alleen naar hun eigen bestanden, via eigen API-adressen.
 
@@ -375,7 +399,7 @@ Je hoeft de code niet te bouwen: het image wordt door [GitHub Actions](.github/w
    | `DOORBELL_MAP_TAG` | Welke versie draait: `latest` (stabiel, standaard), `beta` of een versienummer om vast te zetten (bijvoorbeeld `v1.0.21`). Bij `beta` staat er een **BETA**-label bij de naam, in de tabtitel en onder het app-icoon. Heette deze variabele bij jou nog `SINTMAARTEN_TAG`, dan blijft die werken; hernoem hem wanneer het uitkomt. |
    | `DATA_PATH` | Map op de host voor je gegevens, standaard `./data` naast `docker-compose.yml`. Draai je de stack via Dockge, Portainer, Komodo of Unraid, zet dan een **absoluut pad** (bijvoorbeeld `/mnt/user/appdata/doorbell-map`): `./data` ligt anders in de map van de stack-beheerder, die zelf in een container of volume kan draaien. |
    | `RP_ID`, `SESSION_HOURS` | Optioneel; zie de opmerkingen in [`.env.example`](.env.example). |
-3. Start de container: `docker compose up -d`. Je gegevens (huizen, gebruikers en inloggegevens, logo, uitleg, backups, en `secret.key` voor MFA) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
+3. Start de container: `docker compose up -d`. Je gegevens (huizen, gebruikers en inloggegevens, logo, uitleg, backups, de auditlog `audit-log.jsonl`, en `secret.key` voor MFA) staan in `DATA_PATH` (standaard `./data`); de container herstelt zelf de rechten op die map (hij start kort als root en draait de app daarna als gebruiker `node`).
 4. Voor passkeys, de app op het beginscherm en meldingen: zet een reverse proxy met **HTTPS** voor de poort uit `PORT` (Synology: *Inloggegevens → Reverse Proxy*, of Nginx Proxy Manager / Traefik / Caddy). Zonder HTTPS werkt de kaart ook, en log je in met gebruikersnaam en wachtwoord.
 5. Open `<adres>/beheer` en doorloop de installatie met de `SETUP_TOKEN`: kies een gebruikersnaam en een passkey of wachtwoord (zie [Onboarding](#het-beheer-beheer)).
 
