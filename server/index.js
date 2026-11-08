@@ -10,6 +10,7 @@ const auth = require('./auth');
 const users = require('./users');
 const account = require('./account');
 const backups = require('./backups');
+const images = require('./images');
 const editions = require('./editions');
 const residents = require('./residents');
 const community = require('./community');
@@ -29,7 +30,7 @@ app.use((req, res, next) => {
   });
   next();
 });
-// JSON tot 2 MB; een geüploade backup (met alle edities) mag groter zijn en wordt pas ná de inlogcontrole gelezen.
+// JSON tot 2 MB; een geüploade backup (met alle edities en de logo's) mag groter zijn en wordt pas ná de inlogcontrole gelezen.
 const BACKUP_UPLOAD_LIMIT = '25mb';
 const jsonBody = express.json({ limit: '2mb' });
 app.use((req, res, next) => (req.path === '/api/admin/backups/import' ? next() : jsonBody(req, res, next)));
@@ -172,14 +173,17 @@ app.get('/api/version', (req, res) => {
 
 admin.get('/backups', (req, res) => res.json(backups.list()));
 
+// De backup zoals hij in DATA_PATH/backups staat: een ZIP met backup.json en de logo's.
 admin.get('/backups/:id', (req, res) => {
-  const b = backups.read(req.params.id);
-  if (!b) return res.status(404).json({ error: 'Backup niet gevonden' });
-  res.set('Content-Disposition', `attachment; filename="backup-${b.id}.json"`);
-  res.json(b);
+  const z = backups.zipFile(req.params.id);
+  if (!z) return res.status(404).json({ error: 'Backup niet gevonden' });
+  res.attachment(z.name);
+  res.type('application/zip');
+  res.sendFile(z.name, { root: z.dir });
 });
 
-// Maakt van een geüploade backup een schone inhoud ({houses, view, pdfView, texts}); gooit een Error bij ongeldige inhoud.
+// Maakt van een geüploade backup een schone inhoud ({houses, view, pdfView, texts, settings, devices, blocked, editions}); gooit een Error bij
+// ongeldige inhoud. De logo's controleert backups.parseUpload.
 function sanitizeBackup(b) {
   if (!b || typeof b !== 'object' || Array.isArray(b)) throw new Error('Dit is geen geldige backup');
   const houses = validateHouses(b.houses);
@@ -204,6 +208,11 @@ function sanitizeBackup(b) {
     return out;
   };
   const texts = { labels: labelsOf(t.labels), siteTitle: txt(t, 'siteTitle'), intro: txt(t, 'intro'), appName: txt(t, 'appName'), appShortName: txt(t, 'appShortName'), translations: {} };
+  // infovlak, deeltekst en communityvlak (backups van vóór de ZIP hebben ze niet; terugzetten laat ze dan staan)
+  for (const f of backups.EXTRA_TEXTS) {
+    if (!(f in t)) continue;
+    texts[f] = f === 'residentInfo' && t[f] === null ? null : txt(t, f); // null: de standaardtekst van het infovlak
+  }
   for (const l of lang.LANGS) {
     const o = t.translations?.[l];
     if (!o || typeof o !== 'object' || l === 'nl') continue;
@@ -221,14 +230,16 @@ function sanitizeBackup(b) {
       return clean;
     });
   }
-  return { houses, view, pdfView, texts, ...(eds ? { editions: eds } : {}) };
+  // app-instellingen, apparaten en geblokkeerde apparaten (backups van vóór de ZIP hebben ze niet)
+  return { houses, view, pdfView, texts, ...backups.cleanSections(b), ...(eds ? { editions: eds } : {}) };
 }
 
-// Een gedownloade backup (.json) weer uploaden: komt als nieuwe backup in de lijst; terugzetten blijft een aparte stap.
-admin.post('/backups/import', express.json({ limit: BACKUP_UPLOAD_LIMIT }), (req, res) => {
+// Een gedownloade backup weer uploaden: komt als nieuwe backup in de lijst; terugzetten blijft een aparte stap.
+// Het bestand komt zoals het is (een .zip, of een .json van vóór de ZIP); de eerste bytes bepalen welke soort het is.
+admin.post('/backups/import', express.raw({ type: () => true, limit: BACKUP_UPLOAD_LIMIT }), (req, res) => {
   try {
-    const data = sanitizeBackup(req.body);
-    res.json({ id: backups.importData(data, req.body.title) });
+    const { doc, files } = backups.parseUpload(req.body);
+    res.json({ id: backups.importData(sanitizeBackup(doc), files, doc.title) });
   } catch (err) {
     res.status(400).json({ error: err.message || 'Ongeldige backup' });
   }
@@ -248,7 +259,9 @@ admin.put('/backups/:id/title', (req, res) => {
 });
 
 admin.post('/backups/:id/restore', (req, res) => {
-  if (!backups.restore(req.params.id)) return res.status(404).json({ error: 'Backup niet gevonden' });
+  let done;
+  try { done = backups.restore(req.params.id); } catch (err) { return res.status(400).json({ error: err.message }); }
+  if (!done) return res.status(404).json({ error: 'Backup niet gevonden' });
   res.json({ ok: true });
 });
 
@@ -323,58 +336,29 @@ admin.post('/editions/delete', backups.afterSave('Edities verwijderd'), asyncRou
   res.json({ deleted: editions.remove(idsToDelete) });
 }));
 
-// Afmetingen uit de kop van de afbeelding (PNG, JPEG, WebP); null als ze niet te lezen zijn.
-function imageSize(b, ext) {
-  try {
-    if (ext === 'png') return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
-    if (ext === 'jpg') {
-      for (let i = 2; i + 9 < b.length && b[i] === 0xff;) {
-        const m = b[i + 1];
-        if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) return { width: b.readUInt16BE(i + 7), height: b.readUInt16BE(i + 5) };
-        i += 2 + b.readUInt16BE(i + 2);
-      }
-      return null;
-    }
-    const kind = b.subarray(12, 16).toString();
-    if (kind === 'VP8X') return { width: 1 + b.readUIntLE(24, 3), height: 1 + b.readUIntLE(27, 3) };
-    if (kind === 'VP8L') return { width: 1 + (((b[22] & 0x3f) << 8) | b[21]), height: 1 + (((b[24] & 0x0f) << 10) | (b[23] << 2) | ((b[22] & 0xc0) >> 6)) };
-    if (kind === 'VP8 ') return { width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
-  } catch { /* afgekapt bestand: geen afmetingen */ }
-  return null;
-}
-const IMAGE_MIME = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
-
-const IMAGE_TYPES = [
-  { ext: 'png', test: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
-  { ext: 'jpg', test: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
-  { ext: 'webp', test: (b) => b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP' },
-];
-
-const removeLogoFile = (logo) => {
-  if (logo?.file) fs.rm(path.join(store.uploadDir, path.basename(logo.file)), () => {});
-};
-
 // Het logo (PDF, QR-kaartjes), het kleine logo (kopbalk) en het favicon worden op dezelfde manier bewaard; de laatste twee zijn optioneel.
-for (const [route, key, prefix] of [['/logo', 'logo', 'logo'], ['/logo-small', 'logoSmall', 'logo-small'], ['/favicon', 'favicon', 'favicon']]) {
+// Ze gaan mee in de backups, dus na een wijziging komt er een backup (net als bij de andere instellingen).
+for (const { route, key, prefix, name } of images.LOGOS) {
   admin.post(route,
-    express.raw({ type: 'application/octet-stream', limit: '5mb' }),
+    backups.afterSave(`${name} opgeslagen`),
+    express.raw({ type: 'application/octet-stream', limit: images.MAX_IMAGE }),
     (req, res) => {
       const buf = req.body;
-      const type = Buffer.isBuffer(buf) && IMAGE_TYPES.find((t) => t.test(buf));
-      if (!type) return res.status(400).json({ error: 'Alleen PNG, JPEG of WebP is toegestaan (max 5 MB)' });
+      const ext = images.detect(buf);
+      if (!ext) return res.status(400).json({ error: 'Alleen PNG, JPEG of WebP is toegestaan (max 5 MB)' });
       const db = store.db();
       const old = db.settings[key];
-      const file = `${prefix}-${Date.now()}.${type.ext}`;
+      const file = `${prefix}-${Date.now()}.${ext}`;
       fs.writeFileSync(path.join(store.uploadDir, file), buf);
-      db.settings[key] = { file, url: `/uploads/${file}`, ...(key === 'favicon' ? { type: IMAGE_MIME[type.ext], ...imageSize(buf, type.ext) } : {}) };
+      db.settings[key] = images.setting(key, file, buf, ext);
       store.save();
-      removeLogoFile(old);
+      images.remove(old);
       res.json({ [key]: db.settings[key] });
     });
 
-  admin.delete(route, (req, res) => {
+  admin.delete(route, backups.afterSave(`${name} verwijderd`), (req, res) => {
     const db = store.db();
-    removeLogoFile(db.settings[key]);
+    images.remove(db.settings[key]);
     db.settings[key] = null;
     store.save();
     res.json({ ok: true });

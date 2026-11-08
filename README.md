@@ -46,7 +46,7 @@ Een interactieve kaart van de wijk waarop elk huis **groen**, **rood** of **niet
 - **Edities**: de kaart van elke keer met naam en jaartal, aangemaakt als kopie van de live kaart of een andere editie en los te bewerken; wissel in het beheer tussen *Live* en edities en vergelijk welke huizen toen en nu meedoen, met de aantallen. De voorpagina verandert daar nooit door. Zie [Edities](#edities-eerdere-keren-vergelijken).
 - Instellingen in zeven overzichtelijke tabs; het beheer is ook als eigen **app** te installeren.
 - Eigen **logo** (met een optioneel klein logo voor de kopbalk), een optioneel **favicon** (ook het icoon van de geïnstalleerde app; standaard de lantaarn), uitleg, infovlak, **site- en appnaam** en eigen namen voor de statussen.
-- Automatische **backups** na elke opslagpoging, met korte titels en handmatige backups.
+- Automatische **backups** na elke opslagpoging (ZIP, met app-instellingen, logo's en apparaten), met korte titels en handmatige backups.
 - Versienummer en commit zichtbaar in het instellingenmenu.
 
 ## De website voor bezoekers
@@ -209,7 +209,7 @@ Het tandwiel (⚙) in de balk schuift het instellingen-menu in beeld. Het is ing
 
 **Edities** – een editie aanmaken met naam en jaartal (kopie van de live kaart of van een andere editie), de aantallen per editie, een editie bekijken of bewerken, naam of jaartal wijzigen en verwijderen. Zie [Edities](#edities-eerdere-keren-vergelijken).
 
-**Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout, de teksten en alle edities; bij elke backup staat welke edities erin zitten, en terugzetten zet ook de edities terug. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey (zonder passkey: met je wachtwoord en eventueel een MFA-code).
+**Backups** – na elke opslagpoging wordt automatisch een backup gemaakt van de layout, de teksten, de app-instellingen, de logo's, de apparaten van bewoners (ook de geblokkeerde) en alle edities; bij elke backup staat wat erin zit, en terugzetten zet dat allemaal terug. Geef een backup een **korte titel** (✎, max. 40 tekens, bijvoorbeeld "Alles" of "Alleen layout") of maak er zelf een met *Backup maken*. Terugzetten of downloaden kan altijd; verwijderen (één of meer tegelijk) moet je bevestigen met je passkey (zonder passkey: met je wachtwoord en eventueel een MFA-code).
 
 **Versie** – onderin het menu staat de versie en commit van de draaiende build (zie [Versienummer](#versienummer)).
 
@@ -292,9 +292,16 @@ ook onder die tag gepubliceerd (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). Het de
 Lokaal (zonder build) toont de app `dev` met de commit uit git. De workflow heeft schrijfrechten op de repo nodig om de tag te zetten (staat in `docker.yml`).
 
 ## Backups
-Na **elke opslagpoging** (huizen/layout, teksten, kaartweergave, edities) maakt de server een JSON-backup in `data/backups/` van de layout (huizen + kaartweergave), de teksten (uitleg, appnaam) en **alle edities**.
-Identieke staten worden niet dubbel bewaard en de nieuwste 200 blijven staan (`MAX_BACKUPS` om dat aan te passen). Het logo valt buiten de backups. De bestanden zijn compact opgeslagen; met veel edities wordt een backup groter, reken op ongeveer de grootte van de live kaart per editie.
-Een gedownloade backup (.json, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen (maximaal 25 MB); hij komt als nieuwe backup in de lijst. Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); daarna staan er precies de edities uit die backup. Een backup van vóór de edities laat de edities met rust. In de lijst staat bij elke backup hoeveel en welke edities erin zitten. Verwijderen vraagt een bevestiging met je passkey of wachtwoord.
+Na **elke opslagpoging** (huizen/layout, teksten en instellingen, kaartweergave, logo's, edities, een apparaat ontkoppelen of (de)blokkeren) maakt de server een backup in de map `backups` van de datamap: `DATA_PATH/backups` (in de container `/data/backups`). Elke backup is één ZIP-bestand, `sint_maarten-backup-<id>.zip`, met:
+- `backup.json`: de layout (huizen + kaartweergave), de teksten (uitleg, namen, statusnamen, infovlak, deeltekst, communityvlak en de vertalingen), de **app-instellingen** (de schakelaars en keuzes uit het beheer), de **apparaten van bewoners** en de **geblokkeerde apparaten**, en **alle edities**;
+- `files/`: de **logo's** (logo, klein logo en favicon) als losse afbeeldingen, zodat je er ook zonder de app een uit de ZIP kunt halen.
+
+Niet in de backup: gebruikers, inloggegevens en uitnodigingen, de toegangscode voor bewoners, de QR-geheimen, de pushsleutels, en openstaande wijzigingen en berichten van bewoners. Van een apparaat staat alleen de hash van zijn sleutel erin, zoals in de database: daarmee kom je nergens binnen, maar een apparaat dat zijn sleutel nog heeft, is na terugzetten weer gekoppeld (of geblokkeerd). De IP-adressen van apparaten staan er wel in; bewaar een gedownloade backup dus zorgvuldig.
+
+Identieke staten worden niet dubbel bewaard (het laatste gebruik van een apparaat telt daarbij niet mee) en de nieuwste 200 blijven staan (`MAX_BACKUPS` om dat aan te passen). `backup.json` wordt in de ZIP gecomprimeerd; elke backup bevat de logo's opnieuw, dus reken op ongeveer 200 × (de logo's + de grootte van de live kaart per editie) aan schijfruimte.
+Een gedownloade backup (.zip, downloadknop in de lijst) kun je met **Backup uploaden** weer toevoegen (maximaal 25 MB); hij komt als nieuwe backup in de lijst. De server controleert eerst het hele bestand: elk logo moet kloppen met zijn sha256 in `backup.json` en een PNG, JPEG of WebP van maximaal 5 MB zijn, en een geweigerd bestand verandert niets. Een `.json`-backup van een oudere versie kan ook nog; die heeft geen instellingen, logo's en apparaten en laat die bij terugzetten staan. Een backup van een nieuwere versie van de app wordt geweigerd: werk dan eerst de app bij.
+Terugzetten kan in *Instellingen → Backups* (de huidige staat wordt eerst zelf als backup bewaard); daarna staan er precies de edities, instellingen, logo's en apparaten uit die backup. De toegangscode voor bewoners blijft die van nu (is er geen code, dan staat de schakelaar daarna uit). Een backup van vóór de edities laat de edities met rust. In de lijst staat bij elke backup wat erin zit (huizen, instellingen, logo's, apparaten en welke edities). Verwijderen vraagt een bevestiging met je passkey of wachtwoord.
+**Bijwerken vanaf een versie met .json-backups:** bij de eerste start zet de server de bestaande backups (`<id>.json`) om naar `sint_maarten-backup-<id>.zip`, met dezelfde inhoud. Een oudere versie van de app ziet de ZIP-backups niet meer (ze blijven wel in de map staan).
 Elke backup kan een **korte titel** krijgen (max. 40 tekens, knop ✎), bijvoorbeeld "Alles" of "Alleen layout". Met *Backup maken* maak je handmatig een backup met een eigen titel, ook als er niets is veranderd.
 
 ## Edities: eerdere keren vergelijken
