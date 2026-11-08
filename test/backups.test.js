@@ -25,6 +25,18 @@ fs.writeFileSync(path.join(BK, `${LEGACY_ID}.json`), JSON.stringify(legacy));
 fs.writeFileSync(path.join(BK, 'onzin.json'), '{}'); // geen backup: blijft staan
 fs.writeFileSync(path.join(BK, '1700000000001-abcdef.json'), 'kapot'); // onleesbaar: blijft staan
 fs.writeFileSync(path.join(BK, 'sint_maarten-backup-1700000000002-abcdef.zip.tmp'), 'half'); // onderbroken schrijfactie
+// een backup van v2.0.0, met IP-adressen van bewoners: die worden bij het starten gewist
+const WIPE_ID = '1700000000004-abcdef';
+const WLOGO = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32, 4)]);
+const at = '2026-11-08T12:00:00.000Z';
+const wdoc = {
+  format: 'doorbell-map-backup', format_version: 2, id: WIPE_ID, createdAt: at, reason: 'Handmatig', title: 'Met IP', ok: true, hash: 'x',
+  houses: legacy.houses, view: null, pdfView: null, texts: legacy.texts, editions: [],
+  logos: { logo: { archive_path: 'files/logo.png', sha256: crypto.createHash('sha256').update(WLOGO).digest('hex'), size: WLOGO.length }, logoSmall: null, favicon: null },
+  devices: [{ rid: 'aaaaaaaaaaaa', tokenHash: 'a'.repeat(64), houseId: 'o1', createdAt: at, lastActivity: at, ip: '10.20.30.40', notice: null }],
+  blocked: [{ id: 'bbbbbbbbbbbb', tokenHash: 'b'.repeat(64), ip: '10.20.30.41', title: 'Oudestraat 2', at }, { id: 'cccccccccccc', tokenHash: null, ip: '10.20.30.42', title: 'Oudestraat 3', at }],
+};
+fs.writeFileSync(path.join(BK, `sint_maarten-backup-${WIPE_ID}.zip`), zipSync({ 'backup.json': strToU8(JSON.stringify(wdoc)), 'files/logo.png': [WLOGO, { level: 0 }] }));
 
 const app = require('../server/index.js');
 const backups = require('../server/backups');
@@ -80,6 +92,18 @@ test('oude .json-backups worden bij het starten omgezet naar sint_maarten-backup
   const item = backups.list().find((x) => x.id === LEGACY_ID);
   assert.equal(item.settings, false);
   assert.equal(item.logos, null);
+});
+
+test('IP-adressen van bewoners worden bij het starten uit bestaande backups gewist', () => {
+  const files = entries(fs.readFileSync(path.join(BK, `sint_maarten-backup-${WIPE_ID}.zip`)));
+  const text = files['backup.json'].toString();
+  assert.ok(!text.includes('10.20.30.4') && !text.includes('"ip"'));
+  const d = JSON.parse(text);
+  assert.deepEqual(d.devices.map((x) => x.rid), ['aaaaaaaaaaaa']);
+  assert.deepEqual(d.blocked.map((x) => x.id), ['bbbbbbbbbbbb']); // een blokkade van alleen een IP-adres verdwijnt
+  assert.equal(d.title, 'Met IP'); // de rest blijft zoals hij was
+  assert.deepEqual(files['files/logo.png'], WLOGO);
+  assert.ok(fs.existsSync(path.join(BK, '.zonder-ip-adressen'))); // daarna niet bij elke start opnieuw
 });
 
 test("een backup bevat de app-instellingen en de logo's, als ZIP met backup.json en files/", async () => {
@@ -290,6 +314,9 @@ test('apparaten van bewoners en geblokkeerde apparaten gaan mee in de backup en 
   assert.equal((await post(`/api/admin/residents/${rb.rid}/block`, {})).status, 200);
   await tick();
   assert.equal(backups.list()[0].reason, 'Apparaat geblokkeerd'); // blokkeren maakt een backup
+  const live = await changes();
+  assert.ok(live.residents[0].ip); // de app zelf kent het IP-adres wel
+  store.db().blocked[0].ip = '10.1.1.1'; // alsof het IP-adres mee geblokkeerd is (een ander adres dan dat van de test)
 
   const { id } = await (await post('/api/admin/backups', { title: 'Met apparaten' })).json();
   const item = backups.list().find((x) => x.id === id);
@@ -301,6 +328,8 @@ test('apparaten van bewoners en geblokkeerde apparaten gaan mee in de backup en 
   assert.equal(doc.blocked[0].title, 'Apparaatstraat 2');
   const text = JSON.stringify(doc);
   assert.ok(!text.includes(a.token) && !text.includes(b.token));
+  // geen IP-adressen van bewoners
+  assert.ok(!text.includes('"ip"') && !text.includes(live.residents[0].ip) && !text.includes('10.1.1.1'));
 
   // het laatste gebruik van een apparaat is geen reden voor een nieuwe backup
   const n = backups.list().length;
@@ -323,6 +352,25 @@ test('apparaten van bewoners en geblokkeerde apparaten gaan mee in de backup en 
   assert.equal((await me(b.cookie)).blocked, true);
   const ch = await changes();
   assert.deepEqual([ch.residents.length, ch.blocked.length, ch.pending.length], [1, 1, 0]); // openstaande wijzigingen gaan niet mee
+  assert.deepEqual([ch.residents[0].ip, ch.blocked[0].ip], [null, null]); // de IP-adressen stonden niet in de backup
+  // bij het volgende gebruik kent de app het IP-adres weer, en nog eens terugzetten laat dat staan
+  assert.equal((await j('/api/resident/set', { method: 'POST', headers: { 'Content-Type': 'application/json', cookie: a.cookie }, body: JSON.stringify({ status: 'red' }) })).status, 200);
+  const ipNow = (await changes()).residents[0].ip;
+  assert.ok(ipNow);
+  store.db().blocked[0].ip = '10.2.2.2';
+  assert.equal((await post(`/api/admin/backups/${id}/restore`, {})).status, 200);
+  assert.equal((await changes()).residents[0].ip, ipNow);
+  assert.equal((await changes()).blocked[0].ip, '10.2.2.2'); // ook bij een blokkade
+
+  // een geüploade backup met IP-adressen (zoals van v2.0.0) wordt zonder IP-adressen bewaard
+  const withIps = { ...doc, devices: [{ ...doc.devices[0], ip: '10.9.9.9' }], blocked: [{ ...doc.blocked[0], ip: '10.9.9.8' }, { id: 'abcdefabcdef', tokenHash: null, ip: '10.9.9.7', title: 'Alleen IP', at: doc.blocked[0].at }] };
+  for (const body of [rezip({ ...entries(await download(id)), 'backup.json': JSON.stringify(withIps) }), Buffer.from(JSON.stringify(withIps))]) {
+    const r = await upload('/api/admin/backups/import', body);
+    assert.equal(r.status, 200);
+    const stored = backups.read((await r.json()).id);
+    assert.ok(!JSON.stringify(stored).includes('10.9.9.'));
+    assert.deepEqual(stored.blocked.map((x) => x.id), [doc.blocked[0].id]);
+  }
 
   // een backup van een kaart zonder dat huis: de koppeling verdwijnt bij terugzetten
   const legacyLike = { ...doc, houses: [d('d2', '2')] };
@@ -337,7 +385,7 @@ test('apparaten van bewoners en geblokkeerde apparaten gaan mee in de backup en 
   for (const bad of [
     { devices: 'nee' }, { devices: [{ ...dev, tokenHash: 'x' }] }, { devices: [dev, dev] }, { devices: [{ ...dev, rid: '../x' }] },
     { devices: [{ ...dev, createdAt: 'gisteren' }] }, { devices: [{ ...dev, notice: { decision: 'misschien', status: 'green', at: dev.createdAt } }] },
-    { blocked: 'nee' }, { blocked: [{ id: 'abcdefabcdef', at: dev.createdAt }] }, { blocked: [{ ...doc.blocked[0], tokenHash: 'kort' }] },
+    { blocked: 'nee' }, { blocked: [{ ...doc.blocked[0], id: 'kort' }] }, { blocked: [{ ...doc.blocked[0], tokenHash: 'kort' }] },
   ]) {
     const r = await post('/api/admin/backups/import', { ...doc, ...bad });
     assert.equal(r.status, 400, JSON.stringify(bad).slice(0, 80));
