@@ -311,3 +311,13 @@ body.admin .us-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 body.admin .us-link { margin-top: 12px; padding: 12px; border-radius: var(--r-md); background: var(--surface); }
 body.admin .us-link .set-hint { margin: 0 0 8px; }
 body.admin .us-link .set-hint:last-child { margin: 8px 0 0; }
+
+/* Auditlog: filter boven de lijst; lange samenvattingen (met id's van apparaten) breken af in plaats van de breedte te vergroten */
+body.admin .audit-filter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 10px; }
+@media (max-width: 520px) { body.admin .audit-filter { grid-template-columns: 1fr; } }
+body.admin #audit-list { max-height: 55vh; }
+body.admin .audit-sum { overflow-wrap: anywhere; line-height: 1.4; }
+
+/* Tabs: nooit smaller dan hun label (anders lopen de labels in elkaar bij 8 tabs op een telefoon); past het niet, dan scrolt de balk (overflow-x staat in style.css) */
+body.admin #settings .tabs button { flex: 1 0 auto; }
+body.admin #settings .audit-filter select, body.admin #settings .audit-filter input { max-width: 100%; width: 100%; }

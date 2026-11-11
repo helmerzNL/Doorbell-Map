@@ -206,4 +206,69 @@ function adminMiddleware(req, res, next) {
   next();
 }
 
-module.exports = { FILE, write, admin, device, SYSTEM, house, site, snap, logHouseDiff, adminMiddleware };
+// ---------- lezen (beheer) ----------
+// De log is alleen toe te voegen en wordt nooit ingekort, dus hij kan groot worden. Voor "nieuwste eerst" lezen we het bestand
+// van achteren naar voren in brokken en stoppen zodra de pagina vol is. Elke regel krijgt zijn beginpositie in het bestand (pos);
+// dat is de verwijzing voor de volgende pagina (oudere regels staan altijd vóór die positie, ook als er intussen regels bijkomen).
+const CHUNK = 64 * 1024;
+
+async function* linesBackwards(before) {
+  let fh;
+  try { fh = await fs.promises.open(FILE, 'r'); } catch (err) { if (err.code === 'ENOENT') return; throw err; }
+  try {
+    let end = Math.min(before ?? Infinity, (await fh.stat()).size); // te lezen: [0, end)
+    let rest = Buffer.alloc(0); // het begin van een regel die in een eerdere brok al begon (dus nog niet compleet)
+    while (end > 0) {
+      const start = Math.max(0, end - CHUNK);
+      const chunk = Buffer.alloc(end - start);
+      for (let got = 0; got < chunk.length;) {
+        const { bytesRead } = await fh.read(chunk, got, chunk.length - got, start + got);
+        if (!bytesRead) break;
+        got += bytesRead;
+      }
+      const data = Buffer.concat([chunk, rest]);
+      const cuts = []; // [van, tot) van elk stuk tussen twee regeleinden
+      let from = 0;
+      for (let i = data.indexOf(10); i !== -1; i = data.indexOf(10, from)) { cuts.push([from, i]); from = i + 1; }
+      cuts.push([from, data.length]);
+      for (let k = cuts.length - 1; k >= 0; k--) {
+        const [a, b] = cuts[k];
+        if (k === 0 && start > 0) { rest = data.subarray(a, b); break; } // begint mogelijk eerder: bij de volgende brok
+        if (b > a) yield { pos: start + a, text: data.toString('utf8', a, b) };
+        if (k === 0) rest = Buffer.alloc(0);
+      }
+      end = start;
+    }
+  } finally { await fh.close(); }
+}
+
+const LIMIT_DEFAULT = 50, LIMIT_MAX = 200;
+const haystack = (e) => [e.summary, e.house?.address, e.actor?.name, e.actor?.id, e.device].filter(Boolean).join(' ').toLowerCase();
+
+// GET /api/admin/audit?category=house|site&q=tekst&limit=50&before=<pos>  →  { items: [regel + pos], next: pos | null }
+// Nieuwste eerst. category leeg = alles; q zoekt (zonder hoofdletters) in de samenvatting, het adres, de beheerder en het apparaat.
+// Alleen lezen, voor ingelogde beheerders; er komt niets bij wat niet al in de log staat (dus geen IP-adressen, codes of coördinaten).
+async function list(req, res) {
+  const category = String(req.query.category ?? '');
+  if (category && !['house', 'site'].includes(category)) return res.status(400).json({ error: 'Onbekende categorie' });
+  const q = String(req.query.q ?? '').trim().slice(0, 100).toLowerCase();
+  const limit = Math.min(LIMIT_MAX, Math.max(1, Number.parseInt(req.query.limit, 10) || LIMIT_DEFAULT));
+  const raw = req.query.before;
+  if (raw !== undefined && raw !== '' && !/^\d+$/.test(String(raw))) return res.status(400).json({ error: 'Ongeldige verwijzing naar oudere regels' });
+  const before = raw === undefined || raw === '' ? undefined : Number(raw);
+
+  const items = [];
+  let next = null;
+  for await (const { pos, text } of linesBackwards(before)) {
+    let e;
+    try { e = JSON.parse(text); } catch { continue; } // een half geschreven of beschadigde regel
+    if (!e || typeof e !== 'object') continue;
+    if (category && e.category !== category) continue;
+    if (q && !haystack(e).includes(q)) continue;
+    if (items.length === limit) { next = items[items.length - 1].pos; break; } // er is nog meer
+    items.push({ ...e, pos });
+  }
+  res.set('Cache-Control', 'no-store').json({ items, next });
+}
+
+module.exports = { FILE, write, admin, device, SYSTEM, house, site, snap, logHouseDiff, adminMiddleware, list };
