@@ -1,6 +1,7 @@
 // "Mijn locatie": knop op de publieke kaart die de GPS-positie van het apparaat als stip toont.
 // Staat standaard aan: bij het openen van de kaart vraagt de browser om toestemming (zodra er geen venster meer open staat).
-// Na toestemming staat de knop aan, verschijnt de stip, volgt de kaart de positie en blijft het scherm aan (Screen Wake Lock),
+// Na toestemming staat de knop aan, verschijnt de stip, volgt de kaart de positie en blijft het scherm aan (Screen Wake Lock;
+// dat geldt ook zolang de positie met de community wordt gedeeld),
 // precies als na een tik op de knop; zonder toestemming blijft alles zoals het was en volgt er geen melding. Zet de bezoeker
 // de locatie zelf uit, dan onthoudt dit apparaat dat (alleen die keuze, in localStorage) en start hij niet meer vanzelf.
 // Er wordt niets verstuurd; de positie blijft op het apparaat. De beheerder kan de knop verbergen.
@@ -25,7 +26,7 @@
     let control = null, button = null;
     let watchId = null, following = false, announced = false, fresh = false;
     let dot = null, ring = null;
-    let wake = null, asking = false; // Screen Wake Lock: houdt het scherm aan zolang de locatie aan staat
+    let wake = null, asking = false, again = false; // Screen Wake Lock: houdt het scherm aan zolang de locatie aan staat of gedeeld wordt
     let silent = false, autoTried = false; // silent: vanzelf gestart, dus geen meldingen als de bezoeker niets deed
     // community
     let communityOn = false, commControl = null, commButton = null, commBadge = null, layer = null;
@@ -102,9 +103,24 @@
       fresh = false;
     }
 
+    // Locatie staat geblokkeerd (door de bezoeker, of op het apparaat zelf uit): een kort venster zegt hoe je dat op iOS en Android
+    // weer toestaat. Zonder <dialog>-ondersteuning blijft het bij een melding.
+    function showBlocked() {
+      const dlg = document.getElementById('locate-blocked-dialog');
+      if (!dlg?.showModal) return toast('Je hebt geen toegang tot je locatie gegeven. Sta locatie toe voor deze site in de instellingen van je browser of telefoon en probeer het opnieuw.');
+      document.getElementById('locate-blocked-close').onclick = document.getElementById('locate-blocked-x').onclick = () => dlg.close();
+      if (!dlg.open) dlg.showModal();
+    }
+
+    // De Permissions API meldt vooraf of de browser de locatie al geblokkeerd heeft; zonder die API (of bij een fout) is het antwoord "nee"
+    // en komt de melding alsnog via onError zodra het meten wordt geweigerd.
+    async function isBlocked() {
+      try { return (await navigator.permissions?.query({ name: 'geolocation' }))?.state === 'denied'; } catch { return false; }
+    }
+
     function onError(err) {
       if (err.code === 1) { // toestemming geweigerd: terug naar uit
-        if (!silent) toast('Je hebt geen toegang tot je locatie gegeven. Sta locatie toe voor deze site in de instellingen van je browser of telefoon en probeer het opnieuw.');
+        if (!silent) showBlocked();
         stop();
       } else if (!announced) { // tijdelijk geen signaal: de browser blijft proberen, we melden het één keer
         announced = true;
@@ -112,18 +128,24 @@
       }
     }
 
-    // Een wake lock vervalt vanzelf als de pagina naar de achtergrond gaat; bij terugkomen vragen we hem opnieuw.
-    // Geen ondersteuning of een weigering (bijv. batterijbesparing) is geen fout: het scherm dimt dan gewoon.
+    // Het scherm blijft aan zolang de locatie aan staat en dus ook zolang de positie met de community wordt gedeeld (delen kan niet
+    // zonder meten; de telefoon pauzeert het meten en delen zodra het scherm uitgaat, en de server wist de positie na 45 s).
+    // Een wake lock vervalt vanzelf als de pagina naar de achtergrond gaat en de browser mag hem intrekken (bijv. bij
+    // batterijbesparing). We vragen hem daarom opnieuw bij terugkomen, als hij wegvalt terwijl de pagina zichtbaar is, en bij het
+    // starten van delen (een tik van de bezoeker; sommige browsers weigeren een vraag zonder tik, bijv. direct bij het openen).
+    // Geen ondersteuning of een weigering is geen fout: het scherm dimt dan gewoon.
+    const needScreen = () => watchId !== null || sharing;
     async function holdScreen() {
-      if (!('wakeLock' in navigator) || watchId === null || wake || asking || document.visibilityState !== 'visible') return;
-      asking = true;
+      if (!('wakeLock' in navigator) || !needScreen() || wake || document.visibilityState !== 'visible') return;
+      if (asking) { again = true; return; } // er loopt al een vraag; mislukt die (bijv. net naar de achtergrond), dan volgt er nog één
+      asking = true; again = false;
       try {
         const lock = await navigator.wakeLock.request('screen');
-        if (watchId === null) { lock.release().catch(() => {}); return; } // intussen uitgezet
+        if (!needScreen()) { lock.release().catch(() => {}); return; } // intussen uitgezet
         wake = lock;
-        lock.addEventListener('release', () => { if (wake === lock) wake = null; });
+        lock.addEventListener('release', () => { if (wake === lock) { wake = null; holdScreen(); } }); // zelf loslaten zet wake eerst op null
       } catch { /* niet beschikbaar: het scherm mag dimmen */ }
-      finally { asking = false; }
+      finally { asking = false; if (again && !wake) holdScreen(); }
     }
     function releaseScreen() {
       const lock = wake;
@@ -150,7 +172,7 @@
       if (autoTried) return;
       if (!supported() || !window.isSecureContext || watchId !== null || isOff()) return;
       autoTried = true;
-      try { if ((await navigator.permissions?.query({ name: 'geolocation' }))?.state === 'denied') return; } catch { /* geen Permissions API: gewoon proberen */ }
+      if (await isBlocked()) return; // vanzelf starten meldt niets: alleen een tik van de bezoeker toont de uitleg
       const go = () => {
         if (!control || watchId !== null || isOff()) return;
         if (document.querySelector('dialog[open]')) return setTimeout(go, 1500);
@@ -262,6 +284,8 @@
 
     async function pressCommunity() {
       if (sharing) return stopSharing();
+      silent = false; // een tik van de bezoeker: ook een weigering van het vanzelf gestarte meten (dat nog kan lopen) hoort gemeld te worden
+      if (watchId === null && await isBlocked()) return showBlocked(); // geblokkeerd: eerst dat oplossen, dan pas vragen om te delen
       if (!(await consent())) return;
       if (watchId === null) start(); // delen heeft de positie nodig; ook zonder eerst op "Mijn locatie" te tikken
       if (watchId === null) return;
@@ -269,6 +293,7 @@
       layer = layer || Wijk.createCommunityLayer(map);
       pingTimer = setInterval(sendPing, PING_MS);
       if (lastFix) sendPing();
+      holdScreen(); // een tik van de bezoeker: lukte de vraag bij het openen niet, dan lukt hij nu mogelijk wel
       paintCommunity();
     }
     window.addEventListener('pagehide', () => { if (sharing) leave(); });
