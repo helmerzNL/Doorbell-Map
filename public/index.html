@@ -138,6 +138,27 @@
   <div class="row"><button id="community-yes" class="primary" type="button">Ja, deel mijn positie</button><button id="community-no" type="button">Annuleren</button></div>
 </dialog>
 
+<dialog id="locate-blocked-dialog" aria-labelledby="locate-blocked-title">
+  <div class="intro-head">
+    <h3 id="locate-blocked-title">Locatie staat geblokkeerd</h3>
+    <button id="locate-blocked-x" class="icon-btn" type="button" aria-label="Sluiten"><i data-mdi="close"></i></button>
+  </div>
+  <p>Deze kaart mag je locatie niet gebruiken. Zo sta je dat weer toe:</p>
+  <h4>iPhone en iPad</h4>
+  <ol class="install-steps">
+    <li>Tik in Safari op "aA" in de adresbalk en kies "Websiteinstellingen".</li>
+    <li>Zet "Locatie" op "Sta toe" en laad de pagina opnieuw.</li>
+    <li>Gebruik je de app van je beginscherm? Ga dan naar Instellingen → Privacy en beveiliging → Locatievoorzieningen en sta locatie toe voor deze app.</li>
+  </ol>
+  <h4>Android</h4>
+  <ol class="install-steps">
+    <li>Tik in Chrome op het icoon links in de adresbalk en kies "Machtigingen".</li>
+    <li>Zet "Locatie" op "Toestaan" en laad de pagina opnieuw.</li>
+  </ol>
+  <p class="muted">Staat het daar al goed? Controleer dan of Locatie ook op je telefoon zelf aan staat.</p>
+  <p><button id="locate-blocked-close" class="primary" type="button">Sluiten</button></p>
+</dialog>
+
 <dialog id="streets-dialog" aria-labelledby="streets-title">
   <h3 id="streets-title">Straten</h3>
   <p class="muted">Kies welke straten op de kaart (en in de PDF) te zien zijn.</p>
