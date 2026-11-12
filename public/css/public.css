@@ -140,8 +140,8 @@ body.public.closed .legend, body.public.closed .bar-switches, body.public.closed
 body.public.closed .viewport, body.public.closed .house-sheet { display: none; }
 body.public .closed-screen { flex: 1; min-height: 0; overflow-y: auto; display: grid; place-items: center; padding: 28px 16px calc(28px + env(safe-area-inset-bottom)); background: var(--bg); }
 body.public .closed-screen[hidden] { display: none; }
-body.public .closed-card { width: min(560px, 100%); box-sizing: border-box; text-align: center; padding: 40px 32px 36px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: var(--sh-2); }
-body.public .closed-logo { display: block; max-width: min(240px, 70%); max-height: 120px; margin: 0 auto 22px; object-fit: contain; border-radius: 8px; }
+body.public .closed-card { width: min(600px, 100%); box-sizing: border-box; text-align: center; padding: 48px 36px 40px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: var(--sh-2); }
+body.public .closed-logo { display: block; width: auto; height: auto; max-width: min(360px, 100%); max-height: 180px; margin: 0 auto 30px; object-fit: contain; border-radius: 8px; filter: var(--logo-filter); } /* net als in de kopbalk: het logo keert om in de donkere weergave */
 body.public .closed-logo[hidden] { display: none; }
 body.public .closed-card h2 { margin: 0 0 14px; font-size: clamp(1.7rem, 6vw, 2.25rem); line-height: 1.15; letter-spacing: -.02em; color: var(--accent); }
 body.public .closed-text { font-size: 1.05rem; line-height: 1.65; color: var(--text); }
@@ -169,7 +169,8 @@ body.public .closed-text p:last-child { margin-bottom: 0; }
   body.public .house-sheet { left: 10px; right: 10px; width: auto; bottom: calc(150px + env(safe-area-inset-bottom)); }
   body.public .status-choice button { min-height: 48px; }
   body.public dialog { width: calc(100vw - 20px); }
-  body.public .closed-card { padding: 30px 20px 28px; }
+  body.public .closed-card { padding: 34px 20px 30px; }
+  body.public .closed-logo { margin-bottom: 24px; }
   body.public #intro-dialog { padding: 0 18px 16px; }
   body.public .intro-head { margin-inline: -18px; padding-inline: 18px; }
 }
