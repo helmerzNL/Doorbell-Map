@@ -587,6 +587,7 @@ admin.put('/houses', backups.afterSave('Layout opgeslagen'), (req, res) => {
 });
 
 admin.get('/community', community.adminList);
+admin.get('/audit', audit.list); // de auditlog lezen (alleen lezen; schrijven doet de middleware hierboven)
 admin.use(residents.admin);
 app.use('/api/admin', admin);
 app.use('/api/resident', residents.resident);

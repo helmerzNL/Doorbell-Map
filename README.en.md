@@ -311,6 +311,8 @@ Every backup can get a **short title** (max. 40 characters, ✎ button), for exa
 ## Audit log
 Every change is written straight to **`DATA_PATH/audit-log.jsonl`** (in the container `/data/audit-log.jsonl`). The file has one JSON object per line (*JSON Lines*), so a change is added immediately without rewriting the whole file. You can read it with a text editor, or with for example `jq` (`jq -c 'select(.category == "house")' audit-log.jsonl`).
 
+**Viewing it in the admin** – under *Settings → Audit log* the log is shown as a list, newest first, with the summary and the time of each line. This shows which houses have been changed, when and by whom (an administrator or a resident's device). By default only the **houses** are listed; use the *Show* field to pick *Settings and administration* or *Everything*. The search field searches street, house number, administrator or device, and *Show older* fetches the next 50 lines (opening stays fast, even with a very large log; only a search without a match reads the whole file). The screen is read-only and available to every logged-in administrator; the log itself stays as it is. The summaries are recorded in Dutch and stay Dutch when you view the admin in English. For your own tooling: `GET /api/admin/audit?category=house&q=…&limit=50&before=…` returns the same lines as JSON (when logged in as an administrator).
+
 Every line has:
 - `at`: when;
 - `category`: **`house`** for a house, or **`site`** for everything else;

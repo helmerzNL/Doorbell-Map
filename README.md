@@ -309,6 +309,8 @@ Elke backup kan een **korte titel** krijgen (max. 40 tekens, knop ✎), bijvoorb
 ## Auditlog
 Elke wijziging komt direct in **`DATA_PATH/audit-log.jsonl`** (in de container `/data/audit-log.jsonl`). Het bestand heeft één JSON-object per regel (*JSON Lines*). Zo komt een wijziging er meteen bij zonder het hele bestand te herschrijven. Lezen kan met een teksteditor, of met bijvoorbeeld `jq` (`jq -c 'select(.category == "house")' audit-log.jsonl`).
 
+**Bekijken in het beheer** – onder *Instellingen → Auditlog* staat de log als lijst, nieuwste bovenaan, met per regel de samenvatting en het tijdstip. Je ziet zo welke huizen zijn gewijzigd, wanneer en door wie (een beheerder of het apparaat van een bewoner). Standaard staan alleen de **huizen** erin; met het keuzeveld *Toon* kies je *Instellingen en beheer* of *Alles*. Het zoekveld zoekt op straat, huisnummer, beheerder of apparaat, en *Oudere tonen* haalt de volgende 50 regels op (openen blijft snel, ook bij een zeer grote log; alleen een zoekopdracht zonder treffer leest het hele bestand). Het scherm is alleen-lezen en voor elke ingelogde beheerder; de log zelf blijft zoals hij is. De samenvattingen zijn in het Nederlands vastgelegd en blijven dat ook als je het beheer in het Engels bekijkt. Voor eigen tooling: `GET /api/admin/audit?category=house&q=…&limit=50&before=…` geeft dezelfde regels als JSON (met een inlog als beheerder).
+
 Elke regel heeft:
 - `at`: wanneer;
 - `category`: **`house`** voor een huis, of **`site`** voor de rest;

@@ -187,3 +187,90 @@ test('inloggegevens: wel dát er iets veranderde, nooit het wachtwoord; geen IP-
     assert.ok(e.at && e.action && e.actor?.type && typeof e.summary === 'string', JSON.stringify(e));
   }
 });
+
+// ---------- de log lezen in het beheer: GET /api/admin/audit ----------
+// Een wachtwoordwijziging (hierboven) verhoogt de epoch van de gebruiker en maakt oudere sessies ongeldig; deze sessie hoort bij de actuele epoch.
+const freshCookie = () => {
+  const payload = `${Date.now() + 3600e3}.pk.owner.${store.db().users.find((u) => u.id === 'owner').epoch || 0}`;
+  return `sm_session=${payload}.${crypto.createHmac('sha256', 'test-session-secret-123').update(payload).digest('base64url')}`;
+};
+const get = (qs = '', c = freshCookie()) => j(`/api/admin/audit${qs}`, c ? { headers: { cookie: c } } : undefined);
+const page = async (qs) => { const r = await get(qs); assert.equal(r.status, 200, await r.clone().text()); return r.json(); };
+const noPos = ({ pos, ...e }) => e;
+// Alle pagina's achter elkaar, zoals het beheer ze ophaalt met "Oudere tonen".
+async function all(qs, limit) {
+  const out = [];
+  let before = '';
+  for (;;) {
+    const p = await page(`?limit=${limit}${qs}${before}`);
+    out.push(...p.items);
+    if (p.next === null) return out;
+    before = `&before=${p.next}`;
+  }
+}
+
+test('lezen: alleen voor ingelogde beheerders', async () => {
+  assert.equal((await get('', '')).status, 401);
+  assert.equal((await get('')).status, 200);
+});
+
+test('lezen: nieuwste eerst, en de pagina\'s samen zijn precies de hele log', async () => {
+  const full = lines().reverse();
+  assert.ok(full.length > 10, 'de eerdere tests hebben regels geschreven');
+  const first = await page('');
+  assert.equal(first.items.length, Math.min(50, full.length), 'standaard 50 per pagina');
+  assert.deepEqual(first.items.map(noPos), full.slice(0, 50));
+  const got = await all('', 7);
+  assert.deepEqual(got.map(noPos), full);
+  assert.ok(got.every((e, i) => i === 0 || e.pos < got[i - 1].pos), 'posities lopen terug');
+  assert.equal((await page('?limit=1')).items.length, 1);
+  assert.equal((await page('?limit=100000')).items.length, Math.min(200, full.length), 'maximaal 200 per pagina');
+});
+
+test('lezen: filter op soort en op zoektekst', async () => {
+  const marker = { id: 'zk', street: 'Zoekstraat', number: '7' };
+  audit.house(ADMIN, 'changed', marker, { changes: { note: { from: '', to: 'x' } } });
+  audit.house(audit.device('abc123'), 'proposed', marker, { from: 'none', to: 'green' });
+  audit.site(ADMIN, 'settings', 'Instellingen opgeslagen');
+  const all_ = lines();
+  const houses = (await all('&category=house', 9)).map(noPos);
+  assert.deepEqual(houses, all_.filter((e) => e.category === 'house').reverse());
+  assert.deepEqual((await all('&category=site', 9)).map(noPos), all_.filter((e) => e.category === 'site').reverse());
+
+  const hit = (await all('&q=ZOEKSTRAAT', 9)).map(noPos);
+  assert.equal(hit.length, 2);
+  assert.ok(hit.every((e) => e.house.id === 'zk'));
+  assert.deepEqual((await all('&category=house&q=abc123', 9)).map((e) => e.action), ['proposed'], 'zoeken op het apparaat van een bewoner');
+  assert.ok((await all('&q=beheerder', 9)).length >= 3, 'zoeken op de beheerder');
+  assert.deepEqual(await page('?q=bestaat-niet-xyz'), { items: [], next: null });
+  assert.deepEqual((await all('&category=site&q=zoekstraat', 9)), [], 'filters werken samen');
+
+  assert.equal((await get('?category=alles')).status, 400);
+  assert.equal((await get('?before=abc')).status, 400);
+  assert.equal((await get('?before=-1')).status, 400);
+});
+
+test('lezen: een grote log met tekens van meerdere bytes, over de grenzen van de leesbrokken heen', async () => {
+  const sizeBefore = fs.statSync(audit.FILE).size;
+  for (let i = 0; i < 600; i++) audit.site(ADMIN, 'settings', `Ünïcödé € 😀 ${i} ${'é€'.repeat(60)}`);
+  assert.ok(fs.statSync(audit.FILE).size - sizeBefore > 2 * 64 * 1024, 'meer dan twee brokken');
+  const buf = fs.readFileSync(audit.FILE);
+  const got = await all('', 200);
+  assert.deepEqual(got.map(noPos), lines().reverse(), 'geen regel kwijt, dubbel of beschadigd');
+  assert.ok(got.every((e) => buf.subarray(e.pos, e.pos + 7).toString() === '{"at":"'), 'pos is het begin van de regel');
+});
+
+test('lezen: een beschadigde regel of een half geschreven laatste regel breekt het lezen niet', async () => {
+  const good = lines().reverse();
+  const size = fs.statSync(audit.FILE).size;
+  try {
+    fs.appendFileSync(audit.FILE, 'dit is geen json\n{"at":"2026-');
+    assert.deepEqual((await all('', 5)).map(noPos), good);
+  } finally { fs.truncateSync(audit.FILE, size); }
+});
+
+test('lezen: zonder logbestand een lege lijst', async () => {
+  fs.renameSync(audit.FILE, `${audit.FILE}.bak`);
+  try { assert.deepEqual(await page(''), { items: [], next: null }); }
+  finally { fs.renameSync(`${audit.FILE}.bak`, audit.FILE); }
+});

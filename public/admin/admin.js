@@ -819,9 +819,12 @@
       b.setAttribute('aria-selected', on);
     });
     document.querySelectorAll('#settings [data-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== name));
+    const strip = document.querySelector('#settings .tabs'), cur = strip.querySelector('.active'); // de balk scrolt als de tabs niet passen: de actieve in beeld
+    if (cur) strip.scrollLeft = Math.max(0, cur.offsetLeft - (strip.clientWidth - cur.offsetWidth) / 2);
     if (name === 'security') { $('pk-err').textContent = ''; renderSecurity().catch((e) => ($('pk-err').textContent = e.message)); }
     if (name === 'users') renderUsers();
     if (name === 'backups') renderBackups();
+    if (name === 'audit') renderAudit();
     if (name === 'editions') renderEditions();
     if (name === 'changes') renderChanges();
     if (name === 'residents') { renderChanges(); renderPush(); fillQrStreets(); }
@@ -859,6 +862,55 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && drawerOpen() && !document.querySelector('dialog[open]')) closeSettings();
   });
+
+  // ---------- auditlog ----------
+  // Alleen lezen: de server geeft de regels van de log, nieuwste eerst, per pagina met een verwijzing naar de oudere. De
+  // samenvatting is door de server in het Nederlands vastgelegd op het moment van de wijziging en wordt niet vertaald.
+  const AUDIT_PAGE = 50;
+  let auditNext = null; // verwijzing naar de volgende (oudere) pagina, of null als er geen is
+  let auditToken = 0; // een oudere, tragere aanvraag mag een nieuwere niet overschrijven
+  async function renderAudit(more = false) {
+    $('audit-err').textContent = '';
+    const token = ++auditToken;
+    const params = new URLSearchParams({ limit: String(AUDIT_PAGE) });
+    if ($('audit-cat').value) params.set('category', $('audit-cat').value);
+    const q = $('audit-q').value.trim();
+    if (q) params.set('q', q);
+    if (more && auditNext !== null) params.set('before', String(auditNext));
+    let res;
+    try { res = await api(`/api/admin/audit?${params}`); }
+    catch (e) { if (token === auditToken) $('audit-err').textContent = e.message; return; }
+    if (token !== auditToken) return;
+    const box = $('audit-list');
+    if (!more) box.replaceChildren();
+    for (const e of res.items) {
+      const row = document.createElement('div');
+      row.className = 'bk-row audit-row';
+      const info = document.createElement('div');
+      info.className = 'bk-info';
+      const what = document.createElement('div');
+      what.className = 'audit-sum';
+      what.setAttribute('data-i18n-skip', '');
+      what.textContent = e.summary || e.action;
+      const when = document.createElement('span');
+      when.textContent = fmtDate(e.at);
+      info.append(what, when);
+      row.append(info);
+      box.append(row);
+    }
+    if (!box.children.length) {
+      const p = document.createElement('p');
+      p.className = 'muted';
+      p.textContent = $('audit-q').value.trim() || $('audit-cat').value ? 'Geen wijzigingen gevonden.' : 'Er zijn nog geen wijzigingen vastgelegd.';
+      box.append(p);
+    }
+    auditNext = res.next;
+    $('audit-more').hidden = auditNext === null;
+  }
+  let auditTimer = null;
+  $('audit-cat').onchange = () => renderAudit();
+  $('audit-q').oninput = () => { clearTimeout(auditTimer); auditTimer = setTimeout(() => renderAudit(), 300); };
+  $('audit-more').onclick = () => renderAudit(true);
 
   // ---------- backups ----------
   const selectedBackups = () => [...document.querySelectorAll('#bk-list input[type=checkbox]:checked')].map((c) => c.value);
