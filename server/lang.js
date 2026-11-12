@@ -21,7 +21,7 @@ const trIn = (l, s) => (translators[l] ? translators[l].tr(s) : s);
 
 // Teksten per taal: Nederlands staat in de gewone instellingen, andere talen in settings.translations[taal].
 // Een lege vertaling valt terug op de Nederlandse tekst.
-const TEXT_FIELDS = ['siteTitle', 'appName', 'appShortName', 'intro', 'residentInfo', 'qrShareText', 'communityTitle', 'communityText'];
+const TEXT_FIELDS = ['siteTitle', 'appName', 'appShortName', 'intro', 'residentInfo', 'qrShareText', 'communityTitle', 'communityText', 'closedText'];
 const translations = (l) => store.db().settings?.translations?.[l] || {};
 const text = (field, l = defaultLang()) => {
   const own = l === 'nl' ? '' : translations(l)[field];
@@ -29,6 +29,15 @@ const text = (field, l = defaultLang()) => {
   const base = store.db().settings?.[field];
   return typeof base === 'string' ? base : '';
 };
+
+// Eigen tekst van een taal voor een veld met standaardtekst (Nederlands: de gewone instelling; andere talen: de eigen vertaling),
+// of '' als de beheerder niets invulde. Dan geldt de standaardtekst, in die taal vertaald.
+const customText = (field, l) => {
+  const own = l === 'nl' ? store.db().settings?.[field] : translations(l)[field];
+  return typeof own === 'string' && own.trim() ? own : '';
+};
+// Een standaardtekst met alinea's (gescheiden door een lege regel) vertalen: het woordenboek kent elke alinea apart.
+const trParagraphs = (l, s) => s.split('\n\n').map((p) => trIn(l, p)).join('\n\n');
 
 // Oudere versie: losse velden introEn en residentInfoEn -> translations.en
 function migrate() {
@@ -42,4 +51,4 @@ function migrate() {
   store.save();
 }
 
-module.exports = { LANGS, TEXT_FIELDS, multilingual, defaultLang, tr, trIn, t, translations, text, migrate };
+module.exports = { LANGS, TEXT_FIELDS, multilingual, defaultLang, tr, trIn, t, translations, text, customText, trParagraphs, migrate };

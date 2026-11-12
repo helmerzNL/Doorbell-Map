@@ -594,6 +594,35 @@ async function main() {
     await ctx.close();
   }
 
+  // ---------- site sluiten: de planning in het beheer en het bedankscherm ----------
+  // Voor de edities, en daarna weer open: de site mag niet gesloten blijven voor de rest van de screenshots.
+  console.log('bedankscherm');
+  {
+    const closeAt = new Date(Date.now() + 3 * 864e5);
+    closeAt.setHours(22, 0, 0, 0);
+    await put('/api/admin/settings', { siteCloseOn: true, siteCloseAt: closeAt.toISOString() });
+    const ctx = await browser.newContext(ctxOpts(DESKTOP, { storageState: state }));
+    const p = await ctx.newPage();
+    await openAdmin(p);
+    await openTab(p, 'residents');
+    await p.evaluate(() => document.getElementById('close-on').closest('.set-row').scrollIntoView({ block: 'center' }));
+    await p.waitForTimeout(400);
+    await shot(p, 'instellingen-planning');
+    await ctx.close();
+
+    await put('/api/admin/settings', { siteCloseAt: new Date(Date.now() - 1000).toISOString() }); // het moment is voorbij: gesloten
+    for (const [name, opts] of [['bedankscherm', DESKTOP], ['bedankscherm-mobiel', MOBILE]]) {
+      const c = await browser.newContext(ctxOpts(opts));
+      const pg = await c.newPage();
+      await pg.goto(`${BASE}/`);
+      await pg.waitForSelector('#closed-screen:not([hidden])');
+      await pg.waitForTimeout(500);
+      await shot(pg, name);
+      await c.close();
+    }
+    await put('/api/admin/settings', { siteCloseOn: false });
+  }
+
   // ---------- edities: twee eerdere keren aanmaken, vergelijken met de live kaart en bewerken ----------
   // Als laatste, zodat de keuzelijst in de overzichtskaart niet op de andere screenshots staat.
   console.log('edities');

@@ -11,9 +11,11 @@ const users = require('./users');
 const account = require('./account');
 const backups = require('./backups');
 const images = require('./images');
+const audit = require('./audit');
 const editions = require('./editions');
 const residents = require('./residents');
 const community = require('./community');
+const site = require('./site');
 const appVersion = require('./version');
 const { normalizeHouse, STATUSES, statusLabels, statsShow } = require('./houses');
 
@@ -64,10 +66,11 @@ function publicTranslations() {
   return out;
 }
 
-app.get('/api/map', (req, res) => {
+// De volledige kaartgegevens: huizen, weergave en alle instellingen die de kaart nodig heeft. Bezoekers krijgen ze alleen zolang
+// de site open is (zie closedPayload); het beheer leest ze altijd, via /api/admin/map.
+function mapPayload() {
   const { view, pdfView, houses, settings } = store.db();
-  res.set('Cache-Control', 'no-cache');
-  res.json({
+  return {
     title: settings?.siteTitle || config.siteTitle, siteTitle: settings?.siteTitle || '', view, pdfView: pdfView || null, houses,
     intro: settings?.intro || '', logo: settings?.logo || null, logoSmall: settings?.logoSmall || null, favicon: settings?.favicon || null,
     multilingual: lang.multilingual(), defaultLang: lang.defaultLang(),
@@ -88,7 +91,32 @@ app.get('/api/map', (req, res) => {
     residentsAppOnly: residents.appOnly(),
     residentInfo: residents.enabled() ? residents.info() : '', // het infovlak verdwijnt zodra wijzigen uit staat
     labels: statusLabels(settings),
-  });
+  };
+}
+
+// Is de site gesloten, dan krijgt een bezoeker alleen wat het bedankscherm nodig heeft (naam, logo's, talen en de tekst):
+// geen huizen, weergave, locatie of aantallen. Een lijst met vaste velden, zodat een later toegevoegd veld niet per ongeluk meegaat.
+function closedPayload() {
+  const { settings } = store.db();
+  const translations = {};
+  for (const l of lang.LANGS) {
+    if (l === 'nl') continue;
+    const t = lang.translations(l);
+    translations[l] = { siteTitle: t.siteTitle || '', appName: t.appName || '', appShortName: t.appShortName || '', closedText: t.closedText || '' };
+  }
+  return {
+    closed: true, closedText: site.text('nl'), translations,
+    title: settings?.siteTitle || config.siteTitle, siteTitle: settings?.siteTitle || '',
+    appName: settings?.appName || '', appShortName: settings?.appShortName || '',
+    logo: settings?.logo || null, logoSmall: settings?.logoSmall || null, favicon: settings?.favicon || null,
+    multilingual: lang.multilingual(), defaultLang: lang.defaultLang(),
+    view: null, pdfView: null, houses: [], // een oudere, nog open pagina krijgt zo een lege kaart in plaats van een foutmelding
+  };
+}
+
+app.get('/api/map', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.json(site.closed() ? closedPayload() : { ...mapPayload(), closed: false });
 });
 
 app.use('/uploads', express.static(store.uploadDir, { immutable: true, maxAge: '365d', index: false }));
@@ -156,6 +184,7 @@ app.use('/api/invites', account.invites);
 // ---------- beheer ----------
 const admin = express.Router();
 admin.use(auth.requireAdmin);
+admin.use(audit.adminMiddleware); // auditlog: elke geslaagde wijziging in het beheer, met wie hem deed
 admin.use(account.admin); // eigen inlog (passkeys, wachtwoord, MFA), bevestigen en gebruikersbeheer
 
 const pwError = (res, err) => res.status(err.status || 400).json({ error: err.message });
@@ -163,6 +192,12 @@ const pwError = (res, err) => res.status(err.status || 400).json({ error: err.me
 admin.get('/info', (req, res) => {
   const { version, build, buildFull, label, channel } = appVersion;
   res.json({ version, build, buildFull, label, channel });
+});
+
+// De volledige kaartgegevens voor het beheer: die blijven beschikbaar als de site voor bezoekers is gesloten.
+admin.get('/map', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.json({ ...mapPayload(), closed: false });
 });
 
 // Publieke versie- en kanaalinfo ("beta" of "stable").
@@ -216,7 +251,7 @@ function sanitizeBackup(b) {
   for (const l of lang.LANGS) {
     const o = t.translations?.[l];
     if (!o || typeof o !== 'object' || l === 'nl') continue;
-    texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), communityTitle: txt(o, 'communityTitle'), communityText: txt(o, 'communityText'), labels: labelsOf(o.labels) };
+    texts.translations[l] = { siteTitle: txt(o, 'siteTitle'), appName: txt(o, 'appName'), appShortName: txt(o, 'appShortName'), intro: txt(o, 'intro'), residentInfo: txt(o, 'residentInfo'), qrShareText: txt(o, 'qrShareText'), communityTitle: txt(o, 'communityTitle'), communityText: txt(o, 'communityText'), closedText: txt(o, 'closedText'), labels: labelsOf(o.labels) };
   }
   // edities (backups van vóór de edities hebben dit veld niet; terugzetten laat de edities dan met rust)
   let eds;
@@ -308,8 +343,10 @@ admin.post('/editions', backups.afterSave('Editie aangemaakt'), (req, res) => {
 // De huizen van één editie opslaan (vanuit het bewerkscherm of de popup). Schrijft alleen in die editie, nooit in de live kaart.
 admin.put('/editions/:id/houses', backups.afterSave('Editie opgeslagen'), (req, res) => {
   try {
+    const before = audit.snap(editions.read(req.params.id)?.houses);
     const e = editions.setHouses(req.params.id, validateHouses(req.body?.houses));
     if (!e) return res.status(404).json({ error: 'Editie niet gevonden' });
+    audit.logHouseDiff(req.audit.actor, before, e.houses, { edition: { id: e.id, label: editions.label(e) } });
     res.json({ id: e.id, counts: e.counts, houses: e.houses });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -374,7 +411,7 @@ admin.get('/settings', (req, res) => {
     const t = lang.translations(l);
     tx[l] = Object.fromEntries([...lang.TEXT_FIELDS.map((f) => [f, t[f] || '']), ['labels', { green: t.labels?.green || '', red: t.labels?.red || '', none: t.labels?.none || '' }]]);
   }
-  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, communityLooks: community.looksEnabled(), communityTitle: s.communityTitle || '', communityText: s.communityText || '', defaultCommunity: community.defaults(), statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', passkeyName: s.passkeyName || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
+  res.json({ residentInfo: residents.info(), residentsOff: s.residentsOff === true, residentsUntil: s.residentsUntil || null, residentsSwapAfter: s.residentsSwapAfter === true, residentsGeofence: s.residentsGeofence === true, simpleUi: s.simpleUi === true, locateEnabled: s.locateEnabled !== false, communityEnabled: s.communityEnabled === true, communityLooks: community.looksEnabled(), communityTitle: s.communityTitle || '', communityText: s.communityText || '', defaultCommunity: community.defaults(), siteCloseOn: s.siteCloseOn === true, siteCloseAt: s.siteCloseAt || null, closedText: s.closedText || '', defaultClosed: site.defaults(), statsPublic: s.statsPublic === true, statsShow: statsShow(s), residentsQrOnly: s.residentsQrOnly === true, residentsCodeOn: s.residentsCodeOn === true, residentsCode: s.residentsCode || '', residentsGeofenceRadius: residents.geofence().radius, multilingual: lang.multilingual(), defaultLang: lang.defaultLang(), qrShareText: s.qrShareText || '', passkeyName: s.passkeyName || '', translations: tx, defaultShareTexts: residents.defaultShareTexts(), defaultInfo: residents.DEFAULT_INFO });
 });
 
 // Tekstvelden met hun maximale lengte; gelden voor het Nederlands (gewone instellingen) en voor elke vertaling.
@@ -387,6 +424,7 @@ const TEXT_RULES = {
   qrShareText: { max: 500, multiline: true, error: 'De deeltekst mag maximaal 500 tekens zijn' },
   communityTitle: { max: 80, error: 'De titel van het communityvlak mag maximaal 80 tekens zijn' },
   communityText: { max: 1000, multiline: true, error: 'De tekst van het communityvlak mag maximaal 1000 tekens zijn' },
+  closedText: { max: 1000, multiline: true, error: 'De bedanktekst mag maximaal 1000 tekens zijn' },
   passkeyName: { max: 40, error: 'De naam bij een passkey mag maximaal 40 tekens zijn' },
 };
 // { value } of { error }
@@ -400,11 +438,11 @@ function cleanText(field, raw) {
 admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (req, res) => {
   const body = req.body || {};
   const db = store.db();
-  for (const f of ['intro', 'residentInfo', 'qrShareText', 'communityTitle', 'communityText']) {
+  for (const f of ['intro', 'residentInfo', 'qrShareText', 'communityTitle', 'communityText', 'closedText']) {
     if (!(f in body)) continue;
     const r = cleanText(f, body[f]);
     if (r.error) return res.status(400).json({ error: r.error });
-    db.settings[f] = r.value; // qrShareText, communityTitle en communityText: leeg = standaardtekst
+    db.settings[f] = r.value; // qrShareText, communityTitle, communityText en closedText: leeg = standaardtekst
   }
   if ('communityLooks' in body) {
     db.settings.communityLooks = body.communityLooks === true;
@@ -422,6 +460,15 @@ admin.put('/settings', backups.afterSave('Teksten/instellingen opgeslagen'), (re
     if (off && !Number.isFinite(t)) return res.status(400).json({ error: 'Kies eerst een geldige datum en tijd' });
     db.settings.residentsOff = off;
     db.settings.residentsUntil = Number.isFinite(t) ? new Date(t).toISOString() : null;
+  }
+  // Site sluiten op een datum en tijd (bedankscherm in plaats van de kaart). Een moment in het verleden sluit meteen.
+  if ('siteCloseOn' in body || 'siteCloseAt' in body) {
+    const on = 'siteCloseOn' in body ? body.siteCloseOn === true : db.settings.siteCloseOn === true;
+    const rawAt = 'siteCloseAt' in body ? body.siteCloseAt : db.settings.siteCloseAt;
+    const t = Date.parse(rawAt || '');
+    if (on && !Number.isFinite(t)) return res.status(400).json({ error: 'Kies eerst een geldige datum en tijd om de site te sluiten' });
+    db.settings.siteCloseOn = on;
+    db.settings.siteCloseAt = Number.isFinite(t) ? new Date(t).toISOString() : null;
   }
   if ('residentsGeofenceRadius' in body) {
     const r = Number(body.residentsGeofenceRadius);
@@ -583,6 +630,7 @@ admin.put('/houses', backups.afterSave('Layout opgeslagen'), (req, res) => {
 });
 
 admin.get('/community', community.adminList);
+admin.get('/audit', audit.list); // de auditlog lezen (alleen lezen; schrijven doet de middleware hierboven)
 admin.use(residents.admin);
 app.use('/api/admin', admin);
 app.use('/api/resident', residents.resident);

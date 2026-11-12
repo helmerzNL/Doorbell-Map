@@ -16,6 +16,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - [Settings](#settings)
 - [Logging in: passkey, password and MFA](#logging-in-passkey-password-and-mfa)
 - [Inviting more admins](#inviting-more-admins)
+- [Audit log](#audit-log)
 - [Editions: comparing earlier occasions](#editions-comparing-earlier-occasions)
 - [Installing as an app and offline use](#installing-as-an-app-and-offline-use)
 - [Deploy it yourself with Docker](#deploy-it-yourself-with-docker)
@@ -49,6 +50,7 @@ An interactive map of the neighbourhood in which every house is **green**, **red
 - Settings in seven clear tabs; the admin area can also be installed as its own **app**.
 - Your own **logo** (with an optional small logo for the header), an optional **favicon** (also the icon of the installed app; the lantern by default), explanation, info box, **site and app name** and your own names for the statuses.
 - Automatic **backups** after every save attempt (ZIP, with app settings, logos and devices), with short titles and manual backups.
+- An **audit log** in the data folder with every change and who made it: an administrator or a resident's device, and per house what changed. See [Audit log](#audit-log).
 - Version number and commit visible in the settings menu.
 
 ## The website for visitors
@@ -93,7 +95,7 @@ Example with random houses (map data © OpenStreetMap contributors).
 
 **Quickly to your house** – with a mouse you double-click a house, on a touchscreen you long-press it (a little over half a second). *Edit* is then switched on (in the browser), the map jumps to the house and change mode starts; if you have not chosen a house yet, the app asks whether it is your house. A double-click outside the houses simply zooms in. In the admin area the same gesture selects the house in select mode.
 
-**My location** – below the zoom buttons is the *My location* button (the crosshair). Your location is **on by default**: when the map opens, the browser asks for permission to use your location (after the explanation has been closed). On a first visit the explanation comes first, followed by the location question. If you allow it, the button switches on (blue), your position appears as a blue dot with a light circle for the accuracy, the map zooms to you and follows you as you walk. Without permission the map stays as it was and no message follows. If you move the map yourself, following stops (the dot stays) and a tap on the button takes you back; one more tap on the next state turns the location off. If you turn the location off yourself, it no longer starts by itself on that device (only that choice is remembered, in the browser); a tap on the button turns it back on. While the location is on the screen stays awake, so you do not have to keep unlocking your phone while walking (if your browser supports it; otherwise the screen simply dims, and it is requested again when you return to the page). Your position stays on your phone: it is never stored or sent anywhere, unless you choose to share it with the Community (see below). Showing your location only works over **https**. The administrator can hide the button, and with it the location (see *Config*).
+**My location** – below the zoom buttons is the *My location* button (the crosshair). Your location is **on by default**: when the map opens, the browser asks for permission to use your location (after the explanation has been closed). On a first visit the explanation comes first, followed by the location question. If you allow it, the button switches on (blue), your position appears as a blue dot with a light circle for the accuracy, the map zooms to you and follows you as you walk. Without permission the map stays as it was and no message follows. If you move the map yourself, following stops (the dot stays) and a tap on the button takes you back; one more tap on the next state turns the location off. If you turn the location off yourself, it no longer starts by itself on that device (only that choice is remembered, in the browser); a tap on the button turns it back on. While the location is on the screen stays awake, and so it does while you share your position with the Community, so you do not have to keep unlocking your phone while walking (if your browser supports it; otherwise the screen simply dims). If the browser withdraws it, for example in battery saver mode, or you briefly switch to another app, the screen is kept awake again when you return and as soon as possible. If location is blocked, a tap on *My location* or on the Community button opens a short window explaining how to allow it again on iOS (Safari) and Android (Chrome). Your position stays on your phone: it is never stored or sent anywhere, unless you choose to share it with the Community (see below). Showing your location only works over **https**. The administrator can hide the button, and with it the location (see *Config*).
 
 <table>
 <tr><td align="center" valign="top"><a href="docs/screenshots/mijn-locatie-mobiel.png"><img src="docs/screenshots/mijn-locatie-mobiel.png" width="220" alt="My location: blue dot with accuracy circle"></a><br><sub>My location: blue dot with accuracy circle</sub></td></tr>
@@ -126,6 +128,12 @@ If you want residents to only be able to link **their own house**, switch on *Ch
 **Scheduling changes** – under *Settings → Residents → Schedule* switch on *Switch off changing at a date and time* and pick the moment with the date/time picker. Until that moment residents can make changes (browser and app); after that it is off. The two switches below it are disabled and ignored during that time; if you switch the schedule off, they apply again.
 
 **Still switching green ↔ red after the end date** – next to the schedule is the switch *After the end date still switch between green and red*. If it is on, residents who already have a house can, after the end date, still switch their own house from green to red or the other way round (not from or to *not marked*, and not choose a new house), still with your approval. The *My house* button then only shows those two colours; visitors without a house no longer see the button (or *Edit*). This switch takes precedence over the two switches below it and only works when the schedule is on.
+
+**Closing the site** – under *Settings → Residents → Schedule → Close the site* switch on *Close the site at a date and time* and pick the moment, for example after the event is over. Until then the site is simply open. After that, visitors see a **thank-you screen** instead of the front page and the map with the houses can no longer be viewed: the server then no longer sends houses, map view or counts at all, so they cannot be fetched through the browser either. Residents can then no longer link or change a house and the community stops working. Anyone who had the page open gets the thank-you screen at the next refresh (within about 30 seconds). You still see the map in the admin and can keep editing everything; *View site* shows you what visitors see. If you move the date to later or switch it off, the site is open again right away (the chosen moment is kept). If you choose a moment that has already passed, the site closes immediately; the admin asks for confirmation first. The thank-you screen shows the name of the site, the logo (the normal logo if there is no small logo) and a text; you change that text under *Config → Texts → Text of the thank-you screen* (per language; a default text is already filled in, *Default text* puts it back). The language choice and the light/dark button stay available. Phones that have the site installed as an app and have been offline for a while may still show the last saved map until their next connection.
+
+<table>
+<tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-planning.png"><img src="docs/screenshots/instellingen-planning.png" width="330" alt="Schedule: close the site at a date and time"></a><br><sub>Schedule: close the site</sub></td><td align="center" valign="top"><a href="docs/screenshots/bedankscherm.png"><img src="docs/screenshots/bedankscherm.png" width="400" alt="Thank-you screen instead of the map"></a><br><sub>Thank-you screen</sub></td><td align="center" valign="top"><a href="docs/screenshots/bedankscherm-mobiel.png"><img src="docs/screenshots/bedankscherm-mobiel.png" width="150" alt="Thank-you screen on a phone"></a><br><sub>Thank-you screen on a phone</sub></td></tr>
+</table>
 
 **Simple display** – under *Settings → Config → Display* switch on *Simple display*. On the website the *House numbers* and *Edit* switches and the *Streets* button then disappear; *Info*, *My house* and *Save PDF* are then directly in the menu bar (the *More* menu is dropped) and Edit is always on.
 
@@ -194,12 +202,12 @@ The cog (⚙) in the bar slides the settings menu into view. It is divided into 
 
 **Residents** – everything around changing by residents:
 - *Changes by residents*: on/off, and optionally only in the installed app (the *Edit* switch then disappears in the browser and the server refuses changes without the app header `X-App-Mode: standalone`).
-- *Schedule*: close changing automatically at a date and time (with a date picker), optionally still switching green ↔ red afterwards.
+- *Schedule*: close changing automatically at a date and time (with a date picker), optionally still switching green ↔ red afterwards, and close the whole site at a date and time (thank-you screen instead of the map).
 - *Access*: only in the neighbourhood (location/geofence) and an access code for devices without GPS.
 - *Devices*: registered devices, **alphabetical** by street and house number (handy for searching with many houses), with removing the link or **blocking** (optionally with IP address), and the *Blocked* list.
 - *Notifications on this device*: push notifications for new changes.
 
-**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the *My location* button for visitors (on or off; on by default), the *Community* (live participants; off by default), *Choose colour and symbol* for the community (on or off; on by default), the names of the statuses, the info box, the explanation, the text when sharing via WhatsApp and the title and text of the community window (the texts per language).
+**Config** – language (multilingual and default language), logo, name of the site and the app, the simple display, the *My location* button for visitors (on or off; on by default), the *Community* (live participants; off by default), *Choose colour and symbol* for the community (on or off; on by default), the names of the statuses, the info box, the explanation, the text when sharing via WhatsApp the title and text of the community window and the text of the thank-you screen (the texts per language).
 
 <table>
 <tr><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-afbeeldingen.png"><img src="docs/screenshots/instellingen-config-afbeeldingen.png" width="270" alt="Config: logo, small logo and favicon"></a><br><sub>Config: logo, small logo and favicon</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-locatie.png"><img src="docs/screenshots/instellingen-config-locatie.png" width="270" alt="Config: My location and Community"></a><br><sub>Config: My location and Community</sub></td><td align="center" valign="top"><a href="docs/screenshots/instellingen-config-communityteksten.png"><img src="docs/screenshots/instellingen-config-communityteksten.png" width="270" alt="Config: title and text of the community window"></a><br><sub>Config: title and text of the community window</sub></td></tr>
@@ -295,7 +303,7 @@ Locally (without a build) the app shows `dev` with the commit from git. The work
 
 ## Backups
 After **every save attempt** (houses/layout, texts and settings, map view, logos, editions, unlinking or (un)blocking a device) the server makes a backup in the `backups` folder of the data folder: `DATA_PATH/backups` (in the container `/data/backups`). Every backup is one ZIP file, `sint_maarten-backup-<id>.zip`, containing:
-- `backup.json`: the layout (houses + map view), the texts (explanation, names, status names, info panel, share text, community panel and the translations), the **app settings** (the switches and choices in the admin area), the **residents' devices** and the **blocked devices**, and **all editions**;
+- `backup.json`: the layout (houses + map view), the texts (explanation, names, status names, info panel, share text, community panel, thank-you screen and the translations), the **app settings** (the switches and choices in the admin area), the **residents' devices** and the **blocked devices**, and **all editions**;
 - `files/`: the **logos** (logo, small logo and favicon) as separate images, so you can also take one out of the ZIP without the app.
 
 Not in the backup: users, login details and invitations, the access code for residents, the QR secrets, the push keys, the **IP addresses of residents**, and pending changes and messages from residents. A device is only stored with the hash of its key, as in the database: that gets nobody in anywhere, but a device that still has its key is linked (or blocked) again after restoring. Restoring keeps the IP address the app currently knows for a device or block; a device gets it again on its next use. Backups from v2.0.0 still contain IP addresses: the server wipes them from the backups in `DATA_PATH/backups` on the first start (a backup you downloaded earlier you have to delete yourself), and they are removed on upload.
@@ -305,6 +313,30 @@ A downloaded backup (.zip, download button in the list) can be added again with 
 Restoring is possible in *Settings → Backups* (the current state is first saved as a backup itself); afterwards exactly the editions, settings, logos and devices from that backup are there. The access code for residents stays the current one (without a code the switch is off afterwards). A backup from before editions existed leaves the editions alone. The list shows for each backup what it contains (houses, settings, logos, devices and which editions). Deleting asks for confirmation with your passkey or password.
 **Updating from a version with .json backups:** on the first start the server converts the existing backups (`<id>.json`) to `sint_maarten-backup-<id>.zip`, with the same content, and removes all but the newest 50 (200 were kept before). To keep more, set `MAX_BACKUPS` in `.env` before updating. An older version of the app no longer sees the ZIP backups (they do stay in the folder).
 Every backup can get a **short title** (max. 40 characters, ✎ button), for example "Everything" or "Layout only". With *Make backup* you make a backup manually with your own title, even if nothing has changed.
+
+## Audit log
+Every change is written straight to **`DATA_PATH/audit-log.jsonl`** (in the container `/data/audit-log.jsonl`). The file has one JSON object per line (*JSON Lines*), so a change is added immediately without rewriting the whole file. You can read it with a text editor, or with for example `jq` (`jq -c 'select(.category == "house")' audit-log.jsonl`).
+
+**Viewing it in the admin** – under *Settings → Audit log* the log is shown as a list, newest first, with the summary and the time of each line. This shows which houses have been changed, when and by whom (an administrator or a resident's device). By default only the **houses** are listed; use the *Show* field to pick *Settings and administration* or *Everything*. The search field searches street, house number, administrator or device, and *Show older* fetches the next 50 lines (opening stays fast, even with a very large log; only a search without a match reads the whole file). The screen is read-only and available to every logged-in administrator; the log itself stays as it is. The summaries are recorded in Dutch and stay Dutch when you view the admin in English. For your own tooling: `GET /api/admin/audit?category=house&q=…&limit=50&before=…` returns the same lines as JSON (when logged in as an administrator).
+
+Every line has:
+- `at`: when;
+- `category`: **`house`** for a house, or **`site`** for everything else;
+  - `house` covers: status, address, shape or note in the layout or in an edition, residents' proposals and approving or rejecting them, linking, unlinking or (un)blocking a device, and renewing a QR code;
+  - `site` covers: settings and texts, map view, logos, editions, backups, users and login details, and messages;
+- `action`: what happened, for example `proposed`, `approved`, `changed` or `settings`;
+- `actor`: who did it:
+  - an administrator: `{ "type": "admin", "id", "name" }`;
+  - a resident's device: `{ "type": "device", "id" }`, with a fixed, random id per device;
+  - or `system`;
+- `summary`: the same change in a short Dutch sentence;
+- and where it applies: the house (`house`: id and address), `from`/`to`, `changes` (for settings: old and new value), `device` (the device an approval is about) and `edition`.
+
+Because a device always has the same id, you can see for example that one device changed its house three times: three `proposed` lines with the same `actor.id`.
+
+Never in the log: IP addresses, passwords, codes (including the residents' access code: only that it changed), keys and coordinates (only that the shape of a house changed). A failed attempt, or saving without a difference, adds no line.
+
+The audit log is not part of the backups (restoring does not change history), and the app never shortens it. Each change adds a few hundred bytes. You can archive or empty it whenever you like: the app creates the file again on the next change.
 
 ## Editions: comparing earlier occasions
 An **edition** is the map of one occasion (for example *Sint Maarten 2025*), with its own **name and year** and its own statuses. The **live map** is what the front page shows. Creating or editing an edition **never** changes the live map: the server writes editions only to their own files, through their own API addresses.
@@ -377,7 +409,7 @@ You do not have to build the code: the image is built and published automaticall
    | `DOORBELL_MAP_TAG` | Which version runs: `latest` (stable, default), `beta` or a version number to pin (for example `v1.0.21`). With `beta` a **BETA** label appears next to the name, in the tab title and under the app icon. If this variable is still called `SINTMAARTEN_TAG` on your setup, it keeps working; rename it when convenient. |
    | `DATA_PATH` | Folder on the host for your data, default `./data` next to `docker-compose.yml`. If you run the stack through Dockge, Portainer, Komodo or Unraid, set an **absolute path** (for example `/mnt/user/appdata/doorbell-map`): otherwise `./data` lives inside the stack manager's folder, which may itself run in a container or volume. |
    | `RP_ID`, `SESSION_HOURS` | Optional; see the comments in [`.env.example`](.env.example). |
-3. Start the container: `docker compose up -d`. Your data (houses, users and login details, logo, explanation, backups, and `secret.key` for MFA) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
+3. Start the container: `docker compose up -d`. Your data (houses, users and login details, logo, explanation, backups, the audit log `audit-log.jsonl`, and `secret.key` for MFA) is in `DATA_PATH` (default `./data`); the container restores the permissions on that folder itself (it starts briefly as root and then runs the app as user `node`).
 4. For passkeys, the home-screen app and notifications: put a reverse proxy with **HTTPS** in front of the port from `PORT` (Synology: *Login Portal → Reverse Proxy*, or Nginx Proxy Manager / Traefik / Caddy). Without HTTPS the map works too, and you log in with a username and password.
 5. Open `<address>/beheer` and complete the setup with the `SETUP_TOKEN`: choose a username and a passkey or password (see [Onboarding](#the-admin-area-beheer)).
 

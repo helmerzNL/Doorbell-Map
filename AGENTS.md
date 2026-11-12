@@ -62,3 +62,6 @@ de tooling; de app heeft Nederlandse bron-teksten en een Engelse vertaling (`pub
   de beheerder invoert (een instelling, een upload, een lijst) horen in de backup én in `test/backups.test.js`, in dezelfde wijziging;
   iets waarmee je ergens binnenkomt (inloggegevens, de toegangscode voor bewoners, QR-geheimen, pushsleutels) en IP-adressen
   van bewoners nooit.
+- Elke wijziging komt in de auditlog (`server/audit.js`, `DATA_PATH/audit-log.jsonl`). Een nieuwe route die iets wijzigt,
+  krijgt een naam in `ROUTES` daar (of schrijft zelf een regel per huis) en een test in `test/audit.test.js`. Nooit in de
+  log: IP-adressen, wachtwoorden, codes, sleutels of tokens.

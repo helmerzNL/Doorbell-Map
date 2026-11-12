@@ -606,8 +606,8 @@
   $('org-multi').onchange = () => saveLang({ multilingual: $('org-multi').checked });
   // ---- Config: teksten per taal ----
   // De velden onder de taalbalk bestaan per taal. Wat je typt blijft per taal bewaard (cfg.drafts) tot je opslaat.
-  const FIELD_IDS = { siteTitle: 'org-title', appName: 'org-appname', appShortName: 'org-short', residentInfo: 'org-info', intro: 'org-intro', qrShareText: 'org-share', communityTitle: 'org-ctitle', communityText: 'org-ctext' };
-  const WITH_DEFAULT = new Set(['qrShareText', 'communityTitle', 'communityText']); // leeg = standaardtekst: het veld toont die tekst
+  const FIELD_IDS = { siteTitle: 'org-title', appName: 'org-appname', appShortName: 'org-short', residentInfo: 'org-info', intro: 'org-intro', qrShareText: 'org-share', communityTitle: 'org-ctitle', communityText: 'org-ctext', closedText: 'org-closed' };
+  const WITH_DEFAULT = new Set(['qrShareText', 'communityTitle', 'communityText', 'closedText']); // leeg = standaardtekst: het veld toont die tekst
   const cfg = { st: null, drafts: {}, lang: I18n.defaultLang };
   const cfgLang = () => (I18n.multi ? cfg.lang : I18n.defaultLang); // zonder meertalig bewerk je de standaardtaal
   const draftFrom = (src, l, def) => {
@@ -618,6 +618,7 @@
       qrShareText: src.qrShareText || def.shareText[l],
       communityTitle: src.communityTitle || def.community[l].title,
       communityText: src.communityText || def.community[l].text,
+      closedText: src.closedText || def.closed[l],
       labels: { green: lab.green || '', red: lab.red || '', none: lab.none || '' },
     };
   };
@@ -679,8 +680,8 @@
       $('org-multi').checked = st.multilingual;
       $('org-passkey').value = st.passkeyName || '';
       langPicker.setValue(st.defaultLang);
-      const def = { shareText: st.defaultShareTexts, community: st.defaultCommunity };
-      const nl = draftFrom({ siteTitle: org.siteTitle, appName: org.appName, appShortName: org.appShortName, intro: org.intro, residentInfo: st.residentInfo, qrShareText: st.qrShareText, communityTitle: st.communityTitle, communityText: st.communityText, labels: customLabels(org.labels) }, 'nl', def);
+      const def = { shareText: st.defaultShareTexts, community: st.defaultCommunity, closed: st.defaultClosed };
+      const nl = draftFrom({ siteTitle: org.siteTitle, appName: org.appName, appShortName: org.appShortName, intro: org.intro, residentInfo: st.residentInfo, qrShareText: st.qrShareText, communityTitle: st.communityTitle, communityText: st.communityText, closedText: st.closedText, labels: customLabels(org.labels) }, 'nl', def);
       cfg.drafts = { nl };
       for (const [l, t] of Object.entries(st.translations || {})) cfg.drafts[l] = draftFrom(t, l, def);
       buildLangBar();
@@ -692,6 +693,7 @@
   const customLabels = (labels) => Object.fromEntries(['green', 'red', 'none'].map((k) => [k, labels && labels[k] !== DEFAULT_LABELS[k] ? labels[k] : '']));
   $('org-community-default').onclick = () => { const d = cfg.st.defaultCommunity[cfg.shown]; $('org-ctitle').value = d.title; $('org-ctext').value = d.text; };
   $('org-share-default').onclick = () => { $('org-share').value = cfg.st.defaultShareTexts[cfg.shown]; };
+  $('org-closed-default').onclick = () => { $('org-closed').value = cfg.st.defaultClosed[cfg.shown]; };
   $('qr-share-goto').onclick = () => { openTab('org'); setTimeout(() => { $('org-share').scrollIntoView({ block: 'center' }); $('org-share').focus(); }, 150); };
   $('org-intro').oninput = renderOrg;
   $('org-simple').onchange = async () => {
@@ -794,12 +796,13 @@
         qrShareText: same(d.qrShareText, cfg.st.defaultShareTexts[l]) ? '' : d.qrShareText,
         communityTitle: same(d.communityTitle, cfg.st.defaultCommunity[l].title) ? '' : d.communityTitle,
         communityText: same(d.communityText, cfg.st.defaultCommunity[l].text) ? '' : d.communityText,
+        closedText: same(d.closedText, cfg.st.defaultClosed[l]) ? '' : d.closedText,
       }); // gelijk aan de standaardtekst = leeg
       const nl = norm('nl', cfg.drafts.nl);
       const translations = Object.fromEntries(Object.entries(cfg.drafts).filter(([l]) => l !== 'nl').map(([l, d]) => [l, norm(l, d)]));
       const res = await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ ...nl, translations, passkeyName: $('org-passkey').value }), expectAuth: true });
       api('/api/auth/status').then((s) => signalPasskeyName(s.passkeyDetails)).catch(() => {}); // de nieuwe naam ook in de wachtwoordbeheerder
-      const data = I18n.localize(await api('/api/map'));
+      const data = I18n.localize(await api('/api/admin/map'));
       Wijk.setLabels(data.labels); org.labels = res.labels;
       if (typeof render === 'function' && map) { render(); renderChangesIfOpen(); }
       org.intro = res.intro; org.siteTitle = res.siteTitle; org.appName = res.appName; org.appShortName = res.appShortName;
@@ -819,9 +822,12 @@
       b.setAttribute('aria-selected', on);
     });
     document.querySelectorAll('#settings [data-panel]').forEach((p) => p.classList.toggle('hidden', p.dataset.panel !== name));
+    const strip = document.querySelector('#settings .tabs'), cur = strip.querySelector('.active'); // de balk scrolt als de tabs niet passen: de actieve in beeld
+    if (cur) strip.scrollLeft = Math.max(0, cur.offsetLeft - (strip.clientWidth - cur.offsetWidth) / 2);
     if (name === 'security') { $('pk-err').textContent = ''; renderSecurity().catch((e) => ($('pk-err').textContent = e.message)); }
     if (name === 'users') renderUsers();
     if (name === 'backups') renderBackups();
+    if (name === 'audit') renderAudit();
     if (name === 'editions') renderEditions();
     if (name === 'changes') renderChanges();
     if (name === 'residents') { renderChanges(); renderPush(); fillQrStreets(); }
@@ -859,6 +865,55 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && drawerOpen() && !document.querySelector('dialog[open]')) closeSettings();
   });
+
+  // ---------- auditlog ----------
+  // Alleen lezen: de server geeft de regels van de log, nieuwste eerst, per pagina met een verwijzing naar de oudere. De
+  // samenvatting is door de server in het Nederlands vastgelegd op het moment van de wijziging en wordt niet vertaald.
+  const AUDIT_PAGE = 50;
+  let auditNext = null; // verwijzing naar de volgende (oudere) pagina, of null als er geen is
+  let auditToken = 0; // een oudere, tragere aanvraag mag een nieuwere niet overschrijven
+  async function renderAudit(more = false) {
+    $('audit-err').textContent = '';
+    const token = ++auditToken;
+    const params = new URLSearchParams({ limit: String(AUDIT_PAGE) });
+    if ($('audit-cat').value) params.set('category', $('audit-cat').value);
+    const q = $('audit-q').value.trim();
+    if (q) params.set('q', q);
+    if (more && auditNext !== null) params.set('before', String(auditNext));
+    let res;
+    try { res = await api(`/api/admin/audit?${params}`); }
+    catch (e) { if (token === auditToken) $('audit-err').textContent = e.message; return; }
+    if (token !== auditToken) return;
+    const box = $('audit-list');
+    if (!more) box.replaceChildren();
+    for (const e of res.items) {
+      const row = document.createElement('div');
+      row.className = 'bk-row audit-row';
+      const info = document.createElement('div');
+      info.className = 'bk-info';
+      const what = document.createElement('div');
+      what.className = 'audit-sum';
+      what.setAttribute('data-i18n-skip', '');
+      what.textContent = e.summary || e.action;
+      const when = document.createElement('span');
+      when.textContent = fmtDate(e.at);
+      info.append(what, when);
+      row.append(info);
+      box.append(row);
+    }
+    if (!box.children.length) {
+      const p = document.createElement('p');
+      p.className = 'muted';
+      p.textContent = $('audit-q').value.trim() || $('audit-cat').value ? 'Geen wijzigingen gevonden.' : 'Er zijn nog geen wijzigingen vastgelegd.';
+      box.append(p);
+    }
+    auditNext = res.next;
+    $('audit-more').hidden = auditNext === null;
+  }
+  let auditTimer = null;
+  $('audit-cat').onchange = () => renderAudit();
+  $('audit-q').oninput = () => { clearTimeout(auditTimer); auditTimer = setTimeout(() => renderAudit(), 300); };
+  $('audit-more').onclick = () => renderAudit(true);
 
   // ---------- backups ----------
   const selectedBackups = () => [...document.querySelectorAll('#bk-list input[type=checkbox]:checked')].map((c) => c.value);
@@ -1028,6 +1083,13 @@
     $('res-sched').checked = !!sched.on;
     if (sched.until && document.activeElement !== $('res-until')) $('res-until').value = toLocalInput(sched.until);
     $('res-until').disabled = false;
+    const sc = data.siteClose || {};
+    $('close-on').checked = !!sc.on;
+    if (sc.at && document.activeElement !== $('close-at')) $('close-at').value = toLocalInput(sc.at);
+    const when = sc.at ? new Date(sc.at).toLocaleString(I18n.locale, { dateStyle: 'long', timeStyle: 'short' }) : '';
+    $('close-status').textContent = !sc.on ? '' : sc.closed
+      ? I18n.t('De site is gesloten sinds {datum}. Bezoekers zien het bedankscherm.', { datum: when })
+      : I18n.t('De site sluit op {datum}.', { datum: when });
     const cd = data.code || {};
     $('res-qr-only').checked = !!data.qrOnly;
     shareTexts = data.shareTexts || shareTexts;
@@ -1128,11 +1190,29 @@
   async function saveSchedule(on) {
     $('chg-err').textContent = '';
     const v = $('res-until').value;
+    let msg = '';
     try {
       if (on && !v) throw new Error('Kies eerst een datum en tijd');
       await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ residentsOff: on, residentsUntil: v ? new Date(v).toISOString() : null }), expectAuth: true });
       toast(on ? 'Wijzigen wordt automatisch uitgeschakeld' : 'Planning uitgezet');
     } catch (e) { msg = e.message; $('res-sched').checked = !on; }
+    await renderChanges();
+    if (msg) $('chg-err').textContent = msg;
+  }
+  // Site sluiten: een moment dat al voorbij is sluit de site meteen, dus daar vragen we eerst om bevestiging.
+  async function saveClose(on) {
+    $('chg-err').textContent = '';
+    const v = $('close-at').value;
+    let msg = '';
+    try {
+      if (on && !v) throw new Error('Kies eerst een datum en tijd');
+      if (on && new Date(v).getTime() <= Date.now() && !confirmT('Dit moment is al voorbij: de site wordt nu meteen gesloten en bezoekers zien alleen nog het bedankscherm. Doorgaan?')) {
+        $('close-on').checked = false; $('close-at').blur(); // niets veranderd: renderChanges toont daarna de opgeslagen stand
+      } else {
+        await api('/api/admin/settings', { method: 'PUT', body: JSON.stringify({ siteCloseOn: on, siteCloseAt: v ? new Date(v).toISOString() : null }), expectAuth: true });
+        toast(!on ? 'Site sluiten staat uit' : new Date(v).getTime() <= Date.now() ? 'De site is nu gesloten' : 'De site sluit op het gekozen moment');
+      }
+    } catch (e) { msg = e.message; $('close-on').checked = !on; }
     await renderChanges();
     if (msg) $('chg-err').textContent = msg;
   }
@@ -1169,7 +1249,7 @@
   };
   $('res-code-gen').onclick = () => { $('res-code').value = String(Math.floor(1000 + Math.random() * 9000)); $('res-code').focus(); };
   // ---------- QR-codes ----------
-  const siteName = async (l) => I18n.localize(await api('/api/map'), l).title || I18n.tFor(l || I18n.lang).tr('Onze wijk');
+  const siteName = async (l) => I18n.localize(await api('/api/admin/map'), l).title || I18n.tFor(l || I18n.lang).tr('Onze wijk');
   async function fillQrStreets() {
     try {
       const items = await api('/api/admin/qr');
@@ -1307,6 +1387,9 @@
   };
   $('res-sched').onchange = () => saveSchedule($('res-sched').checked);
   $('res-until').onchange = () => { if ($('res-sched').checked) saveSchedule(true); };
+  $('close-on').onchange = () => saveClose($('close-on').checked);
+  $('close-at').onchange = () => { if ($('close-on').checked) saveClose(true); };
+  $('close-text-goto').onclick = () => { openTab('org'); setTimeout(() => { $('org-closed').scrollIntoView({ block: 'center' }); $('org-closed').focus(); }, 150); };
 
   async function blockDevice(rid, title, ip) {
     if (!confirmT(`Het apparaat van ${title} blokkeren? De koppeling en openstaande wijzigingen worden verwijderd en dit apparaat kan niet meer wijzigen.`)) return;
@@ -2320,7 +2403,7 @@
   }
 
   async function reloadFromServer() {
-    const raw = await api('/api/map');
+    const raw = await api('/api/admin/map');
     const data = I18n.localize(raw);
     if (editTarget === LIVE) houses = data.houses; else liveStash = data.houses; // een editie in bewerking blijft staan
     savedView = data.view; savedPdf = data.pdfView || null;
@@ -2334,7 +2417,7 @@
 
   async function openEditor() {
     show('v-edit');
-    const raw = await api('/api/map');
+    const raw = await api('/api/admin/map');
     const data = I18n.localize(raw);
     houses = data.houses;
     try { statsShow = (await api('/api/admin/settings', { expectAuth: true })).statsShow; } catch { /* standaard: alles tonen */ }
