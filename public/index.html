@@ -66,6 +66,15 @@
   </div>
 </div>
 
+<!-- Bedankscherm: komt in de plaats van de kaart als de beheerder de site heeft gesloten (zie public.js) -->
+<main id="closed-screen" class="closed-screen" hidden>
+  <section class="closed-card" aria-labelledby="closed-title">
+    <img id="closed-logo" class="closed-logo" alt="" hidden>
+    <h2 id="closed-title">Bedankt!</h2>
+    <div id="closed-text" class="closed-text"></div>
+  </section>
+</main>
+
 <dialog id="intro-dialog">
   <div class="intro-head">
     <h3 id="intro-title"></h3>

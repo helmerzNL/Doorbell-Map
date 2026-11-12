@@ -311,7 +311,9 @@
       </div>
 
       <div class="set-card">
-        <header class="set-card-head"><h4>Planning</h4><p>Wijzigen automatisch afsluiten op een moment. Zolang de planning aan staat, gelden de twee schakelaars hierboven niet.</p></header>
+        <header class="set-card-head"><h4>Planning</h4><p>Sluit automatisch op een moment, bijvoorbeeld na afloop van een evenement: eerst het wijzigen door bewoners en daarna de hele site.</p></header>
+        <h5 class="set-sub set-sub-first">Wijzigen door bewoners</h5>
+        <p class="set-hint">Zolang deze planning aan staat, gelden de twee schakelaars hierboven niet.</p>
         <div class="set-row">
           <div class="set-text"><div class="set-title">Wijzigen uitschakelen op een datum en tijd</div><div class="set-hint">Tot dat moment kunnen bewoners wijzigen (browser én app), daarna niet meer.</div></div>
           <label class="switch"><input type="checkbox" id="res-sched" role="switch" aria-label="Wijzigen uitschakelen op een datum en tijd"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
@@ -320,6 +322,18 @@
         <div class="set-row">
           <div class="set-text"><div class="set-title">Daarna nog wisselen tussen groen en rood</div><div class="set-hint">Alleen bewoners met een gekoppeld huis, niet van of naar <em>niet gemarkeerd</em>, en nog steeds met jouw goedkeuring.</div></div>
           <label class="switch"><input type="checkbox" id="res-swap" role="switch" aria-label="Na de einddatum nog wisselen tussen groen en rood"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
+        </div>
+        <hr class="set-sep">
+        <h5 class="set-sub set-sub-first">Site sluiten</h5>
+        <div class="set-row">
+          <div class="set-text"><div class="set-title">Site sluiten op een datum en tijd</div><div class="set-hint">Daarna zien bezoekers een bedankscherm in plaats van de voorpagina en is de kaart met de huizen niet meer te bekijken. Jij ziet de kaart in het beheer nog wel; met <em>Bekijk site</em> zie je wat bezoekers zien. Wijzig je de datum of zet je dit uit, dan is de site meteen weer open.</div></div>
+          <label class="switch"><input type="checkbox" id="close-on" role="switch" aria-label="Site sluiten op een datum en tijd"><span class="track" aria-hidden="true"><span class="thumb"></span></span></label>
+        </div>
+        <div class="field"><label for="close-at">Site sluit op</label><input type="datetime-local" id="close-at"></div>
+        <p class="set-hint" id="close-status" role="status"></p>
+        <div class="set-row">
+          <div class="set-text"><div class="set-title">Tekst van het bedankscherm</div><div class="set-hint">Die stel je in onder <em>Config → Teksten</em>, per taal. Er staat al een standaardtekst.</div></div>
+          <button id="close-text-goto" type="button">Naar Config</button>
         </div>
       </div>
 
@@ -472,6 +486,11 @@
           <textarea id="org-ctext" rows="6" maxlength="1000"></textarea>
           <div class="set-hint">Het venster waarin een bezoeker bevestigt dat hij of zij de positie deelt. Een lege regel begint een nieuwe alinea; de eerste is de uitleg, de rest de toelichting (kleiner gedrukt). Let op: pas de toelichting over wat er met de positie gebeurt alleen aan als dat klopt. Leeg = standaardtekst.</div>
           <div class="set-actions"><button id="org-community-default" type="button">Standaardtekst</button></div>
+        </div>
+        <div class="field" data-perlang><label for="org-closed">Tekst van het bedankscherm</label>
+          <textarea id="org-closed" rows="5" maxlength="1000"></textarea>
+          <div class="set-hint">Bezoekers zien deze tekst onder <em>Bedankt!</em> in plaats van de kaart zodra de site is gesloten (instellen onder <em>Bewoners → Planning</em>). Een lege regel begint een nieuwe alinea. Leeg = standaardtekst.</div>
+          <div class="set-actions"><button id="org-closed-default" type="button">Standaardtekst</button></div>
         </div>
         <p class="error" id="org-err"></p>
         <div class="set-actions"><button id="org-save" class="primary">Opslaan</button></div>

@@ -134,6 +134,20 @@ body.public .notice.no { background: var(--danger-soft); color: var(--danger); b
 body.public .qr-hint { padding: 10px 12px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
 body.public .mine-badge .mdi { filter: drop-shadow(0 0 3px var(--panel)); }
 
+/* ---------- gesloten site: bedankscherm in plaats van de kaart ---------- */
+body.public.closed { padding-bottom: 0; }
+body.public.closed .legend, body.public.closed .bar-switches, body.public.closed .actions, body.public.closed .more-pop,
+body.public.closed .viewport, body.public.closed .house-sheet { display: none; }
+body.public .closed-screen { flex: 1; min-height: 0; overflow-y: auto; display: grid; place-items: center; padding: 28px 16px calc(28px + env(safe-area-inset-bottom)); background: var(--bg); }
+body.public .closed-screen[hidden] { display: none; }
+body.public .closed-card { width: min(560px, 100%); box-sizing: border-box; text-align: center; padding: 40px 32px 36px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: var(--sh-2); }
+body.public .closed-logo { display: block; max-width: min(240px, 70%); max-height: 120px; margin: 0 auto 22px; object-fit: contain; border-radius: 8px; }
+body.public .closed-logo[hidden] { display: none; }
+body.public .closed-card h2 { margin: 0 0 14px; font-size: clamp(1.7rem, 6vw, 2.25rem); line-height: 1.15; letter-spacing: -.02em; color: var(--accent); }
+body.public .closed-text { font-size: 1.05rem; line-height: 1.65; color: var(--text); }
+body.public .closed-text p { margin: 0 0 1em; white-space: pre-line; overflow-wrap: anywhere; }
+body.public .closed-text p:last-child { margin-bottom: 0; }
+
 /* ---------- telefoon: onderbalk ---------- */
 @media (max-width: 640px) {
   body.public { padding-bottom: calc(66px + env(safe-area-inset-bottom)); }
@@ -155,6 +169,7 @@ body.public .mine-badge .mdi { filter: drop-shadow(0 0 3px var(--panel)); }
   body.public .house-sheet { left: 10px; right: 10px; width: auto; bottom: calc(150px + env(safe-area-inset-bottom)); }
   body.public .status-choice button { min-height: 48px; }
   body.public dialog { width: calc(100vw - 20px); }
+  body.public .closed-card { padding: 30px 20px 28px; }
   body.public #intro-dialog { padding: 0 18px 16px; }
   body.public .intro-head { margin-inline: -18px; padding-inline: 18px; }
 }
