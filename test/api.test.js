@@ -1200,3 +1200,96 @@ test('"alleen in de geïnstalleerde app": wijzigen vereist de app-kop, lezen nie
   await adminReq('/settings', 'PUT', { residentsAppOnly: false });
   assert.equal((await post('/set', { status: 'none' }, c)).status, 200); // weer open voor de browser
 });
+
+test('site sluiten: bedankscherm in plaats van de kaart; het beheer houdt zijn eigen kaart', async () => {
+  const admin = async () => (await adminReq('/settings')).json();
+  const map = async () => (await j('/api/map')).json();
+  await adminReq('/settings', 'PUT', { siteCloseOn: false, siteCloseAt: null, closedText: '', residentsEnabled: true, residentsAppOnly: false, residentsOff: false, residentsGeofence: false, residentsCodeOn: false, residentsQrOnly: false, communityEnabled: true, translations: { en: { closedText: '' } } });
+  await adminReq('/houses', 'PUT', { houses: [{ id: 'z1', street: 'Geheimstraat', number: '7', status: 'green', points: ptsR }] });
+  await adminReq('/view', 'PUT', { center: [52, 5], zoom: 15 });
+  for (const r of (await (await adminReq('/changes')).json()).residents) await adminReq(`/residents/${r.rid}`, 'DELETE');
+  const claim = await post('/claim', { houseId: 'z1' }); // een bewoner met een gekoppeld apparaat
+  assert.equal(claim.status, 200);
+  const c = claim.headers.get('set-cookie').split(';')[0];
+  const a0 = await admin();
+  assert.equal(a0.siteCloseOn, false);
+  assert.equal(a0.siteCloseAt, null);
+  assert.equal(a0.closedText, '', 'niets opgeslagen = standaardtekst');
+  assert.match(a0.defaultClosed.nl, /^Het evenement is afgelopen.*\n\nTot de volgende keer!$/s);
+  assert.match(a0.defaultClosed.en, /^The event is over.*\n\nSee you next time!$/s, 'ook de Engelse standaard heeft beide alinea\'s');
+
+  // open: gewoon de kaart
+  let m = await map();
+  assert.deepEqual([m.closed, m.houses.length], [false, 1]);
+
+  // aanzetten zonder (geldig) moment mag niet, en alleen met een beheersessie
+  assert.equal((await adminReq('/settings', 'PUT', { siteCloseOn: true })).status, 400);
+  assert.equal((await adminReq('/settings', 'PUT', { siteCloseOn: true, siteCloseAt: 'nee' })).status, 400);
+  assert.equal((await j('/api/admin/settings', { method: 'PUT', headers: jsonH(), body: '{"siteCloseOn":false}' })).status, 401);
+  assert.equal((await admin()).siteCloseOn, false, 'een afgewezen wijziging verandert niets');
+
+  // gepland in de toekomst: de site is nog open; het beheer ziet de planning
+  const future = new Date(Date.now() + 3600e3).toISOString();
+  assert.equal((await adminReq('/settings', 'PUT', { siteCloseOn: true, siteCloseAt: future })).status, 200);
+  m = await map();
+  assert.deepEqual([m.closed, m.houses.length], [false, 1]);
+  assert.deepEqual((await (await adminReq('/changes')).json()).siteClose, { on: true, at: future, closed: false });
+
+  // verlopen: bezoekers krijgen geen huizen, weergave of locatie, alleen wat het bedankscherm nodig heeft
+  assert.equal((await adminReq('/settings', 'PUT', { siteCloseAt: new Date(Date.now() - 1000).toISOString() })).status, 200);
+  m = await map();
+  assert.equal(m.closed, true);
+  assert.deepEqual([m.houses, m.view, m.pdfView], [[], null, null]);
+  assert.ok(!JSON.stringify(m).includes('Geheimstraat'), 'geen straatnamen of huizen in het gesloten antwoord');
+  for (const k of ['geofence', 'residentInfo', 'intro', 'statsShow', 'labels', 'qrOnly', 'deviceCode', 'residentsMode', 'communityEnabled']) assert.ok(!(k in m), `${k} hoort niet in het gesloten antwoord`);
+  assert.equal(m.closedText, a0.defaultClosed.nl);
+  assert.equal(m.title, 'Onze wijk');
+  assert.equal(m.translations.en.closedText, '', 'de Engelse tekst valt terug op de standaardtekst (de browser vertaalt die)');
+  assert.deepEqual((await (await adminReq('/changes')).json()).siteClose, { on: true, at: (await admin()).siteCloseAt, closed: true });
+
+  // bewoners en de community zijn dicht; het beheer niet
+  const refused = await post('/claim', { houseId: 'z1' });
+  assert.equal(refused.status, 403);
+  assert.equal((await refused.json()).closed, true);
+  assert.equal((await post('/set', { status: 'red' }, c)).status, 403);
+  assert.equal((await res('/me', { headers: { cookie: c } })).status, 403);
+  assert.equal((await post('/qr/lookup', { q: 'x'.repeat(22) })).status, 403);
+  const ping = await j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id: 'z'.repeat(32), lat: 52.1, lng: 5.3, acc: 12 }) });
+  assert.equal(ping.status, 403);
+  assert.equal((await ping.json()).closed, true);
+  const full = await (await adminReq('/map')).json();
+  assert.deepEqual([full.closed, full.houses.map((h) => h.id), full.view.zoom], [false, ['z1'], 15], 'het beheer ziet de volledige kaart');
+  assert.equal((await j('/api/admin/map')).status, 401, 'de volledige kaart is alleen voor het beheer');
+  assert.equal((await adminReq('/changes')).status, 200);
+  assert.equal((await adminReq('/houses', 'PUT', { houses: full.houses })).status, 200, 'het beheer kan blijven werken');
+  assert.equal((await j('/')).status, 200); // de pagina zelf blijft bereikbaar: die toont het bedankscherm
+
+  // eigen tekst (per taal), te lang, leeg = standaardtekst
+  assert.equal((await adminReq('/settings', 'PUT', { closedText: 'Dank jullie wel!\r\n\r\nTot volgend jaar.', translations: { en: { closedText: 'Thanks all!' } } })).status, 200);
+  m = await map();
+  assert.equal(m.closedText, 'Dank jullie wel!\n\nTot volgend jaar.');
+  assert.equal(m.translations.en.closedText, 'Thanks all!');
+  assert.equal((await admin()).translations.en.closedText, 'Thanks all!');
+  assert.equal((await adminReq('/settings', 'PUT', { closedText: 'x'.repeat(1001) })).status, 400);
+  assert.equal((await adminReq('/settings', 'PUT', { translations: { en: { closedText: 'x'.repeat(1001) } } })).status, 400);
+  assert.equal((await map()).closedText, 'Dank jullie wel!\n\nTot volgend jaar.', 'een afgewezen wijziging verandert niets');
+  assert.equal((await adminReq('/settings', 'PUT', { closedText: ' ', translations: { en: { closedText: '' } } })).status, 200);
+  m = await map();
+  assert.deepEqual([m.closedText, m.translations.en.closedText], [a0.defaultClosed.nl, '']);
+
+  // de datum verzetten of het uitzetten opent de site meteen weer; het gekozen moment blijft bewaard
+  assert.equal((await adminReq('/settings', 'PUT', { siteCloseAt: future })).status, 200);
+  m = await map();
+  assert.deepEqual([m.closed, m.houses.length], [false, 1]);
+  assert.equal((await adminReq('/settings', 'PUT', { siteCloseAt: new Date(Date.now() - 1000).toISOString() })).status, 200);
+  assert.equal((await map()).closed, true);
+  assert.equal((await adminReq('/settings', 'PUT', { siteCloseOn: false })).status, 200);
+  m = await map();
+  assert.deepEqual([m.closed, m.houses.length], [false, 1]);
+  assert.ok((await admin()).siteCloseAt, 'het moment blijft staan, alleen uitgeschakeld');
+  assert.equal((await post('/set', { status: 'red' }, c)).status, 200, 'bewoners kunnen weer wijzigen');
+  assert.equal((await j('/api/community/ping', { method: 'POST', headers: jsonH(), body: JSON.stringify({ id: 'z'.repeat(32), lat: 52.1, lng: 5.3, acc: 12 }) })).status, 200);
+
+  await adminReq('/settings', 'PUT', { communityEnabled: false });
+  for (const r of (await (await adminReq('/changes')).json()).residents) await adminReq(`/residents/${r.rid}`, 'DELETE');
+});

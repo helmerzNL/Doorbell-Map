@@ -10,6 +10,7 @@ const auth = require('./auth');
 const backups = require('./backups');
 const audit = require('./audit');
 const push = require('./push');
+const site = require('./site');
 const { tr, trIn, t, defaultLang, translations, LANGS } = require('./lang');
 const { STATUSES, statusLabels } = require('./houses');
 
@@ -237,6 +238,8 @@ function notifyAdmin() {
 const resident = express.Router();
 
 resident.use((req, res, next) => {
+  // Gesloten site: geen koppelen, wijzigen of QR-controle meer (de beheerder kan lopende wijzigingen nog wel afhandelen).
+  if (site.closed()) return res.status(403).json({ error: 'De site is gesloten', enabled: false, closed: true });
   const m = mode();
   if (m === 'closed') return res.status(403).json({ error: 'Wijzigen door bewoners staat uit', enabled: false });
   // na de einddatum: alleen bestaande koppelingen en alleen wisselen tussen groen en rood
@@ -413,7 +416,7 @@ const list = () => {
   const blocked = (d.blocked || []).map((b) => ({ id: b.id, title: b.title, ip: b.ip || null, at: b.at }))
     .sort((a, b) => String(a.title).localeCompare(String(b.title), 'nl', { numeric: true, sensitivity: 'base' }));
   const messages = (d.messages || []).map((m) => ({ id: m.id, createdAt: m.createdAt, text: m.text, ownTitle: m.ownTitle, scannedTitle: m.scannedTitle })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return { messages, qrOnly: qrOnly(), shareTexts: shareTexts(), defaultShareTexts: defaultShareTexts(), enabled: storedEnabled(), appOnly: storedAppOnly(), code: { on: db().settings?.residentsCodeOn === true, code: codeSetting() }, geofence: { on: db().settings?.residentsGeofence === true, radius: geofence().radius, hasCenter: !!geoCenter() }, schedule: { swap: swapAfter(), on: db().settings?.residentsOff === true, until: db().settings?.residentsUntil || null, active: scheduled() }, pending: rows, residents, blocked };
+  return { messages, qrOnly: qrOnly(), shareTexts: shareTexts(), defaultShareTexts: defaultShareTexts(), enabled: storedEnabled(), appOnly: storedAppOnly(), code: { on: db().settings?.residentsCodeOn === true, code: codeSetting() }, geofence: { on: db().settings?.residentsGeofence === true, radius: geofence().radius, hasCenter: !!geoCenter() }, schedule: { swap: swapAfter(), on: db().settings?.residentsOff === true, until: db().settings?.residentsUntil || null, active: scheduled() }, siteClose: site.info(), pending: rows, residents, blocked };
 };
 
 admin.get('/changes', (req, res) => res.json(list()));

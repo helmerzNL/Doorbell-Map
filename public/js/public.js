@@ -4,6 +4,8 @@
   let data = await getData();
 
   I18n.mountPrefs($('prefs'));
+  // De beheerder heeft de site gesloten: een bedankscherm in plaats van de kaart. De server stuurt dan ook geen huizen meer mee.
+  if (data.closed) return showClosed();
   // Knop naast licht/donker: het blok met het totaal aantal huizen verbergen of weer tonen. Standaard zichtbaar (als de beheerder
   // het blok aanzet); alleen de keuze van de bezoeker wordt op dit apparaat onthouden.
   const STATS_KEY = 'sm-stats-hidden';
@@ -23,8 +25,8 @@
   paintStatsBtn();
 
   // ---------- kop, logo en uitleg ----------
-  function applyMeta(first) {
-    Wijk.setLabels(data.labels);
+  // Naam, tabtitel, favicon en logo in de kopbalk: ook het bedankscherm van een gesloten site heeft ze.
+  function applyBrand() {
     Wijk.setHeading($('title'), data.title);
     document.title = Wijk.docTitle(data.title);
     const iosTitle = data.appShortName || data.appName || data.title;
@@ -47,6 +49,11 @@
     } else {
       $('logo').hidden = true;
     }
+  }
+
+  function applyMeta(first) {
+    Wijk.setLabels(data.labels);
+    applyBrand();
 
     document.body.classList.toggle('simple-ui', data.simpleUi === true); // eenvoudige weergave: geen huisnummers/Bewerken/straten
     const intro = data.intro;
@@ -75,6 +82,24 @@
     }
   }
   applyMeta(true);
+
+  // ---------- gesloten: bedankscherm in plaats van de kaart ----------
+  function showClosed() {
+    document.body.classList.add('closed');
+    applyBrand();
+    if (data.logo) { $('closed-logo').src = data.logo.url; $('closed-logo').hidden = false; } // het gewone logo; de naam staat al in de kop
+    $('closed-text').replaceChildren(...String(data.closedText || '').split(/\n{2,}/).map((t) => t.trim()).filter(Boolean)
+      .map((t) => Object.assign(document.createElement('p'), { textContent: t }))); // platte tekst; elke alinea een <p>
+    $('closed-screen').hidden = false;
+    // Opent de beheerder de site weer (of verzet hij het moment), dan komt de kaart vanzelf terug.
+    const recheck = async () => {
+      if (document.hidden || !navigator.onLine) return;
+      try { if (!(await getData()).closed) location.reload(); } catch { /* offline of server even weg: volgende poging */ }
+    };
+    setInterval(recheck, 60000);
+    document.addEventListener('visibilitychange', recheck);
+    window.addEventListener('online', recheck);
+  }
 
   const map = Wijk.createMap($('vp'), data.view, data.houses);
   Wijk.map = map;
@@ -318,6 +343,7 @@
     let ok = false, changed = false;
     try {
       const next = await getData();
+      if (next.closed) { location.reload(); return true; } // de site is intussen gesloten: opnieuw laden toont het bedankscherm
       if (signature(next) !== lastSig) {
         lastSig = signature(next);
         data = next;

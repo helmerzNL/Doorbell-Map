@@ -5,7 +5,8 @@
 const crypto = require('node:crypto');
 const express = require('express');
 const store = require('./store');
-const { defaultLang, trIn, translations, LANGS } = require('./lang');
+const site = require('./site');
+const { defaultLang, trIn, customText, trParagraphs, LANGS } = require('./lang');
 
 const TTL_MS = 45 * 1000; // zonder nieuwe positie verdwijnt een deelnemer hierna van de kaart
 const MIN_GAP_MS = 2000; // een apparaat mag niet vaker dan dit een nieuwe positie doorgeven
@@ -21,12 +22,7 @@ const people = new Map(); // apparaat-id -> { lat, lng, acc, t, k, ip, c, i }
 // (per taal). De tekst bestaat uit alinea's, gescheiden door een lege regel; de eerste is de uitleg, de rest toelichting.
 const DEFAULT_TITLE = 'Positie delen met de community?';
 const DEFAULT_TEXT = 'Andere bezoekers die hun positie ook delen, zien jouw positie live als stip op de kaart. Jij ziet hen ook. Wie niet deelt, ziet niemand.\n\nJe positie wordt alleen tijdelijk op de server bewaard en direct gewist zodra je stopt met delen of de pagina sluit. Er staat geen naam bij. Kinderen delen alleen met toestemming van een ouder.';
-// Eigen tekst van die taal (Nederlands: de gewone instelling), anders de standaardtekst in die taal.
-const customText = (field, l) => {
-  const own = l === 'nl' ? store.db().settings?.[field] : translations(l)[field];
-  return typeof own === 'string' && own.trim() ? own : '';
-};
-const trParagraphs = (l, s) => s.split('\n\n').map((p) => trIn(l, p)).join('\n\n'); // het woordenboek vertaalt per alinea
+// Eigen tekst van die taal (zie lang.js), anders de standaardtekst in die taal.
 const title = (l = defaultLang()) => customText('communityTitle', l) || trIn(l, DEFAULT_TITLE);
 const text = (l = defaultLang()) => customText('communityText', l) || trParagraphs(l, DEFAULT_TEXT);
 const defaults = () => Object.fromEntries(LANGS.map((l) => [l, { title: trIn(l, DEFAULT_TITLE), text: trParagraphs(l, DEFAULT_TEXT) }]));
@@ -62,6 +58,7 @@ function listOthers(exceptId, now = Date.now()) {
 const router = express.Router();
 router.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');
+  if (site.closed()) return res.status(403).json({ error: 'De site is gesloten', off: true, closed: true }); // geen posities meer delen
   if (!enabled()) return res.status(403).json({ error: 'De community staat uit', off: true });
   next();
 });

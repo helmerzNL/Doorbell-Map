@@ -102,6 +102,7 @@ body.admin #settings .set-card-head p { font-size: .84rem; }
 body.admin #settings .set-row { padding: 14px 0; }
 body.admin #settings .set-title { font-size: .92rem; }
 body.admin #settings .set-sub { margin-top: 20px; }
+body.admin #settings .set-sub.set-sub-first { margin-top: 4px; }
 body.admin #settings .field > label, body.admin #settings .field label.sub { color: var(--text); font-size: .8rem; }
 body.admin #settings .field label.sub { color: var(--muted); }
 body.admin #settings .set-actions { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; flex-wrap: wrap; }

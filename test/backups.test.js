@@ -76,6 +76,7 @@ const uploadExists = (url) => fs.existsSync(path.join(store.uploadDir, path.base
 const LOGO = png(400, 100, 1);
 const FAVICON = png(512, 512, 2);
 const CODE = '918273';
+const CLOSE_AT = new Date(Date.now() + 86400e3).toISOString(); // morgen: de site is dus nog open
 
 test('oude .json-backups worden bij het starten omgezet naar sint_maarten-backup-<id>.zip', () => {
   const files = fs.readdirSync(BK).sort();
@@ -108,7 +109,7 @@ test('IP-adressen van bewoners worden bij het starten uit bestaande backups gewi
 
 test("een backup bevat de app-instellingen en de logo's, als ZIP met backup.json en files/", async () => {
   assert.equal((await put('/api/admin/houses', { houses: [{ id: 'n1', street: 'Nieuwstraat', number: '1', status: 'red', points: sq }] })).status, 200);
-  const settings = { simpleUi: true, statsPublic: true, statsShow: { red: false }, residentsCode: CODE, residentsCodeOn: true, communityEnabled: true, multilingual: true, defaultLang: 'en', residentsGeofenceRadius: 800, residentInfo: 'Info voor bewoners', qrShareText: 'Deel dit', communityTitle: 'Doe mee', passkeyName: 'Sint Maarten Hoogland' };
+  const settings = { simpleUi: true, statsPublic: true, statsShow: { red: false }, residentsCode: CODE, residentsCodeOn: true, communityEnabled: true, multilingual: true, defaultLang: 'en', residentsGeofenceRadius: 800, residentInfo: 'Info voor bewoners', qrShareText: 'Deel dit', communityTitle: 'Doe mee', siteCloseOn: true, siteCloseAt: CLOSE_AT, closedText: 'Tot ziens!', passkeyName: 'Sint Maarten Hoogland' };
   assert.equal((await put('/api/admin/settings', { passkeyName: 'x'.repeat(41) })).status, 400); // max. 40 tekens
   assert.equal((await put('/api/admin/settings', settings)).status, 200);
   // een logo opslaan of verwijderen maakt een backup, net als andere instellingen
@@ -152,10 +153,13 @@ test("een backup bevat de app-instellingen en de logo's, als ZIP met backup.json
   assert.equal(doc.settings.defaultLang, 'en');
   assert.equal(doc.settings.residentsGeofenceRadius, 800);
   assert.equal(doc.settings.statsShow.red, false);
+  assert.equal(doc.settings.siteCloseOn, true);
+  assert.equal(doc.settings.siteCloseAt, CLOSE_AT);
   assert.equal(doc.settings.locateEnabled, true); // standaard aan
   assert.equal(doc.texts.residentInfo, 'Info voor bewoners');
   assert.equal(doc.texts.qrShareText, 'Deel dit');
   assert.equal(doc.texts.communityTitle, 'Doe mee');
+  assert.equal(doc.texts.closedText, 'Tot ziens!');
   assert.equal(doc.texts.passkeyName, 'Sint Maarten Hoogland');
   // niets waarmee je ergens binnenkomt: geen toegangscode, inloggegevens, QR-geheimen of pushsleutels
   const text = files['backup.json'].toString();
@@ -173,7 +177,7 @@ test("terugzetten zet de instellingen en logo's terug; de toegangscode blijft di
   const id = backups.list().find((x) => x.reason === 'Handmatig').id;
   const LOGO2 = png(300, 100, 9);
   const SMALL = png(64, 64, 7);
-  await put('/api/admin/settings', { simpleUi: false, communityEnabled: false, defaultLang: 'nl', residentsCode: '555555', residentInfo: 'Anders', statsShow: { red: true }, passkeyName: '' });
+  await put('/api/admin/settings', { simpleUi: false, communityEnabled: false, defaultLang: 'nl', residentsCode: '555555', residentInfo: 'Anders', statsShow: { red: true }, siteCloseOn: false, closedText: '', passkeyName: '' });
   assert.equal((await upload('/api/admin/logo', LOGO2)).status, 200);
   assert.equal((await upload('/api/admin/logo-small', SMALL)).status, 200);
   assert.equal((await j('/api/admin/favicon', { method: 'DELETE', headers: { cookie } })).status, 200);
@@ -199,6 +203,7 @@ test("terugzetten zet de instellingen en logo's terug; de toegangscode blijft di
   assert.equal(s.residentsCodeOn, true);
   assert.equal(s.statsShow.red, false);
   assert.equal(s.residentsGeofenceRadius, 800);
+  assert.deepEqual([s.siteCloseOn, s.siteCloseAt, s.closedText], [true, CLOSE_AT, 'Tot ziens!']); // het sluitmoment en de bedanktekst gaan mee
   // de vervangen bestanden zijn weg
   await tick();
   assert.ok(!uploadExists(changed.logo.url));
@@ -212,6 +217,16 @@ test("terugzetten zet de instellingen en logo's terug; de toegangscode blijft di
   await put('/api/admin/settings', { residentsCode: '' });
   assert.equal((await post(`/api/admin/backups/${id}/restore`, {})).status, 200);
   assert.equal((await adminSettings()).residentsCodeOn, false);
+});
+
+test('site sluiten in een backup: het moment wordt gecontroleerd, aan zonder moment kan niet', () => {
+  const clean = (settings) => backups.cleanSections({ settings }).settings;
+  assert.deepEqual(clean({ siteCloseOn: true, siteCloseAt: CLOSE_AT }), { siteCloseOn: true, siteCloseAt: CLOSE_AT });
+  assert.equal(clean({ siteCloseOn: true, siteCloseAt: '2030-01-02T10:00:00+01:00' }).siteCloseAt, '2030-01-02T09:00:00.000Z', 'altijd als UTC bewaard');
+  assert.deepEqual(clean({ siteCloseOn: true, siteCloseAt: null }), { siteCloseOn: false, siteCloseAt: null }, 'aan zonder moment wordt uit');
+  assert.deepEqual(clean({ siteCloseOn: true }), { siteCloseOn: false }, 'ook als het moment ontbreekt');
+  assert.throws(() => clean({ siteCloseOn: true, siteCloseAt: 'nee' }), /ongeldig/);
+  assert.deepEqual(clean({ simpleUi: true }), { simpleUi: true }, 'een backup zonder deze velden laat ze bij terugzetten staan');
 });
 
 test("een backup zonder instellingen en logo's (van vóór de ZIP) laat die bij terugzetten staan", async () => {
@@ -264,6 +279,8 @@ test('een geüploade ZIP wordt volledig gecontroleerd; een geweigerd bestand ver
     'andere app': withDoc({ ...doc, format: 'iets-anders' }),
     'instellingen ongeldig': withDoc({ ...doc, settings: { ...doc.settings, defaultLang: 'xx' } }),
     'straal ongeldig': withDoc({ ...doc, settings: { ...doc.settings, residentsGeofenceRadius: 1 } }),
+    'sluitmoment ongeldig': withDoc({ ...doc, settings: { ...doc.settings, siteCloseAt: 'nee' } }),
+    'bedanktekst te lang': withDoc({ ...doc, texts: { ...doc.texts, closedText: 'x'.repeat(1001) } }),
     'huizen ongeldig': withDoc({ ...doc, houses: 'nee' }),
     'geen ZIP': Buffer.concat([Buffer.from('PK\x03\x04', 'latin1'), Buffer.from('onzin')]),
     'geen JSON': Buffer.from('dit is niets'),

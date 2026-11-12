@@ -118,18 +118,19 @@ function writeZip(id, doc, files = {}) {
 // Teksten die naast uitleg, namen en statusnamen in de backup staan (Nederlands; de vertalingen staan in translations),
 // en de naam bij een passkey. Leeg betekent bij deze velden "de standaardtekst" (bij passkeyName: de naam van de app);
 // bij residentInfo staat null voor de standaardtekst.
-const EXTRA_TEXTS = ['residentInfo', 'qrShareText', 'communityTitle', 'communityText', 'passkeyName'];
+const EXTRA_TEXTS = ['residentInfo', 'qrShareText', 'communityTitle', 'communityText', 'closedText', 'passkeyName'];
 
 // App-instellingen die meegaan: de schakelaars en keuzes uit het beheer, zoals ze werken (een standaard die aan staat
 // wordt true). De toegangscode voor bewoners gaat niet mee: een backup bevat niets waarmee je ergens binnenkomt, net
 // als inloggegevens, QR-geheimen en pushsleutels. Terugzetten laat de code staan die er al is.
-const BOOL_SETTINGS = ['residentsEnabled', 'residentsAppOnly', 'residentsOff', 'residentsSwapAfter', 'residentsGeofence', 'residentsQrOnly', 'residentsCodeOn', 'simpleUi', 'locateEnabled', 'communityEnabled', 'communityLooks', 'statsPublic', 'multilingual'];
+const BOOL_SETTINGS = ['siteCloseOn', 'residentsEnabled', 'residentsAppOnly', 'residentsOff', 'residentsSwapAfter', 'residentsGeofence', 'residentsQrOnly', 'residentsCodeOn', 'simpleUi', 'locateEnabled', 'communityEnabled', 'communityLooks', 'statsPublic', 'multilingual'];
 const DEFAULT_ON = new Set(['residentsEnabled', 'locateEnabled', 'communityLooks']);
 
 function settingsData(s) {
   const out = {};
   for (const k of BOOL_SETTINGS) out[k] = DEFAULT_ON.has(k) ? s[k] !== false : s[k] === true;
   out.residentsUntil = s.residentsUntil || null;
+  out.siteCloseAt = s.siteCloseAt || null;
   out.residentsGeofenceRadius = Number.isFinite(s.residentsGeofenceRadius) ? s.residentsGeofenceRadius : null;
   out.statsShow = statsShow(s);
   out.defaultLang = LANGS.includes(s.defaultLang) ? s.defaultLang : 'nl';
@@ -151,6 +152,12 @@ function cleanSettings(raw) {
     out.residentsUntil = Number.isFinite(t) ? new Date(t).toISOString() : null;
   }
   if (out.residentsOff && !out.residentsUntil) out.residentsOff = false; // uit zonder einddatum kan niet
+  if ('siteCloseAt' in raw) {
+    const t = raw.siteCloseAt == null ? NaN : Date.parse(raw.siteCloseAt);
+    if (raw.siteCloseAt != null && !Number.isFinite(t)) throw bad;
+    out.siteCloseAt = Number.isFinite(t) ? new Date(t).toISOString() : null;
+  }
+  if (out.siteCloseOn && !out.siteCloseAt) out.siteCloseOn = false; // sluiten zonder moment kan niet
   if (raw.residentsGeofenceRadius != null) {
     const r = Number(raw.residentsGeofenceRadius);
     if (!Number.isFinite(r) || r < GEO_MIN || r > GEO_MAX) throw bad;
