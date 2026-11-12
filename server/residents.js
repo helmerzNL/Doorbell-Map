@@ -89,6 +89,24 @@ function reconcile() {
   }
 }
 
+// Na het resetten van de kaart: alle openstaande wijzigingen van bewoners laten vervallen. Ze gingen over de vorige keer; goedkeuren
+// zou de huizen meteen weer markeren. De bewoner ziet "niet doorgevoerd", zoals bij een afwijzing, en elke wijziging komt als
+// afgewezen voorstel in de auditlog. Geeft het aantal vervallen wijzigingen. Roep dit aan vóór de statussen terugkeren naar "niet
+// gemarkeerd", zodat de logregel de status van toen noemt.
+function discardProposals(actor) {
+  const d = db();
+  const at = new Date().toISOString();
+  for (const prop of d.proposals) {
+    const house = houseOf(prop.houseId);
+    if (house) audit.house(actor, 'rejected', house, { from: house.status, to: prop.to, device: prop.residentId });
+    const rec = d.residents.find((r) => r.rid === prop.residentId);
+    if (rec) rec.notice = { decision: 'rejected', status: prop.to, at };
+  }
+  const n = d.proposals.length;
+  d.proposals = [];
+  return n;
+}
+
 function currentResident(req) {
   const token = auth.parseCookies(req.headers.cookie)[COOKIE];
   if (!token || token.length < 20) return null;
@@ -527,4 +545,4 @@ admin.post('/push/test', async (req, res) => {
   res.json(r);
 });
 
-module.exports = { resident, admin, prune, reconcile, enabled, mode, geofence, codeOn, qrOnly, MAX_RESIDENTS, GEO_MAX_ACC, GEO_MIN, GEO_MAX, GEO_DEFAULT_RADIUS, appOnly, info, untilMs, DEFAULT_INFO, DEFAULT_SHARE_TEXT, shareText, defaultShareTexts };
+module.exports = { resident, admin, prune, reconcile, discardProposals, enabled, mode, geofence, codeOn, qrOnly, MAX_RESIDENTS, GEO_MAX_ACC, GEO_MIN, GEO_MAX, GEO_DEFAULT_RADIUS, appOnly, info, untilMs, DEFAULT_INFO, DEFAULT_SHARE_TEXT, shareText, defaultShareTexts };

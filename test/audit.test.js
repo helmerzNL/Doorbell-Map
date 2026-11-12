@@ -156,6 +156,44 @@ test('site: instellingen met wat er veranderde, de toegangscode zonder waarde; l
   assert.ok(!JSON.stringify(backups.read(id)).includes('audit'));
 });
 
+test('kaart resetten: een regel per huis, een samenvatting en een afgewezen voorstel per vervallen wijziging', async () => {
+  assert.equal((await send('PUT', '/api/admin/settings', { residentsEnabled: true, residentsAppOnly: false })).status, 200);
+  assert.equal((await send('PUT', '/api/admin/houses', { houses: [house('x1', '20', 'green'), house('x2', '21', 'red', 0.01), house('x3', '22', 'none', 0.02)] })).status, 200);
+  const claim = await send('POST', '/api/resident/claim', { houseId: 'x3' }, '');
+  const dev = claim.headers.get('set-cookie').split(';')[0];
+  assert.equal((await send('POST', '/api/resident/set', { status: 'green' }, dev)).status, 200);
+  const rid = lines().find((e) => e.action === 'device-linked' && e.house.id === 'x3').actor.id;
+
+  const n = mark();
+  assert.equal((await send('POST', '/api/admin/houses/reset', {})).status, 200);
+  const got = since(n);
+  const byAction = (a) => got.filter((e) => e.action === a);
+
+  // de vervallen wijziging: afgewezen, met het apparaat en de status van toen
+  assert.deepEqual(byAction('rejected').map((e) => [e.category, e.house.id, e.from, e.to, e.device, e.actor]), [['house', 'x3', 'none', 'green', rid, ADMIN]]);
+  // elk huis dat veranderde, met de oude en de nieuwe status
+  const changed = Object.fromEntries(byAction('changed').map((e) => [e.house.id, e]));
+  assert.deepEqual(Object.keys(changed).sort(), ['x1', 'x2']);
+  assert.deepEqual(changed.x1.changes, { status: { from: 'green', to: 'none' } });
+  assert.deepEqual(changed.x2.changes, { status: { from: 'red', to: 'none' } });
+  assert.deepEqual(changed.x1.actor, ADMIN);
+  assert.equal(changed.x1.via, 'Kaart gereset: groene en rode huizen teruggezet naar niet gemarkeerd');
+  assert.match(changed.x1.summary, /^Auditstraat 20: status groen → niet gemarkeerd \(beheerder beheerder\)$/);
+  // en één samenvatting voor de hele handeling
+  const summary = got.filter((e) => e.category === 'site');
+  assert.equal(summary.length, 1);
+  assert.deepEqual([summary[0].action, summary[0].actor], ['houses-reset', ADMIN]);
+  assert.match(summary[0].summary, /^Kaart gereset: groene en rode huizen teruggezet naar niet gemarkeerd \(beheerder beheerder\)$/);
+  assert.equal(got.length, 4); // 1 afgewezen + 2 gewijzigd + 1 samenvatting: huis x3 en de rest blijven buiten beeld
+
+  // niets te resetten: een afgewezen aanvraag laat niets in de log achter
+  const m = mark();
+  assert.equal((await send('POST', '/api/admin/houses/reset', {})).status, 409);
+  assert.equal(since(m).length, 0);
+  assert.equal((await send('POST', '/api/admin/houses/reset', {}, '')).status, 401);
+  assert.equal(since(m).length, 0);
+});
+
 test('edities: huizen van een editie staan erin met de editie erbij', async () => {
   const e = await (await send('POST', '/api/admin/editions', { name: 'Auditeditie', year: 2026 })).json();
   assert.ok(e.id);

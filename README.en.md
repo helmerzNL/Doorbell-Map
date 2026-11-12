@@ -302,7 +302,7 @@ also published under that tag (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). The `1.
 Locally (without a build) the app shows `dev` with the commit from git. The workflow needs write access to the repo to set the tag (it is in `docker.yml`).
 
 ## Backups
-After **every save attempt** (houses/layout, texts and settings, map view, logos, editions, unlinking or (un)blocking a device) the server makes a backup in the `backups` folder of the data folder: `DATA_PATH/backups` (in the container `/data/backups`). Every backup is one ZIP file, `sint_maarten-backup-<id>.zip`, containing:
+After **every save attempt** (houses/layout, resetting the map, texts and settings, map view, logos, editions, unlinking or (un)blocking a device) the server makes a backup in the `backups` folder of the data folder: `DATA_PATH/backups` (in the container `/data/backups`). Every backup is one ZIP file, `sint_maarten-backup-<id>.zip`, containing:
 - `backup.json`: the layout (houses + map view), the texts (explanation, names, status names, info panel, share text, community panel, thank-you screen and the translations), the **app settings** (the switches and choices in the admin area), the **residents' devices** and the **blocked devices**, and **all editions**;
 - `files/`: the **logos** (logo, small logo and favicon) as separate images, so you can also take one out of the ZIP without the app.
 
@@ -323,7 +323,7 @@ Every line has:
 - `at`: when;
 - `category`: **`house`** for a house, or **`site`** for everything else;
   - `house` covers: status, address, shape or note in the layout or in an edition, residents' proposals and approving or rejecting them, linking, unlinking or (un)blocking a device, and renewing a QR code;
-  - `site` covers: settings and texts, map view, logos, editions, backups, users and login details, and messages;
+  - `site` covers: settings and texts, map view, logos, editions, backups, resetting the map (only the summary `houses-reset`; the houses themselves fall under `house`), users and login details, and messages;
 - `action`: what happened, for example `proposed`, `approved`, `changed` or `settings`;
 - `actor`: who did it:
   - an administrator: `{ "type": "admin", "id", "name" }`;
@@ -347,6 +347,7 @@ An **edition** is the map of one occasion (for example *Sint Maarten 2025*), wit
 - **Comparing** – *Compare with* puts two maps side by side (an edition and live, or two editions). The houses are then coloured by taking part (green): **green in both**, **only in the older one** (orange) or **only in the newer one** (blue); the rest is shown dashed grey. The overview card shows the numbers of both maps with the difference (total, green, red, not marked) and how many houses fall into each group. Houses are matched on the house itself, and otherwise on street and house number.
 - **Overview** – the list in *Settings → Editions* shows the number of houses per edition and how many are green (with percentage), red and not marked, what it is a copy of and when it was edited, with the live map at the top. The text field icon changes the name or year; deleting is confirmed with your passkey or password.
 - *Hide counts* folds the overview card down to just the lists (handy on a phone).
+- **Resetting the live map** – after an event, use *Reset the live map* at the bottom of *Settings → Editions* to set all green and red houses on the live map back to *not marked* (after a confirmation). If you want to compare the state later, create an edition first. Only the live map changes, and only the status: editions, the links to residents, and each house's address, note and shape stay as they were. Changes by residents that are still waiting for approval lapse (the resident sees *not applied*); otherwise a later *Approve all* would mark the houses again straight away. Right before the reset the server makes a backup (reason *Before the reset*; if the state is already in the newest backup, that backup is it), so *Restore* under Backups undoes the reset. The [audit log](#audit-log) gets one line per house (*status groen → niet gemarkeerd*), one line per lapsed change (*voorstel afgewezen*) and one summary (*Kaart gereset*). For your own tooling: `POST /api/admin/houses/reset` (when logged in as an administrator) returns `{ "reset": { "green", "red" }, "proposals" }`, or `409` if nothing is marked.
 
 Editions are stored as separate files in `data/editions/` (at most 100) and are part of **every backup**; restoring brings them back too (see [Backups](#backups)).
 

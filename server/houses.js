@@ -18,6 +18,17 @@ function normalizeHouse(h) {
   };
 }
 
+// Zet elk groen of rood huis terug op "niet gemarkeerd" (in de lijst zelf) en geeft terug hoeveel het er waren: { green, red }.
+function resetStatuses(houses) {
+  const reset = { green: 0, red: 0 };
+  for (const h of houses) {
+    if (h.status !== 'green' && h.status !== 'red') continue;
+    reset[h.status]++;
+    h.status = 'none';
+  }
+  return reset;
+}
+
 const DEFAULT_LABELS = { green: 'Groen', red: 'Rood', none: 'Niet gemarkeerd' };
 
 // Namen van de statussen (door de beheerder aan te passen); ontbrekende of lege namen vallen terug op de standaard.
@@ -36,4 +47,4 @@ function statsShow(settings) {
   return Object.fromEntries(STATUSES.map((k) => [k, s[k] !== false]));
 }
 
-module.exports = { normalizeHouse, STATUSES, statusLabels, statsShow, DEFAULT_LABELS };
+module.exports = { normalizeHouse, STATUSES, statusLabels, statsShow, resetStatuses, DEFAULT_LABELS };

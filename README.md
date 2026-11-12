@@ -300,7 +300,7 @@ ook onder die tag gepubliceerd (`ghcr.io/helmerznl/doorbell-map:v1.0.3`). Het de
 Lokaal (zonder build) toont de app `dev` met de commit uit git. De workflow heeft schrijfrechten op de repo nodig om de tag te zetten (staat in `docker.yml`).
 
 ## Backups
-Na **elke opslagpoging** (huizen/layout, teksten en instellingen, kaartweergave, logo's, edities, een apparaat ontkoppelen of (de)blokkeren) maakt de server een backup in de map `backups` van de datamap: `DATA_PATH/backups` (in de container `/data/backups`). Elke backup is één ZIP-bestand, `sint_maarten-backup-<id>.zip`, met:
+Na **elke opslagpoging** (huizen/layout, de kaart resetten, teksten en instellingen, kaartweergave, logo's, edities, een apparaat ontkoppelen of (de)blokkeren) maakt de server een backup in de map `backups` van de datamap: `DATA_PATH/backups` (in de container `/data/backups`). Elke backup is één ZIP-bestand, `sint_maarten-backup-<id>.zip`, met:
 - `backup.json`: de layout (huizen + kaartweergave), de teksten (uitleg, namen, statusnamen, infovlak, deeltekst, communityvlak, bedankscherm en de vertalingen), de **app-instellingen** (de schakelaars en keuzes uit het beheer), de **apparaten van bewoners** en de **geblokkeerde apparaten**, en **alle edities**;
 - `files/`: de **logo's** (logo, klein logo en favicon) als losse afbeeldingen, zodat je er ook zonder de app een uit de ZIP kunt halen.
 
@@ -321,7 +321,7 @@ Elke regel heeft:
 - `at`: wanneer;
 - `category`: **`house`** voor een huis, of **`site`** voor de rest;
   - onder `house` vallen: status, adres, vorm of notitie in de layout of in een editie, voorstellen van bewoners en het goedkeuren of afwijzen daarvan, een apparaat koppelen, ontkoppelen of (de)blokkeren, en een QR-code vernieuwen;
-  - onder `site` vallen: instellingen en teksten, kaartweergave, logo's, edities, backups, gebruikers en inloggegevens, en berichten;
+  - onder `site` vallen: instellingen en teksten, kaartweergave, logo's, edities, backups, het resetten van de kaart (alleen de samenvatting `houses-reset`; de huizen zelf staan onder `house`), gebruikers en inloggegevens, en berichten;
 - `action`: wat er gebeurde, bijvoorbeeld `proposed`, `approved`, `changed` of `settings`;
 - `actor`: wie het deed:
   - een beheerder: `{ "type": "admin", "id", "name" }`;
@@ -345,6 +345,7 @@ Een **editie** is de kaart van één keer (bijvoorbeeld *Sint Maarten 2025*), me
 - **Vergelijken** – met *Vergelijk met* zet je twee kaarten naast elkaar (een editie met live, of twee edities). De huizen kleuren dan naar meedoen (groen): **groen in beide**, **alleen in de oudere** (oranje) of **alleen in de nieuwere** (blauw); de rest staat grijs gestippeld. De overzichtskaart toont de aantallen van beide kaarten met het verschil (totaal, groen, rood, niet gemarkeerd) en hoeveel huizen in elke groep vallen. Huizen worden gekoppeld op het huis zelf, en anders op straat en huisnummer.
 - **Overzicht** – de lijst in *Instellingen → Edities* toont per editie het aantal huizen en hoeveel groen (met percentage), rood en niet gemarkeerd, waarvan hij een kopie is en wanneer hij bewerkt is, met de live kaart bovenaan. Naam of jaartal wijzig je met het tekstveld-icoon; verwijderen bevestig je met je passkey of wachtwoord.
 - *Aantallen verbergen* klapt de overzichtskaart in tot alleen de keuzelijsten (handig op een telefoon).
+- **Live kaart resetten** – na afloop van een evenement zet je onderaan *Instellingen → Edities*, bij *Live kaart resetten*, alle groene en rode huizen van de live kaart terug naar *niet gemarkeerd* (na een bevestiging). Wil je de stand later kunnen vergelijken, maak dan eerst een editie aan. Alleen de live kaart verandert, en alleen de status: edities, de koppelingen van bewoners en het adres, de notitie en de vorm van elk huis blijven zoals ze waren. Wijzigingen van bewoners die nog op goedkeuring wachten vervallen (de bewoner ziet *niet doorgevoerd*); anders zou een volgende *Alles goedkeuren* de huizen meteen weer markeren. Vlak voor het resetten maakt de server een backup (reden *Voor het resetten*; staat de stand al in de nieuwste backup, dan is dat die backup), dus *Terugzetten* bij Backups maakt de reset ongedaan. In de [auditlog](#auditlog) staat een regel per huis (*status groen → niet gemarkeerd*), een regel per vervallen wijziging (*voorstel afgewezen*) en één samenvatting (*Kaart gereset*). Voor eigen tooling: `POST /api/admin/houses/reset` (met een inlog als beheerder) geeft `{ "reset": { "green", "red" }, "proposals" }`, of `409` als er niets gemarkeerd is.
 
 Edities staan als losse bestanden in `data/editions/` (maximaal 100) en zitten **in elke backup**; terugzetten zet ze ook terug (zie [Backups](#backups)).
 

@@ -127,6 +127,7 @@ function site(actor, action, label, extra = {}) {
 const P = '/api/admin';
 const ROUTES = [
   ['PUT', /^\/houses$/, { house: true }],
+  ['POST', /^\/houses\/reset$/, { action: 'houses-reset', label: 'Kaart gereset: groene en rode huizen teruggezet naar niet gemarkeerd' }], // regel per huis én één samenvatting
   ['POST', /^\/changes\/(approve-all|[^/]+\/(approve|reject))$/, { house: true }],
   ['DELETE', /^\/residents\/[^/]+$/, { house: true }],
   ['POST', /^\/residents\/[^/]+\/block$/, { house: true }],

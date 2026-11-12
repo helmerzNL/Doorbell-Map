@@ -17,7 +17,7 @@ const residents = require('./residents');
 const community = require('./community');
 const site = require('./site');
 const appVersion = require('./version');
-const { normalizeHouse, STATUSES, statusLabels, statsShow } = require('./houses');
+const { normalizeHouse, STATUSES, statusLabels, statsShow, resetStatuses } = require('./houses');
 
 const app = express();
 app.set('trust proxy', true);
@@ -616,6 +616,24 @@ function validateHouses(list) {
     return normalizeHouse({ ...h, points });
   });
 }
+
+// Na afloop van een evenement: alle groene en rode huizen van de live kaart terug op "niet gemarkeerd". Alleen de live kaart: edities
+// zijn de bewaarde stand van een eerdere keer en blijven zoals ze zijn, net als de koppelingen van bewoners. Openstaande wijzigingen
+// van bewoners vervallen (ze gingen over de vorige keer). Vooraf komt er een backup, zodat Backups → Terugzetten de reset ongedaan maakt.
+admin.post('/houses/reset', backups.afterSave('Kaart gereset'), (req, res) => {
+  const db = store.db();
+  if (!db.houses.some((h) => h.status === 'green' || h.status === 'red')) {
+    return res.status(409).json({ error: 'Er staan geen groene of rode huizen op de kaart; er valt niets te resetten' });
+  }
+  try { backups.create('Voor het resetten'); } catch (err) {
+    console.error('Backup mislukt:', err.message);
+    return res.status(500).json({ error: 'De backup voor het resetten is mislukt; er is niets gewijzigd' });
+  }
+  const proposals = residents.discardProposals(req.audit.actor);
+  const reset = resetStatuses(db.houses);
+  store.save();
+  res.json({ reset, proposals });
+});
 
 admin.put('/houses', backups.afterSave('Layout opgeslagen'), (req, res) => {
   try {

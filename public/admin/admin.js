@@ -2297,7 +2297,33 @@
     $('ed-from').value = from === LIVE || edById(from) ? from : LIVE;
     $('ed-list').replaceChildren(editionRow({ id: LIVE }), ...editionList.map(editionRow));
     syncEditionButtons();
+    renderReset();
   }
+
+  // ---- live kaart resetten (onderaan de tab Edities) ----
+  function renderReset() {
+    const c = SMCompare.counts(liveList());
+    $('rs-counts').replaceChildren(countChips(c));
+    $('rs-go').disabled = c.green + c.red === 0;
+  }
+
+  $('rs-go').onclick = async () => {
+    $('rs-err').textContent = '';
+    const c = SMCompare.counts(liveList());
+    const lines = [`De live kaart resetten? Alle ${c.green + c.red} groene en rode huizen worden teruggezet naar niet gemarkeerd.`, 'Er wordt eerst automatisch een backup gemaakt; die kun je bij Backups terugzetten.'];
+    if (pendingCount) lines.push(`${pendingCount} wijziging(en) van bewoners die op goedkeuring wachten vervallen.`);
+    if (!confirm(lines.map((l) => I18n.tr(l)).join('\n'))) return;
+    $('rs-go').disabled = true;
+    try {
+      const res = await post('/api/admin/houses/reset', {}, { expectAuth: true });
+      // zoals bij "Alles goedkeuren": de lokale kaart bijwerken, zodat niet-opgeslagen tekenwerk en een volgende "Opslaan" intact blijven
+      for (const h of liveList()) h.status = 'none';
+      touchHouses(); render();
+      pollChanges();
+      toast(`${res.reset.green + res.reset.red} huizen teruggezet naar niet gemarkeerd ✔`);
+      renderEditions(); // de Live-rij en dit kaartje met de nieuwe aantallen
+    } catch (e) { $('rs-err').textContent = e.message; renderReset(); }
+  };
 
   $('ed-save').onclick = async () => {
     $('ed-err').textContent = '';
