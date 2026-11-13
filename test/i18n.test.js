@@ -23,6 +23,21 @@ test('vertaalmotor: sjablonen met variabelen, ook geneste en samengestelde regel
   assert.equal(T.t('Onbekend sjabloon {n}', { n: 3 }), 'Onbekend sjabloon 3');
 });
 
+test('vertaalmotor: een algemeen sjabloon ("{n} van {m}") loopt niet over een scheidingsteken heen', () => {
+  // Losse redenen en een gewoon "x van y" werken zoals altijd.
+  assert.equal(T.tr('Wijzigingen van bewoners goedgekeurd'), 'Changes by residents approved');
+  assert.equal(T.tr('3 van 5'), '3 of 5');
+  // Samengestelde backuprij (admin.js: reden · huizen · instellingen): eerst per stuk, niet "van" -> "of".
+  assert.equal(T.tr('Wijzigingen van bewoners goedgekeurd · 8 huizen · instellingen'), 'Changes by residents approved · 8 houses · settings');
+  assert.equal(T.tr('Wijziging van bewoner goedgekeurd · 1 huizen · instellingen'), 'Change by resident approved · 1 houses · settings');
+  assert.equal(T.tr('Wijziging van bewoner afgewezen · 8 huizen'), 'Change by resident rejected · 8 houses');
+  assert.equal(T.tr('Wijzigingen van bewoners goedgekeurd (mislukt) · 8 huizen'), 'Changes by residents approved (failed) · 8 houses');
+  assert.equal(T.tr('13 nov 2026 12:00 · Wijzigingen van bewoners goedgekeurd · 8 huizen · uitleg 120 tekens'), '13 nov 2026 12:00 · Changes by residents approved · 8 houses · explanation 120 characters');
+  assert.equal(T.tr('Wijzigingen van bewoners goedgekeurd → 8 huizen'), 'Changes by residents approved → 8 houses');
+  // Sjablonen met een scheidingsteken in de sleutel zelf blijven in één keer passen.
+  assert.equal(T.tr('Kaart nu: zoom 5 · startweergave is ingesteld'), 'Map now: zoom 5 · start view is set');
+});
+
 test('in het Engels heet Sint Maarten Halloween', () => {
   assert.equal(T.tr('Sint Maarten Hoogland'), 'Halloween Hoogland');
   assert.equal(T.tr('Onze wijk'), 'Our neighbourhood');
