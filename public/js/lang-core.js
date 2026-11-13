@@ -27,6 +27,11 @@
     pats.sort((a, b) => b.len - a.len); // het meest specifieke sjabloon eerst
     const swap = (s) => words.reduce((acc, [from, to]) => acc.split(from).join(to), s);
     const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (m, n) => (vars && n in vars ? String(vars[n]) : m));
+    // Scheidingstekens van samengestelde regels ("a · b · c", "a → b"). Een sjabloonvariabele is één stuk
+    // tekst: loopt hij over zo'n teken heen, dan was het sjabloon te gretig (bv. "{n} van {m}" op
+    // "Wijzigingen van bewoners goedgekeurd · 8 huizen") en worden de stukken apart vertaald.
+    const SEPS = [' · ', ' → '];
+    const spans = (s) => SEPS.some((x) => s.includes(x));
 
     // Vertaalt één tekst; ongewijzigd als er geen vertaling is. Witruimte aan de randen blijft behouden.
     function tr(str) {
@@ -40,11 +45,11 @@
       if (out === undefined) {
         for (const p of pats) {
           const r = p.re.exec(core) || p.re.exec(flat);
-          if (r) { out = fill(p.to, Object.fromEntries(p.names.map((n, i) => [n, tr(r[i + 1])]))); break; }
+          if (r && !r.slice(1).some(spans)) { out = fill(p.to, Object.fromEntries(p.names.map((n, i) => [n, tr(r[i + 1])]))); break; }
         }
       }
       if (out === undefined) { // samengestelde regels: "a · b · c" of "a → b" per stuk vertalen
-        const sep = [' · ', ' → '].find((x) => core.includes(x));
+        const sep = SEPS.find((x) => core.includes(x));
         if (sep) {
           const parts = core.split(sep), done = parts.map((x) => tr(x));
           if (done.some((x, i) => x !== parts[i])) out = done.join(sep);
